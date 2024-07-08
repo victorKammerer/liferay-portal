@@ -257,4 +257,66 @@ test('notification receptionType on source remains the same after clicking on no
 			`<recipients receptionType="bcc">`
 		)
 	).toBe(6);
-});
+})
+
+test('user associated with a workflow instance must be able to at least read the workflow task from a notification', async ({
+	apiHelpers,
+	diagramViewPage,
+	page,
+	processBuilderPage,
+	sourceViewPage,
+}) => {
+	const workflowDefinitionName = 'Workflow Definition' + getRandomString();
+
+	const workflowDefinition =
+		await apiHelpers.headlessAdminWorkflow.postWorkflowDefinitionSave(
+			workflowDefinitionName,
+			getWorkflowDefinition('bcc-reception-type')
+		);
+
+	workflowDefinitionIds.push(workflowDefinition.id);
+
+	await processBuilderPage.goto();
+
+	await processBuilderPage.clickWorkflowDefinitionName(
+		workflowDefinitionName
+	);
+
+	await diagramViewPage.clickNode('Task');
+
+	const notificationEntry = processBuilderPage.page.getByRole('link', {
+		name: 'notification 1',
+	});
+
+	await notificationEntry.click();
+
+	await expect(
+		page.getByRole('tablist').filter({hasText: 'Recipient Type'})
+	).toHaveCount(6);
+
+	await diagramViewPage.clickSourceViewButton();
+
+	const requestPromise = page.waitForRequest('**/workflow-definitions/save');
+
+	await sourceViewPage.saveWorkflowDefinition();
+
+	const request = await requestPromise;
+
+	const xmlContent = request.postDataJSON().content;
+
+	expect(
+		await countSubstringOccurrences(
+			xmlContent,
+			`<recipients receptionType="bcc">`
+		)
+	).toBe(6);
+})
+
+
+async goto(siteUrl?: Site['friendlyUrlPath']) {
+	await this.page.goto(
+		`/group${siteUrl || '/guest'}${PORTLET_URLS.myWorkflowTasks}`
+	);
+
+	await this.page.waitForLoadState();
+};

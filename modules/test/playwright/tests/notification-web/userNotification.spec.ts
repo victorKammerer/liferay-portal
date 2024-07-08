@@ -28,6 +28,18 @@ let workflowDefinitionId: number;
 let workflowDefinitionName: string;
 let workflowXMLDefinition: string;
 
+let user;
+
+test.beforeEach(async ({apiHelpers}) => {
+	user = await apiHelpers.headlessAdminUser.getUserAccountByEmailAddress(
+		'demo.unprivileged@liferay.com'
+	);
+	await apiHelpers.headlessAdminUser.assignUserToRole(
+		'workflowReviewer',
+		user.id
+	);
+});
+
 test.afterEach(async ({apiHelpers, blogsPage, configurationTabPage}) => {
 	if (assetType && workflowDefinitionName) {
 		await configurationTabPage.goTo();
@@ -53,7 +65,7 @@ test.afterEach(async ({apiHelpers, blogsPage, configurationTabPage}) => {
 	workflowXMLDefinition = null;
 });
 
-test('review comment is added to user notification', async ({
+test('user must be able to read workflow task from a notification if contained on the flow', async ({
 	apiHelpers,
 	blogsEditBlogEntryPage,
 	blogsPage,
