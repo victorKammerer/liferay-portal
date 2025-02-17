@@ -100,6 +100,7 @@
 		<field name="treePath" type="String">
 			<hint name="max-length">4000</hint>
 		</field>
+		<field name="version" type="int" />
 		<field name="lastPublishDate" type="Date" />
 		<field name="status" type="int" />
 		<field name="statusByUserId" type="long" />
@@ -137,7 +138,7 @@
 		<field name="content" type="String">
 			<hint-collection name="CLOB" />
 		</field>
-		<field name="version" type="long" />
+		<field name="version" type="int" />
 		<field name="status" type="int" />
 	</model>
 	<model name="com.liferay.object.model.ObjectField">

@@ -79,6 +79,7 @@ create table ObjectEntry (
 	objectEntryFolderId LONG,
 	rootObjectEntryId LONG,
 	treePath STRING null,
+	version INTEGER,
 	lastPublishDate DATE null,
 	status INTEGER,
 	statusByUserId LONG,
@@ -113,8 +114,8 @@ create table ObjectEntryVersion (
 	createDate DATE null,
 	modifiedDate DATE null,
 	objectEntryId LONG,
-	content VARCHAR(75) null,
-	version LONG,
+	content TEXT null,
+	version INTEGER,
 	status INTEGER
 );
 

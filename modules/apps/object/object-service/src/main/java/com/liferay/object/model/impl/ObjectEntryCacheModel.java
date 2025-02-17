@@ -68,7 +68,7 @@ public class ObjectEntryCacheModel
 
 	@Override
 	public String toString() {
-		StringBundler sb = new StringBundler(39);
+		StringBundler sb = new StringBundler(41);
 
 		sb.append("{mvccVersion=");
 		sb.append(mvccVersion);
@@ -98,6 +98,8 @@ public class ObjectEntryCacheModel
 		sb.append(rootObjectEntryId);
 		sb.append(", treePath=");
 		sb.append(treePath);
+		sb.append(", version=");
+		sb.append(version);
 		sb.append(", lastPublishDate=");
 		sb.append(lastPublishDate);
 		sb.append(", status=");
@@ -170,6 +172,8 @@ public class ObjectEntryCacheModel
 			objectEntryImpl.setTreePath(treePath);
 		}
 
+		objectEntryImpl.setVersion(version);
+
 		if (lastPublishDate == Long.MIN_VALUE) {
 			objectEntryImpl.setLastPublishDate(null);
 		}
@@ -222,6 +226,8 @@ public class ObjectEntryCacheModel
 
 		rootObjectEntryId = objectInput.readLong();
 		treePath = objectInput.readUTF();
+
+		version = objectInput.readInt();
 		lastPublishDate = objectInput.readLong();
 
 		status = objectInput.readInt();
@@ -280,6 +286,7 @@ public class ObjectEntryCacheModel
 			objectOutput.writeUTF(treePath);
 		}
 
+		objectOutput.writeInt(version);
 		objectOutput.writeLong(lastPublishDate);
 
 		objectOutput.writeInt(status);
@@ -310,6 +317,7 @@ public class ObjectEntryCacheModel
 	public long objectEntryFolderId;
 	public long rootObjectEntryId;
 	public String treePath;
+	public int version;
 	public long lastPublishDate;
 	public int status;
 	public long statusByUserId;
