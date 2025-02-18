@@ -523,8 +523,7 @@ public class ObjectServiceUpgradeStepRegistrator
 
 		registry.register(
 			"10.4.0", "10.5.0", ObjectEntryVersionTable.create(),
-			UpgradeProcessFactory.addColumns(
-				"ObjectEntry", "version INTEGER"));
+			UpgradeProcessFactory.addColumns("ObjectEntry", "version INTEGER"));
 	}
 
 	@Reference
