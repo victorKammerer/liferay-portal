@@ -28,6 +28,14 @@ public class ObjectEntryVersionServiceWrapper
 		_objectEntryVersionService = objectEntryVersionService;
 	}
 
+	@Override
+	public java.util.List<com.liferay.object.model.ObjectEntryVersion>
+			getObjectEntryVersions(long objectEntryId)
+		throws com.liferay.portal.kernel.exception.PortalException {
+
+		return _objectEntryVersionService.getObjectEntryVersions(objectEntryId);
+	}
+
 	/**
 	 * Returns the OSGi service identifier.
 	 *
