@@ -5,6 +5,8 @@
 
 package com.liferay.object.rest.internal.manager.v1_0;
 
+import static com.liferay.portal.vulcan.util.ActionUtil.addAction;
+
 import com.liferay.account.exception.NoSuchGroupException;
 import com.liferay.document.library.kernel.service.DLAppLocalService;
 import com.liferay.object.action.engine.ObjectActionEngine;
@@ -29,6 +31,7 @@ import com.liferay.object.relationship.util.ObjectRelationshipUtil;
 import com.liferay.object.rest.dto.v1_0.FileEntry;
 import com.liferay.object.rest.dto.v1_0.Folder;
 import com.liferay.object.rest.dto.v1_0.ObjectEntry;
+import com.liferay.object.rest.dto.v1_0.ObjectEntryVersion;
 import com.liferay.object.rest.dto.v1_0.Scope;
 import com.liferay.object.rest.dto.v1_0.Status;
 import com.liferay.object.rest.filter.factory.FilterFactory;
@@ -47,6 +50,7 @@ import com.liferay.object.rest.manager.v1_0.util.ObjectEntryManagerUtil;
 import com.liferay.object.service.ObjectActionLocalService;
 import com.liferay.object.service.ObjectDefinitionLocalService;
 import com.liferay.object.service.ObjectEntryService;
+import com.liferay.object.service.ObjectEntryVersionService;
 import com.liferay.object.service.ObjectRelationshipLocalService;
 import com.liferay.object.service.ObjectRelationshipService;
 import com.liferay.object.system.SystemObjectDefinitionManager;
@@ -646,6 +650,19 @@ public class DefaultObjectEntryManagerImpl
 	}
 
 	@Override
+	public Page<ObjectEntryVersion> getObjectEntryVersion(
+			DTOConverterContext dtoConverterContext, long objectEntryId)
+		throws Exception {
+
+		com.liferay.object.model.ObjectEntry serviceBuilderObjectEntry =
+			_objectEntryService.getObjectEntry(objectEntryId);
+
+		return _getObjectEntryVersion(
+			serviceBuilderObjectEntry.getCompanyId(), serviceBuilderObjectEntry,
+			null, null, dtoConverterContext, null, null, null, null);
+	}
+
+	@Override
 	public Page<Object> getRelatedSystemObjectEntries(
 			ObjectDefinition objectDefinition, Long objectEntryId,
 			String objectRelationshipName, Pagination pagination)
@@ -1181,6 +1198,76 @@ public class DefaultObjectEntryManagerImpl
 
 		return _toObjectEntry(
 			dtoConverterContext, objectDefinition, serviceBuilderObjectEntry);
+	}
+
+	private Page<ObjectEntryVersion> _getObjectEntryVersion(
+			long companyId, com.liferay.object.model.ObjectEntry objectEntry,
+			String scopeKey, Aggregation aggregation,
+			DTOConverterContext dtoConverterContext, Filter filter,
+			Pagination pagination, String search, Sort[] sorts)
+		throws Exception {
+
+		ObjectDefinition objectDefinition =
+			_objectDefinitionLocalService.getObjectDefinition(
+				objectEntry.getObjectDefinitionId());
+
+		long groupId = getGroupId(objectDefinition, null);
+
+		return SearchUtil.search(
+			HashMapBuilder.put(
+				"get",
+				ActionUtil.addAction(
+					ActionKeys.VIEW, ObjectEntryResourceImpl.class, 0L,
+					"getObjectEntryVersionsPage", null,
+					objectDefinition.getUserId(),
+					objectDefinition.getResourceName(), groupId,
+					dtoConverterContext.getUriInfo())
+			).build(),
+			booleanQuery -> {
+				BooleanFilter booleanFilter =
+					booleanQuery.getPreBooleanFilter();
+
+				booleanFilter.add(
+					new TermFilter(
+						"objectDefinitionId",
+						String.valueOf(
+							objectDefinition.getObjectDefinitionId())),
+					BooleanClauseOccur.MUST);
+			},
+			filter, objectDefinition.getClassName(), search, pagination,
+			queryConfig -> queryConfig.setSelectedFieldNames(
+				Field.ENTRY_CLASS_PK),
+			searchContext -> {
+				searchContext.addVulcanAggregation(aggregation);
+				searchContext.setAttribute(
+					Field.STATUS, WorkflowConstants.STATUS_ANY);
+				searchContext.setAttribute(
+					"objectDefinitionId",
+					objectDefinition.getObjectDefinitionId());
+
+				UriInfo uriInfo = dtoConverterContext.getUriInfo();
+
+				if (uriInfo != null) {
+					MultivaluedMap<String, String> queryParameters =
+						uriInfo.getQueryParameters();
+
+					searchContext.setAttribute(
+						"searchByObjectView",
+						queryParameters.containsKey("searchByObjectView"));
+				}
+
+				searchContext.setCompanyId(companyId);
+				searchContext.setGroupIds(new long[] {groupId});
+
+				SearchRequestBuilder searchRequestBuilder =
+					_searchRequestBuilderFactory.builder(searchContext);
+
+				_processVulcanAggregation(
+					_aggregations, _queries, searchRequestBuilder, aggregation);
+			},
+			sorts,
+			document -> _toObjectEntryVersion(
+				dtoConverterContext, objectDefinition, objectEntry));
 	}
 
 	private Map<String, ObjectRelationship> _getObjectRelationships(
@@ -1773,6 +1860,49 @@ public class DefaultObjectEntryManagerImpl
 			defaultDTOConverterContext, serviceBuilderObjectEntry);
 	}
 
+	private ObjectEntryVersion _toObjectEntryVersion(
+			DTOConverterContext dtoConverterContext,
+			ObjectDefinition objectDefinition,
+			com.liferay.object.model.ObjectEntry serviceBuilderObjectEntry)
+		throws Exception {
+
+		Map<String, Map<String, String>> actions =
+			dtoConverterContext.getActions();
+
+		if (GetterUtil.getBoolean(
+				dtoConverterContext.getAttribute("addActions"), true)) {
+
+			if (actions == null) {
+				actions = Collections.emptyMap();
+			}
+
+			actions = HashMapBuilder.create(
+				actions
+			).put(
+				"get",
+				_addAction(
+					ActionKeys.VIEW, "getObjectEntryVersionsPage",
+					serviceBuilderObjectEntry, dtoConverterContext.getUriInfo())
+			).build();
+		}
+
+		DefaultDTOConverterContext defaultDTOConverterContext =
+			new DefaultDTOConverterContext(
+				dtoConverterContext.isAcceptAllLanguages(), actions,
+				dtoConverterContext.getDTOConverterRegistry(),
+				dtoConverterContext.getHttpServletRequest(),
+				serviceBuilderObjectEntry.getObjectEntryId(),
+				dtoConverterContext.getLocale(),
+				dtoConverterContext.getUriInfo(),
+				dtoConverterContext.getUser());
+
+		defaultDTOConverterContext.setAttribute(
+			"objectDefinition", objectDefinition);
+
+		return ObjectEntryVersion.unsafeToDTO(
+			(String)dtoConverterContext.getAttribute("payload"));
+	}
+
 	private Map<String, Serializable> _toObjectValues(
 			Locale locale, ObjectDefinition objectDefinition,
 			ObjectEntry objectEntry, String scopeKey,
@@ -1907,6 +2037,9 @@ public class DefaultObjectEntryManagerImpl
 
 	@Reference
 	private ObjectEntryService _objectEntryService;
+
+	@Reference
+	private ObjectEntryVersionService _objectEntryVersionService;
 
 	@Reference
 	private ObjectFieldBusinessTypeRegistry _objectFieldBusinessTypeRegistry;
