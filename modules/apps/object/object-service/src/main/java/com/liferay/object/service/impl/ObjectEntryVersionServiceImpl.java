@@ -5,10 +5,19 @@
 
 package com.liferay.object.service.impl;
 
+import com.liferay.object.model.ObjectEntry;
+import com.liferay.object.model.ObjectEntryVersion;
+import com.liferay.object.service.ObjectEntryLocalService;
+import com.liferay.object.service.ObjectEntryService;
 import com.liferay.object.service.base.ObjectEntryVersionServiceBaseImpl;
 import com.liferay.portal.aop.AopService;
 
+import com.liferay.portal.kernel.exception.PortalException;
+import com.liferay.portal.kernel.security.permission.ActionKeys;
 import org.osgi.service.component.annotations.Component;
+import org.osgi.service.component.annotations.Reference;
+
+import java.util.List;
 
 /**
  * @author Marco Leo
@@ -22,4 +31,23 @@ import org.osgi.service.component.annotations.Component;
 )
 public class ObjectEntryVersionServiceImpl
 	extends ObjectEntryVersionServiceBaseImpl {
+
+	@Override
+	public List<ObjectEntryVersion> getObjectEntryVersions(long objectEntryId)
+		throws PortalException {
+
+		ObjectEntry objectEntry = _objectEntryLocalService.getObjectEntry(objectEntryId);
+
+		_objectEntryService.checkModelResourcePermission(
+			objectEntry.getObjectDefinitionId(), objectEntryId,
+			ActionKeys.UPDATE);
+		
+		return objectEntryVersionLocalService.getObjectEntryVersions(objectEntryId);
+	}
+
+	@Reference
+	private ObjectEntryLocalService _objectEntryLocalService;
+
+	@Reference
+	private ObjectEntryService _objectEntryService;
 }
