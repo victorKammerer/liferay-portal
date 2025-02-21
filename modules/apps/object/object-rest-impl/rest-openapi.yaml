@@ -158,6 +158,33 @@ components:
                     type: array
                     writeOnly: true
             type: object
+        ObjectEntryVersion:
+            properties:
+                creator:
+                    $ref: "../../headless/headless-delivery/headless-delivery-impl/rest-openapi.yaml#Creator"
+                    readOnly: true
+                dateCreated:
+                    format: date
+                    type: string
+                dateModified:
+                    format: date
+                    readOnly: true
+                    type: string
+                id:
+                    format: int64
+                    readOnly: true
+                    type: integer
+                objectEntry:
+                    $ref: "#/components/schemas/ObjectEntry"
+                    readOnly: true
+                status:
+                    $ref: "#/components/schemas/Status"
+                    readOnly: true
+                version:
+                    format: int64
+                    readOnly: true
+                    type: integer
+            type: object
         Scope:
             properties:
                 externalReferenceCode:
@@ -757,6 +784,30 @@ paths:
                     content:
                         application/json: {}
                         application/xml: {}
+            tags: ["ObjectEntry"]
+    "/{objectEntryId}/versions":
+        get:
+            operationId: getObjectEntryVersionsPage
+            parameters:
+                - in: path
+                  name: objectEntryId
+                  required: true
+                  schema:
+                      format: int64
+                      type: integer
+            responses:
+                200:
+                    content:
+                        application/json:
+                            schema:
+                                items:
+                                    $ref: "#/components/schemas/ObjectEntryVersion"
+                                type: array
+                        application/xml:
+                            schema:
+                                items:
+                                    $ref: "#/components/schemas/ObjectEntryVersion"
+                                type: array
             tags: ["ObjectEntry"]
     /scopes/{scopeKey}:
         get:
