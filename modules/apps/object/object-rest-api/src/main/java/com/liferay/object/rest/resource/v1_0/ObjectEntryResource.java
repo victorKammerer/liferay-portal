@@ -6,6 +6,7 @@
 package com.liferay.object.rest.resource.v1_0;
 
 import com.liferay.object.rest.dto.v1_0.ObjectEntry;
+import com.liferay.object.rest.dto.v1_0.ObjectEntryVersion;
 import com.liferay.portal.kernel.search.Sort;
 import com.liferay.portal.kernel.search.filter.Filter;
 import com.liferay.portal.kernel.service.GroupLocalService;
@@ -132,6 +133,10 @@ public interface ObjectEntryResource {
 
 	public void putObjectEntryObjectActionObjectActionName(
 			Long objectEntryId, String objectActionName)
+		throws Exception;
+
+	public Page<ObjectEntryVersion> getObjectEntryVersionsPage(
+			Long objectEntryId)
 		throws Exception;
 
 	public Page<com.liferay.portal.vulcan.permission.Permission>
