@@ -40,9 +40,9 @@ public class WorkflowDefinitionLinkLocalServiceImpl
 
 	@Override
 	public WorkflowDefinitionLink addWorkflowDefinitionLink(
-			long userId, long companyId, long groupId, String className,
-			long classPK, long typePK, String workflowDefinitionName,
-			int workflowDefinitionVersion)
+			long userId, long companyId, String externalReferenceCode,
+			long groupId, String className, long classPK, long typePK,
+			String workflowDefinitionName, int workflowDefinitionVersion)
 		throws PortalException {
 
 		User user = _userPersistence.findByPrimaryKey(userId);
@@ -52,6 +52,7 @@ public class WorkflowDefinitionLinkLocalServiceImpl
 		WorkflowDefinitionLink workflowDefinitionLink =
 			workflowDefinitionLinkPersistence.create(workflowDefinitionLinkId);
 
+		workflowDefinitionLink.setExternalReferenceCode(externalReferenceCode);
 		workflowDefinitionLink.setGroupId(StagingUtil.getLiveGroupId(groupId));
 		workflowDefinitionLink.setCompanyId(companyId);
 		workflowDefinitionLink.setUserId(userId);
@@ -353,7 +354,7 @@ public class WorkflowDefinitionLinkLocalServiceImpl
 
 		if (workflowDefinitionLink == null) {
 			workflowDefinitionLink = addWorkflowDefinitionLink(
-				userId, companyId, StagingUtil.getLiveGroupId(groupId),
+				userId, companyId, null, StagingUtil.getLiveGroupId(groupId),
 				className, classPK, typePK, workflowDefinitionName,
 				workflowDefinitionVersion);
 		}
@@ -387,9 +388,9 @@ public class WorkflowDefinitionLinkLocalServiceImpl
 
 		if (serviceBuilderWorkflowDefinitionLink == null) {
 			return addWorkflowDefinitionLink(
-				userId, companyId, StagingUtil.getLiveGroupId(groupId),
-				className, classPK, typePK, workflowDefinitionName,
-				workflowDefinitionVersion);
+				userId, companyId, externalReferenceCode,
+				StagingUtil.getLiveGroupId(groupId), className, classPK, typePK,
+				workflowDefinitionName, workflowDefinitionVersion);
 		}
 
 		serviceBuilderWorkflowDefinitionLink.setClassName(className);

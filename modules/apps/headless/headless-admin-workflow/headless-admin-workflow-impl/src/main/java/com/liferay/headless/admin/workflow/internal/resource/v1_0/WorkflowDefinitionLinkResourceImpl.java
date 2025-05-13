@@ -115,6 +115,7 @@ public class WorkflowDefinitionLinkResourceImpl
 		return _toWorkflowDefinitionLink(
 			_workflowDefinitionLinkService.addWorkflowDefinitionLink(
 				contextUser.getUserId(), contextCompany.getCompanyId(),
+				workflowDefinitionLink.getExternalReferenceCode(),
 				GetterUtil.getLong(workflowDefinitionLink.getGroupId()),
 				workflowDefinitionLink.getClassName(), 0, 0,
 				workflowDefinition.getName(), workflowDefinition.getVersion()));
@@ -133,6 +134,7 @@ public class WorkflowDefinitionLinkResourceImpl
 		return _toWorkflowDefinitionLink(
 			_workflowDefinitionLinkService.addWorkflowDefinitionLink(
 				contextUser.getUserId(), contextCompany.getCompanyId(),
+				workflowDefinitionLink.getExternalReferenceCode(),
 				GetterUtil.getLong(workflowDefinitionLink.getGroupId()),
 				workflowDefinitionLink.getClassName(), 0, 0,
 				workflowDefinition.getName(), workflowDefinition.getVersion()));
