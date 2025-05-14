@@ -1372,7 +1372,7 @@ public class UserLocalServiceTest {
 		throws Exception {
 
 		_workflowDefinitionLinkLocalService.addWorkflowDefinitionLink(
-			TestPropsValues.getUserId(), TestPropsValues.getCompanyId(),
+			TestPropsValues.getUserId(), TestPropsValues.getCompanyId(), null,
 			GroupConstants.DEFAULT_LIVE_GROUP_ID, User.class.getName(), 0, 0,
 			"Single Approver", 1);
 

@@ -71,7 +71,7 @@ public class SiteWorkflowTest {
 		throws Exception {
 
 		_workflowDefinitionLinkLocalService.addWorkflowDefinitionLink(
-			_user.getUserId(), _companyId, groupId, null, 0, -1,
+			_user.getUserId(), _companyId, null, groupId, null, 0, -1,
 			RandomTestUtil.randomString(), 0);
 	}
 

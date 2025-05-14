@@ -123,7 +123,7 @@ public class GetObjectDefinitionInfoMVCResourceCommandTest {
 				ServiceContextTestUtil.getServiceContext());
 
 		_workflowDefinitionLinkService.addWorkflowDefinitionLink(
-			TestPropsValues.getUserId(), TestPropsValues.getCompanyId(),
+			TestPropsValues.getUserId(), TestPropsValues.getCompanyId(), null,
 			TestPropsValues.getGroupId(), objectDefinition.getClassName(), 0, 0,
 			kaleoDefinition.getName(), 1);
 

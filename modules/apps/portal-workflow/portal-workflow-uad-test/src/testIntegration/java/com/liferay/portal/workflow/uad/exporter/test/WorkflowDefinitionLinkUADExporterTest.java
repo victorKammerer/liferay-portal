@@ -42,7 +42,7 @@ public class WorkflowDefinitionLinkUADExporterTest
 
 		WorkflowDefinitionLink workflowDefinitionLink =
 			_workflowDefinitionLinkLocalService.addWorkflowDefinitionLink(
-				userId, TestPropsValues.getCompanyId(),
+				userId, TestPropsValues.getCompanyId(), null,
 				TestPropsValues.getGroupId(), null, 0, 0,
 				RandomTestUtil.randomString(), 0);
 

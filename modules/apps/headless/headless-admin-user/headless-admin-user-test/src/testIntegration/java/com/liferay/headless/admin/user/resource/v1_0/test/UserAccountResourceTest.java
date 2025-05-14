@@ -2515,8 +2515,8 @@ public class UserAccountResourceTest extends BaseUserAccountResourceTestCase {
 		WorkflowDefinitionLink workflowDefinitionLink =
 			_workflowDefinitionLinkLocalService.addWorkflowDefinitionLink(
 				TestPropsValues.getUserId(), TestPropsValues.getCompanyId(),
-				GroupConstants.DEFAULT_LIVE_GROUP_ID, User.class.getName(), 0,
-				0, "Single Approver", 1);
+				null, GroupConstants.DEFAULT_LIVE_GROUP_ID,
+				User.class.getName(), 0, 0, "Single Approver", 1);
 
 		postUserAccount = userAccountResource.postUserAccount(
 			randomUserAccount());

@@ -65,7 +65,7 @@ public class BlogsItemSelectorViewDisplayContextTest {
 	@Test
 	public void testShowDragAndDropZoneWithWorkflowEnabled() throws Exception {
 		_workflowDefinitionLinkLocalService.addWorkflowDefinitionLink(
-			TestPropsValues.getUserId(), TestPropsValues.getCompanyId(),
+			TestPropsValues.getUserId(), TestPropsValues.getCompanyId(), null,
 			_group.getGroupId(), BlogsEntry.class.getName(), 0, 0,
 			"Single Approver", 1);
 
@@ -82,7 +82,7 @@ public class BlogsItemSelectorViewDisplayContextTest {
 		throws Exception {
 
 		_workflowDefinitionLinkLocalService.addWorkflowDefinitionLink(
-			TestPropsValues.getUserId(), TestPropsValues.getCompanyId(),
+			TestPropsValues.getUserId(), TestPropsValues.getCompanyId(), null,
 			_group.getGroupId(), BlogsEntry.class.getName(), 0, 0,
 			"Single Approver", 1);
 
