@@ -3183,6 +3183,11 @@ public class DefaultObjectEntryManagerImpl
 				serviceBuilderParentObjectEntry)
 		throws Exception {
 
+		com.liferay.object.model.ObjectEntry
+			testServiceBuilderParentObjectEntry =  _objectEntryService.
+			getObjectEntry(
+				serviceBuilderObjectEntry.getRootObjectEntryId());
+
 		Map<String, Map<String, String>> actions = GetterUtil.getObject(
 			dtoConverterContext.getActions(), Collections::emptyMap);
 
@@ -3196,7 +3201,7 @@ public class DefaultObjectEntryManagerImpl
 				() -> _addAction(
 					ActionKeys.DELETE, dtoConverterContext, "delete",
 					objectDefinition, serviceBuilderObjectEntry,
-					serviceBuilderParentObjectEntry)
+					testServiceBuilderParentObjectEntry)
 			).put(
 				"expire",
 				() -> {
@@ -3219,7 +3224,7 @@ public class DefaultObjectEntryManagerImpl
 				() -> _addAction(
 					ActionKeys.VIEW, dtoConverterContext, "get",
 					objectDefinition, serviceBuilderObjectEntry,
-					serviceBuilderParentObjectEntry)
+					testServiceBuilderParentObjectEntry)
 			).put(
 				"permissions",
 				_addAction(
@@ -3282,7 +3287,7 @@ public class DefaultObjectEntryManagerImpl
 				() -> _addAction(
 					ActionKeys.UPDATE, dtoConverterContext, "patch",
 					objectDefinition, serviceBuilderObjectEntry,
-					serviceBuilderParentObjectEntry)
+					testServiceBuilderParentObjectEntry)
 			).put(
 				"versions",
 				_addAction(
