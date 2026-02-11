@@ -333,6 +333,96 @@ test('logged user must be able to see workflow task at least from a read-only pe
 	await performUserSwitch(page, defaultUser.alternateName);
 });
 
+test('logged user must not see workflow task if they do not have the necessary permission', async ({
+	apiHelpers,
+	configurationTabPage,
+	diagramViewPage,
+	page,
+	processBuilderPage,
+	workflowTaskDetailsPage,
+	workflowTasksPage,
+}) => {
+	const user =
+		await apiHelpers.headlessAdminUser.getUserAccountByEmailAddress(
+			'demo.unprivileged@liferay.com'
+		);
+
+	demoUserId = user.id;
+
+	const defaultUser =
+		await apiHelpers.headlessAdminUser.getUserAccountByEmailAddress(
+			'test@liferay.com'
+		);
+
+	const objectDefinition =
+		await apiHelpers.objectAdmin.postRandomObjectDefinition({
+			scope: 'site',
+			status: {code: 0},
+			titleObjectFieldName: 'textField',
+		});
+
+	apiHelpers.data.push({
+		id: objectDefinition.id,
+		type: 'objectDefinition',
+	});
+
+	workflowDefinitionName = 'MBWorkflowDefinition' + getRandomInt();
+	workflowXMLDefinition = readFileSync(
+		__dirname +
+			'/dependencies/administrator-role-assignments-workflow-definition.xml',
+		'utf-8'
+	);
+
+	const workflowDefinition =
+		await apiHelpers.headlessAdminWorkflow.postWorkflowDefinitionSave(
+			workflowDefinitionName,
+			{content: workflowXMLDefinition}
+		);
+
+	workflowDefinitionId = workflowDefinition.id;
+
+	await processBuilderPage.goto();
+
+	await processBuilderPage.clickWorkflowDefinitionName(
+		workflowDefinitionName
+	);
+
+	await diagramViewPage.publishWorkflowDefinition();
+
+	await configurationTabPage.goTo();
+
+	await configurationTabPage.assignWorkflowToAssetType(
+		workflowDefinitionName,
+		objectDefinition.name
+	);
+
+	const objectEntryValue = getRandomString();
+
+	const applicationName = 'c/' + objectDefinition.name.toLowerCase() + 's';
+
+	await apiHelpers.objectEntry.postObjectEntry(
+		{textField: objectEntryValue},
+		applicationName,
+		'Guest'
+	);
+
+	await workflowTasksPage.goToAssignedToMyRoles();
+
+	await workflowTaskDetailsPage.selectAsset(objectEntryValue);
+
+	await page.waitForLoadState('networkidle');
+
+	const url = page.url();
+
+	await performUserSwitch(page, user.alternateName);
+
+	await page.goto(`${url}`);
+
+	await expect(page.getByText('Error:')).toBeVisible();
+
+	await performUserSwitch(page, defaultUser.alternateName);
+});
+
 test('approve or reject modal appear even after doing a comment on the comments section', async ({
 	blogsEditBlogEntryPage,
 	blogsPage,
