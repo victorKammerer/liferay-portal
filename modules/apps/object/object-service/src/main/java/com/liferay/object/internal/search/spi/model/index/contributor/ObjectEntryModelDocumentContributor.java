@@ -481,6 +481,13 @@ public class ObjectEntryModelDocumentContributor
 				"cmpTaskCMPProjectId",
 				MapUtil.getLong(
 					values, "r_cmpProjectToCMPTasks_c_cmpProjectId"));
+
+			if (Objects.equals(
+					objectDefinition.getExternalReferenceCode(),
+					"L_CMP_TASK")) {
+
+				document.addKeyword("cmpTaskType", "project");
+			}
 		}
 
 		_contributeTextEmbeddings(document, objectContentHelper, objectEntry);
