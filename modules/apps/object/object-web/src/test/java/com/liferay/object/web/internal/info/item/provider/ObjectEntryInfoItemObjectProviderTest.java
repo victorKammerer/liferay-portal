@@ -12,6 +12,7 @@ import com.liferay.info.item.InfoItemIdentifier;
 import com.liferay.info.item.provider.filter.InfoItemServiceFilter;
 import com.liferay.object.model.ObjectDefinition;
 import com.liferay.object.model.ObjectEntry;
+import com.liferay.object.rest.dto.v1_0.Status;
 import com.liferay.object.rest.manager.v1_0.ObjectEntryManager;
 import com.liferay.object.rest.manager.v1_0.ObjectEntryManagerRegistry;
 import com.liferay.object.service.ObjectEntryLocalService;
@@ -24,6 +25,7 @@ import com.liferay.portal.kernel.service.UserLocalService;
 import com.liferay.portal.kernel.test.util.RandomTestUtil;
 import com.liferay.portal.kernel.util.HashMapBuilder;
 import com.liferay.portal.kernel.util.MapUtil;
+import com.liferay.portal.kernel.workflow.WorkflowConstants;
 import com.liferay.portal.test.rule.LiferayUnitTestRule;
 import com.liferay.portal.vulcan.dto.converter.DefaultDTOConverterContext;
 
@@ -107,6 +109,30 @@ public class ObjectEntryInfoItemObjectProviderTest {
 	}
 
 	@Test
+	public void testGetInfoItemLiferayObjectEntryInTrash() throws Exception {
+		long classPK = RandomTestUtil.randomLong();
+
+		ObjectEntry objectEntry = Mockito.mock(ObjectEntry.class);
+
+		Mockito.when(
+			objectEntry.isInTrash()
+		).thenReturn(
+			true
+		);
+
+		Mockito.when(
+			_objectEntryLocalService.fetchObjectEntry(classPK)
+		).thenReturn(
+			objectEntry
+		);
+
+		Assert.assertNull(
+			_assertGetInfoItem(new ClassPKInfoItemIdentifier(classPK)));
+
+		Mockito.verifyNoInteractions(_objectEntryManagerRegistry);
+	}
+
+	@Test
 	public void testGetInfoItemLiferayObjectEntryNoSuchInfoItemException() {
 		long classPK = RandomTestUtil.randomLong();
 
@@ -175,6 +201,55 @@ public class ObjectEntryInfoItemObjectProviderTest {
 			attributes, new ERCInfoItemIdentifier(externalReferenceCode),
 			_getHttpServletRequest(attributes), objectEntry,
 			_setUpProxyObjectEntry(externalReferenceCode, objectEntry));
+	}
+
+	@Test
+	public void testGetInfoItemProxyObjectEntryInTrash() throws Exception {
+		String externalReferenceCode = RandomTestUtil.randomString();
+
+		com.liferay.object.rest.dto.v1_0.ObjectEntry proxyObjectEntry =
+			Mockito.mock(com.liferay.object.rest.dto.v1_0.ObjectEntry.class);
+
+		Status status = Mockito.mock(Status.class);
+
+		Mockito.when(
+			status.getCode()
+		).thenReturn(
+			WorkflowConstants.STATUS_IN_TRASH
+		);
+
+		Mockito.when(
+			proxyObjectEntry.getStatus()
+		).thenReturn(
+			status
+		);
+
+		Mockito.when(
+			_objectEntryManager.getObjectEntry(
+				Mockito.eq(0L), Mockito.any(DefaultDTOConverterContext.class),
+				Mockito.eq(externalReferenceCode),
+				Mockito.eq(_objectDefinition), Mockito.eq(null))
+		).thenReturn(
+			proxyObjectEntry
+		);
+
+		Map<String, Object> attributes = new HashMap<>();
+
+		Assert.assertNull(
+			_assertGetInfoItem(
+				new ERCInfoItemIdentifier(externalReferenceCode),
+				_getHttpServletRequest(attributes)));
+
+		Mockito.verifyNoInteractions(_objectEntryLocalService);
+
+		_objectEntryUtilMockedStatic.verifyNoInteractions();
+
+		Map<InfoItemIdentifier, ObjectEntry> objectEntries =
+			(Map<InfoItemIdentifier, ObjectEntry>)attributes.get(
+				_OBJECT_ENTRIES);
+
+		Assert.assertTrue(
+			MapUtil.toString(objectEntries), objectEntries.isEmpty());
 	}
 
 	@Test
