@@ -7,17 +7,32 @@ package com.liferay.notification.rest.resource.v1_0.test;
 
 import com.liferay.account.constants.AccountRoleConstants;
 import com.liferay.arquillian.extension.junit.bridge.junit.Arquillian;
+import com.liferay.exportimport.report.constants.ExportImportReportEntryConstants;
+import com.liferay.exportimport.report.model.ExportImportReportEntry;
+import com.liferay.exportimport.report.service.ExportImportReportEntryLocalService;
+import com.liferay.exportimport.test.util.ExportImportConfigurationTemporarySwapper;
 import com.liferay.notification.constants.NotificationConstants;
 import com.liferay.notification.constants.NotificationRecipientConstants;
 import com.liferay.notification.constants.NotificationRecipientSettingConstants;
 import com.liferay.notification.constants.NotificationTemplateConstants;
+import com.liferay.notification.model.NotificationTemplateAttachment;
 import com.liferay.notification.rest.client.dto.v1_0.Creator;
 import com.liferay.notification.rest.client.dto.v1_0.NotificationTemplate;
 import com.liferay.notification.rest.client.pagination.Page;
 import com.liferay.notification.rest.client.pagination.Pagination;
 import com.liferay.notification.rest.client.permission.Permission;
 import com.liferay.notification.rest.resource.v1_0.NotificationTemplateResource;
+import com.liferay.notification.service.NotificationTemplateAttachmentLocalService;
 import com.liferay.notification.service.NotificationTemplateLocalService;
+import com.liferay.object.constants.ObjectDefinitionConstants;
+import com.liferay.object.constants.ObjectFieldSettingConstants;
+import com.liferay.object.field.builder.AttachmentObjectFieldBuilder;
+import com.liferay.object.field.setting.builder.ObjectFieldSettingBuilder;
+import com.liferay.object.model.ObjectDefinition;
+import com.liferay.object.model.ObjectField;
+import com.liferay.object.service.ObjectDefinitionLocalService;
+import com.liferay.object.service.ObjectFieldLocalService;
+import com.liferay.object.test.util.ObjectDefinitionTestUtil;
 import com.liferay.petra.function.transform.TransformUtil;
 import com.liferay.petra.string.StringPool;
 import com.liferay.portal.kernel.json.JSONFactory;
@@ -31,15 +46,19 @@ import com.liferay.portal.kernel.test.util.RandomTestUtil;
 import com.liferay.portal.kernel.test.util.TestPropsValues;
 import com.liferay.portal.kernel.util.HashMapBuilder;
 import com.liferay.portal.kernel.util.Http;
+import com.liferay.portal.kernel.util.ListUtil;
 import com.liferay.portal.kernel.util.LocaleUtil;
+import com.liferay.portal.kernel.workflow.WorkflowConstants;
 import com.liferay.portal.odata.entity.EntityField;
 import com.liferay.portal.test.rule.Inject;
 import com.liferay.portal.vulcan.util.LocalizedMapUtil;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
 import org.junit.Assert;
 import org.junit.Ignore;
@@ -280,6 +299,19 @@ public class NotificationTemplateResourceTest
 	}
 
 	@Override
+	@Test
+	public void testPutNotificationTemplateByExternalReferenceCode()
+		throws Exception {
+
+		super.testPutNotificationTemplateByExternalReferenceCode();
+
+		_testPutNotificationTemplateByExternalReferenceCodeWithAttachmentObjectFields();
+		_testPutNotificationTemplateByExternalReferenceCodeWithMissingAttachmentObjectField();
+		_testPutNotificationTemplateByExternalReferenceCodeWithMissingObjectDefinition();
+		_testPutNotificationTemplateByExternalReferenceCodeWithUnrelatedObjectDefinitionId();
+	}
+
+	@Override
 	protected NotificationTemplate randomNotificationTemplate()
 		throws Exception {
 
@@ -412,6 +444,77 @@ public class NotificationTemplateResourceTest
 		return notificationTemplate;
 	}
 
+	private ObjectDefinition _addObjectDefinition() throws Exception {
+		ObjectDefinition objectDefinition =
+			ObjectDefinitionTestUtil.publishObjectDefinition(
+				Collections.singletonList(
+					new AttachmentObjectFieldBuilder(
+					).labelMap(
+						LocalizedMapUtil.getLocalizedMap(
+							RandomTestUtil.randomString())
+					).name(
+						_ATTACHMENT_OBJECT_FIELD_NAME
+					).objectFieldSettings(
+						Arrays.asList(
+							new ObjectFieldSettingBuilder(
+							).name(
+								ObjectFieldSettingConstants.
+									NAME_ACCEPTED_FILE_EXTENSIONS
+							).value(
+								"txt"
+							).build(),
+							new ObjectFieldSettingBuilder(
+							).name(
+								ObjectFieldSettingConstants.NAME_FILE_SOURCE
+							).value(
+								ObjectFieldSettingConstants.
+									VALUE_USER_COMPUTER_TO_DOCS_AND_MEDIA
+							).build(),
+							new ObjectFieldSettingBuilder(
+							).name(
+								ObjectFieldSettingConstants.NAME_MAX_FILE_SIZE
+							).value(
+								"100"
+							).build())
+					).build()),
+				ObjectDefinitionConstants.SCOPE_COMPANY);
+
+		_objectDefinitions.add(objectDefinition);
+
+		return objectDefinition;
+	}
+
+	private void _assertExportImportReportEntry(
+			String classExternalReferenceCode, long exportImportConfigurationId,
+			int type)
+		throws Exception {
+
+		List<ExportImportReportEntry> exportImportReportEntries =
+			_exportImportReportEntryLocalService.getExportImportReportEntries(
+				TestPropsValues.getCompanyId(), exportImportConfigurationId);
+
+		Assert.assertTrue(
+			exportImportReportEntries.toString(),
+			ListUtil.exists(
+				exportImportReportEntries,
+				exportImportReportEntry ->
+					Objects.equals(
+						exportImportReportEntry.getClassExternalReferenceCode(),
+						classExternalReferenceCode) &&
+					(exportImportReportEntry.getType() == type)));
+	}
+
+	private List<Long> _getAttachmentObjectFieldIds(
+		com.liferay.notification.model.NotificationTemplate
+			notificationTemplate) {
+
+		return TransformUtil.transform(
+			_notificationTemplateAttachmentLocalService.
+				getNotificationTemplateAttachments(
+					notificationTemplate.getNotificationTemplateId()),
+			NotificationTemplateAttachment::getObjectFieldId);
+	}
+
 	private List<String> _getRoleNames(Long notificationTemplateId)
 		throws Exception {
 
@@ -424,6 +527,39 @@ public class NotificationTemplateResourceTest
 					Http.Method.GET),
 				"JSONArray/permissions"),
 			permissionJSONObject -> permissionJSONObject.getString("roleName"));
+	}
+
+	private com.liferay.notification.model.NotificationTemplate
+			_putNotificationTemplate(NotificationTemplate notificationTemplate)
+		throws Exception {
+
+		NotificationTemplateResource.Builder
+			notificationTemplateResourceBuilder =
+				_notificationTemplateResourceFactory.create();
+
+		NotificationTemplateResource notificationTemplateResource =
+			notificationTemplateResourceBuilder.user(
+				TestPropsValues.getUser()
+			).build();
+
+		String externalReferenceCode =
+			notificationTemplate.getExternalReferenceCode();
+
+		notificationTemplateResource.
+			putNotificationTemplateByExternalReferenceCode(
+				externalReferenceCode,
+				com.liferay.notification.rest.dto.v1_0.NotificationTemplate.
+					toDTO(notificationTemplate.toString()));
+
+		com.liferay.notification.model.NotificationTemplate
+			serviceBuilderNotificationTemplate =
+				_notificationTemplateLocalService.
+					getNotificationTemplateByExternalReferenceCode(
+						externalReferenceCode, TestPropsValues.getCompanyId());
+
+		_notificationTemplates.add(serviceBuilderNotificationTemplate);
+
+		return serviceBuilderNotificationTemplate;
 	}
 
 	private NotificationTemplate _randomNotificationTemplate(String roleName)
@@ -583,6 +719,141 @@ public class NotificationTemplateResourceTest
 					toDTO(notificationTemplateJSONObject.toString())));
 	}
 
+	private void _testPutNotificationTemplateByExternalReferenceCodeWithAttachmentObjectFields()
+		throws Exception {
+
+		ObjectDefinition objectDefinition = _addObjectDefinition();
+
+		ObjectField objectField = _objectFieldLocalService.fetchObjectField(
+			objectDefinition.getObjectDefinitionId(),
+			_ATTACHMENT_OBJECT_FIELD_NAME);
+
+		NotificationTemplate notificationTemplate =
+			randomNotificationTemplate();
+
+		notificationTemplate.setAttachmentObjectFieldExternalReferenceCodes(
+			new String[] {objectField.getExternalReferenceCode()});
+		notificationTemplate.setObjectDefinitionExternalReferenceCode(
+			objectDefinition.getExternalReferenceCode());
+
+		com.liferay.notification.model.NotificationTemplate
+			serviceBuilderNotificationTemplate = _putNotificationTemplate(
+				notificationTemplate);
+
+		Assert.assertEquals(
+			objectDefinition.getObjectDefinitionId(),
+			serviceBuilderNotificationTemplate.getObjectDefinitionId());
+		Assert.assertEquals(
+			Collections.singletonList(objectField.getObjectFieldId()),
+			_getAttachmentObjectFieldIds(serviceBuilderNotificationTemplate));
+	}
+
+	private void _testPutNotificationTemplateByExternalReferenceCodeWithMissingAttachmentObjectField()
+		throws Exception {
+
+		ObjectDefinition objectDefinition = _addObjectDefinition();
+
+		ObjectField objectField = _objectFieldLocalService.fetchObjectField(
+			objectDefinition.getObjectDefinitionId(),
+			_ATTACHMENT_OBJECT_FIELD_NAME);
+
+		String externalReferenceCode = RandomTestUtil.randomString();
+		long exportImportConfigurationId = RandomTestUtil.randomLong();
+
+		NotificationTemplate notificationTemplate =
+			randomNotificationTemplate();
+
+		notificationTemplate.setAttachmentObjectFieldExternalReferenceCodes(
+			new String[] {
+				objectField.getExternalReferenceCode(), externalReferenceCode
+			});
+		notificationTemplate.setObjectDefinitionExternalReferenceCode(
+			objectDefinition.getExternalReferenceCode());
+
+		com.liferay.notification.model.NotificationTemplate
+			serviceBuilderNotificationTemplate = null;
+
+		try (AutoCloseable autoCloseable =
+				new ExportImportConfigurationTemporarySwapper(
+					exportImportConfigurationId)) {
+
+			serviceBuilderNotificationTemplate = _putNotificationTemplate(
+				notificationTemplate);
+		}
+
+		Assert.assertEquals(
+			Collections.singletonList(objectField.getObjectFieldId()),
+			_getAttachmentObjectFieldIds(serviceBuilderNotificationTemplate));
+
+		_assertExportImportReportEntry(
+			externalReferenceCode, exportImportConfigurationId,
+			ExportImportReportEntryConstants.TYPE_MISSING_REFERENCE);
+	}
+
+	private void _testPutNotificationTemplateByExternalReferenceCodeWithMissingObjectDefinition()
+		throws Exception {
+
+		String externalReferenceCode = RandomTestUtil.randomString();
+		long exportImportConfigurationId = RandomTestUtil.randomLong();
+
+		NotificationTemplate notificationTemplate =
+			randomNotificationTemplate();
+
+		notificationTemplate.setObjectDefinitionExternalReferenceCode(
+			externalReferenceCode);
+
+		com.liferay.notification.model.NotificationTemplate
+			serviceBuilderNotificationTemplate = null;
+
+		try (AutoCloseable autoCloseable =
+				new ExportImportConfigurationTemporarySwapper(
+					exportImportConfigurationId)) {
+
+			serviceBuilderNotificationTemplate = _putNotificationTemplate(
+				notificationTemplate);
+		}
+
+		ObjectDefinition objectDefinition =
+			_objectDefinitionLocalService.
+				fetchObjectDefinitionByExternalReferenceCode(
+					externalReferenceCode, TestPropsValues.getCompanyId());
+
+		_objectDefinitions.add(objectDefinition);
+
+		Assert.assertEquals(
+			WorkflowConstants.STATUS_EMPTY, objectDefinition.getStatus());
+		Assert.assertEquals(
+			objectDefinition.getObjectDefinitionId(),
+			serviceBuilderNotificationTemplate.getObjectDefinitionId());
+
+		_assertExportImportReportEntry(
+			externalReferenceCode, exportImportConfigurationId,
+			ExportImportReportEntryConstants.TYPE_EMPTY);
+	}
+
+	private void _testPutNotificationTemplateByExternalReferenceCodeWithUnrelatedObjectDefinitionId()
+		throws Exception {
+
+		ObjectDefinition objectDefinition = _addObjectDefinition();
+		ObjectDefinition unrelatedObjectDefinition = _addObjectDefinition();
+
+		NotificationTemplate notificationTemplate =
+			randomNotificationTemplate();
+
+		notificationTemplate.setObjectDefinitionExternalReferenceCode(
+			objectDefinition.getExternalReferenceCode());
+		notificationTemplate.setObjectDefinitionId(
+			unrelatedObjectDefinition.getObjectDefinitionId());
+
+		com.liferay.notification.model.NotificationTemplate
+			serviceBuilderNotificationTemplate = _putNotificationTemplate(
+				notificationTemplate);
+
+		Assert.assertEquals(
+			objectDefinition.getObjectDefinitionId(),
+			serviceBuilderNotificationTemplate.getObjectDefinitionId());
+	}
+
 	private void _testPutNotificationTemplatePermissions() throws Exception {
 		NotificationTemplate notificationTemplate = _addNotificationTemplate(
 			_randomNotificationTemplate(RoleConstants.ADMINISTRATOR));
@@ -613,8 +884,19 @@ public class NotificationTemplateResourceTest
 			roleNames.toString(), roleNames.contains(RoleConstants.GUEST));
 	}
 
+	private static final String _ATTACHMENT_OBJECT_FIELD_NAME =
+		"attachmentObjectField";
+
+	@Inject
+	private ExportImportReportEntryLocalService
+		_exportImportReportEntryLocalService;
+
 	@Inject
 	private JSONFactory _jsonFactory;
+
+	@Inject
+	private NotificationTemplateAttachmentLocalService
+		_notificationTemplateAttachmentLocalService;
 
 	@Inject
 	private NotificationTemplateLocalService _notificationTemplateLocalService;
@@ -626,5 +908,14 @@ public class NotificationTemplateResourceTest
 	@DeleteAfterTestRun
 	private List<com.liferay.notification.model.NotificationTemplate>
 		_notificationTemplates = new ArrayList<>();
+
+	@Inject
+	private ObjectDefinitionLocalService _objectDefinitionLocalService;
+
+	@DeleteAfterTestRun
+	private List<ObjectDefinition> _objectDefinitions = new ArrayList<>();
+
+	@Inject
+	private ObjectFieldLocalService _objectFieldLocalService;
 
 }
