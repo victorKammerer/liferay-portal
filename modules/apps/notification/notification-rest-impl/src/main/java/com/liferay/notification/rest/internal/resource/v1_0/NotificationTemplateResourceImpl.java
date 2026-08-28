@@ -246,9 +246,17 @@ public class NotificationTemplateResourceImpl
 			NotificationTemplate notificationTemplate)
 		throws Exception {
 
+		com.liferay.notification.model.NotificationTemplate
+			serviceBuilderNotificationTemplate =
+				NotificationUtil.toNotificationTemplate(
+					0L, notificationTemplate, _objectDefinitionLocalService,
+					contextUser);
+
 		NotificationContext notificationContext =
 			NotificationUtil.toNotificationContext(
-				notificationTemplate, _objectFieldLocalService);
+				notificationTemplate,
+				serviceBuilderNotificationTemplate.getObjectDefinitionId(),
+				_objectFieldLocalService, contextUser);
 
 		notificationContext.setCompanyId(contextCompany.getCompanyId());
 		notificationContext.setModelPermissions(
@@ -262,9 +270,7 @@ public class NotificationTemplateResourceImpl
 					notificationTemplate.getType()),
 				notificationTemplate.getRecipients(), contextUser));
 		notificationContext.setNotificationTemplate(
-			NotificationUtil.toNotificationTemplate(
-				0L, notificationTemplate, _objectDefinitionLocalService,
-				contextUser));
+			serviceBuilderNotificationTemplate);
 
 		return _toNotificationTemplate(
 			_notificationTemplateService.addNotificationTemplate(
@@ -343,9 +349,17 @@ public class NotificationTemplateResourceImpl
 			NotificationTemplate notificationTemplate)
 		throws Exception {
 
+		com.liferay.notification.model.NotificationTemplate
+			serviceBuilderNotificationTemplate =
+				NotificationUtil.toNotificationTemplate(
+					notificationTemplateId, notificationTemplate,
+					_objectDefinitionLocalService, contextUser);
+
 		NotificationContext notificationContext =
 			NotificationUtil.toNotificationContext(
-				notificationTemplate, _objectFieldLocalService);
+				notificationTemplate,
+				serviceBuilderNotificationTemplate.getObjectDefinitionId(),
+				_objectFieldLocalService, contextUser);
 
 		notificationContext.setCompanyId(contextCompany.getCompanyId());
 		notificationContext.setModelPermissions(
@@ -364,9 +378,7 @@ public class NotificationTemplateResourceImpl
 				notificationTemplate.getRecipients(), contextUser));
 
 		notificationContext.setNotificationTemplate(
-			NotificationUtil.toNotificationTemplate(
-				notificationTemplateId, notificationTemplate,
-				_objectDefinitionLocalService, contextUser));
+			serviceBuilderNotificationTemplate);
 
 		return _toNotificationTemplate(
 			_notificationTemplateService.updateNotificationTemplate(

@@ -6,6 +6,7 @@
 package com.liferay.notification.rest.dto.v1_0.util;
 
 import com.liferay.counter.kernel.service.CounterLocalServiceUtil;
+import com.liferay.exportimport.kernel.empty.model.EmptyModelManagerUtil;
 import com.liferay.notification.context.NotificationContext;
 import com.liferay.notification.model.NotificationRecipient;
 import com.liferay.notification.model.NotificationRecipientSetting;
@@ -19,7 +20,9 @@ import com.liferay.object.model.ObjectField;
 import com.liferay.object.service.ObjectDefinitionLocalService;
 import com.liferay.object.service.ObjectFieldLocalService;
 import com.liferay.portal.kernel.exception.PortalException;
+import com.liferay.portal.kernel.model.Group;
 import com.liferay.portal.kernel.model.User;
+import com.liferay.portal.kernel.service.GroupLocalServiceUtil;
 import com.liferay.portal.kernel.util.GetterUtil;
 import com.liferay.portal.kernel.util.ListUtil;
 import com.liferay.portal.kernel.util.Validator;
@@ -34,47 +37,18 @@ import java.util.List;
 public class NotificationUtil {
 
 	public static NotificationContext toNotificationContext(
-		com.liferay.notification.rest.dto.v1_0.NotificationTemplate
-			notificationTemplate,
-		ObjectFieldLocalService objectFieldLocalService) {
+			com.liferay.notification.rest.dto.v1_0.NotificationTemplate
+				notificationTemplate,
+			long objectDefinitionId,
+			ObjectFieldLocalService objectFieldLocalService, User user)
+		throws PortalException {
 
 		NotificationContext notificationContext = new NotificationContext();
 
-		List<Long> attachmentObjectFieldIds = new ArrayList<>();
-
-		String[] attachmentObjectFieldExternalReferenceCodes =
-			notificationTemplate.
-				getAttachmentObjectFieldExternalReferenceCodes();
-
-		if (attachmentObjectFieldExternalReferenceCodes != null) {
-			for (String attachmentObjectFieldExternalReferenceCode :
-					attachmentObjectFieldExternalReferenceCodes) {
-
-				ObjectField objectField =
-					objectFieldLocalService.fetchObjectField(
-						attachmentObjectFieldExternalReferenceCode,
-						notificationTemplate.getObjectDefinitionId());
-
-				if (objectField == null) {
-					attachmentObjectFieldIds.clear();
-
-					break;
-				}
-
-				attachmentObjectFieldIds.add(objectField.getObjectFieldId());
-			}
-		}
-
-		if (attachmentObjectFieldIds.isEmpty()) {
-			notificationContext.setAttachmentObjectFieldIds(
-				ListUtil.fromArray(
-					notificationTemplate.getAttachmentObjectFieldIds()));
-		}
-		else {
-			notificationContext.setAttachmentObjectFieldIds(
-				attachmentObjectFieldIds);
-		}
-
+		notificationContext.setAttachmentObjectFieldIds(
+			_getAttachmentObjectFieldIds(
+				notificationTemplate, objectDefinitionId,
+				objectFieldLocalService, user));
 		notificationContext.setType(notificationTemplate.getType());
 
 		return notificationContext;
@@ -161,6 +135,48 @@ public class NotificationUtil {
 			notificationTemplate.getType());
 
 		return serviceBuilderNotificationTemplate;
+	}
+
+	private static List<Long> _getAttachmentObjectFieldIds(
+			com.liferay.notification.rest.dto.v1_0.NotificationTemplate
+				notificationTemplate,
+			long objectDefinitionId,
+			ObjectFieldLocalService objectFieldLocalService, User user)
+		throws PortalException {
+
+		String[] attachmentObjectFieldExternalReferenceCodes =
+			notificationTemplate.
+				getAttachmentObjectFieldExternalReferenceCodes();
+
+		if (attachmentObjectFieldExternalReferenceCodes == null) {
+			return ListUtil.fromArray(
+				notificationTemplate.getAttachmentObjectFieldIds());
+		}
+
+		List<Long> attachmentObjectFieldIds = new ArrayList<>();
+
+		for (String attachmentObjectFieldExternalReferenceCode :
+				attachmentObjectFieldExternalReferenceCodes) {
+
+			ObjectField objectField = objectFieldLocalService.fetchObjectField(
+				attachmentObjectFieldExternalReferenceCode, objectDefinitionId);
+
+			if (objectField == null) {
+				Group group = GroupLocalServiceUtil.getCompanyGroup(
+					user.getCompanyId());
+
+				EmptyModelManagerUtil.reportMissingReference(
+					ObjectField.class.getName(),
+					attachmentObjectFieldExternalReferenceCode,
+					group.getGroupId());
+
+				continue;
+			}
+
+			attachmentObjectFieldIds.add(objectField.getObjectFieldId());
+		}
+
+		return attachmentObjectFieldIds;
 	}
 
 	private static long _getObjectDefinitionId(
