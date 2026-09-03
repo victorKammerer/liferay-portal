@@ -1,4 +1,4 @@
-{{- $doclibConnectionString := dig (printf "liferay-storage-account-%s" $activeDataPlane) "connectionDetails" "attribute.primary_connection_string" "" $observedResources -}}
+{{- $doclibConnectionString := dig (printf "liferay-storage-account-%s" $activeDataPlane) "connectionDetails" "attribute.primary_connection_string" "" $observedResources | toString | b64dec -}}
 {{- $identityClientId := dig "liferay-identity" "resource" "status" "atProvider" "clientId" "" $observedResources -}}
 {{- $isDatabaseBootstrapped := false -}}
 {{- $isDoclibContainerReady := false -}}
@@ -110,8 +110,8 @@ spec:
         manifest:
             apiVersion: v1
             data:
-                LIFERAY_OVERLAY_CONTAINER_NAME: {{ "overlay" | b64enc | quote }}
-                LIFERAY_OVERLAY_STORAGE_ACCOUNT_NAME: {{ $overlayStorageAccountName | b64enc | quote }}
+                LIFERAY_OVERLAY_BACKEND_OPTIONS: {{ printf "account=%s" $overlayStorageAccountName | b64enc | quote }}
+                LIFERAY_OVERLAY_BUCKET_NAME: {{ "overlay" | b64enc | quote }}
             kind: Secret
             metadata:
                 labels:

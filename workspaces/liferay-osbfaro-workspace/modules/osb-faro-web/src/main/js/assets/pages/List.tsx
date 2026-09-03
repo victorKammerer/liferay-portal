@@ -25,7 +25,8 @@ import {
 } from 'shared/util/router';
 import {toThousands} from 'shared/util/numbers';
 import {useChannelContext} from 'shared/context/channel';
-import {useHistory, useLocation, useParams} from 'react-router-dom';
+import {useLocation, useParams} from 'react-router-dom';
+import {useHistoryAdapter} from 'shared/hooks/useHistoryAdapter';
 import {useLDPEnabled} from 'shared/hooks/useLDPEnabled';
 import {useQueryRangeSelectors} from 'shared/hooks/useQueryRangeSelectors';
 
@@ -92,10 +93,10 @@ const getAssetURL = ({
 		groupId,
 		touchpoint: 'Any',
 		...(itemData.assetType && {
-			type: encodeURIComponent(itemData.assetType),
+			type: itemData.assetType,
 		}),
 		...(assetTitle && {
-			title: encodeURIComponent(assetTitle),
+			title: assetTitle,
 		}),
 	})}?${queryParams.toString()}`;
 };
@@ -103,9 +104,6 @@ const getAssetURL = ({
 const columns = {
 	assetMetricRenderer: ({value}: {value: {value: number}}) => (
 		<span>{toThousands(value.value)}</span>
-	),
-	assetObjectTypeRenderer: ({value}: {value?: AssetObjectTypes}) => (
-		<span>{(value && ASSET_OBJECT_TYPE_LANG_MAP[value]) || ''}</span>
 	),
 	assetTitleRenderer:
 		({
@@ -196,12 +194,6 @@ const TABLE_FIELDS = [
 		sortable: true,
 	},
 	{
-		contentRenderer: 'assetObjectTypeRenderer',
-		fieldName: 'objectType',
-		label: Liferay.Language.get('object-type'),
-		sortable: true,
-	},
-	{
 		contentRenderer: 'assetMetricRenderer',
 		fieldName: 'viewsMetric',
 		label: Liferay.Language.get('views'),
@@ -222,7 +214,7 @@ const TABLE_FIELDS = [
 ];
 
 const List = () => {
-	const history = useHistory();
+	const history = useHistoryAdapter();
 	const {search} = useLocation();
 	const {selectedChannel} = useChannelContext();
 	const {channelId, groupId} = useParams();
@@ -419,17 +411,8 @@ const List = () => {
 
 			<BasePage.SubHeader fluid>
 				<div className="d-flex justify-content-end w-100">
-					<div className="mr-1">
-						<DownloadStaticCSVReport
-							disabled={false}
-							getFDSQuery={() => fdsQueryRef.current}
-							rangeSelectors={rangeSelectors}
-							type={CSVType.Asset}
-							typeLang={Liferay.Language.get('assets')}
-						/>
-					</div>
-
 					<DropdownRangeKey
+						bordered
 						legacy={false}
 						onRangeSelectorChange={(rangeSelectors) => {
 							history.push(
@@ -449,6 +432,17 @@ const List = () => {
 							setRangeSelectors(rangeSelectors);
 						}}
 						rangeSelectors={rangeSelectors}
+					/>
+
+					<span className="align-self-stretch border-left mx-3" />
+
+					<DownloadStaticCSVReport
+						bordered
+						disabled={false}
+						getFDSQuery={() => fdsQueryRef.current}
+						rangeSelectors={rangeSelectors}
+						type={CSVType.Asset}
+						typeLang={Liferay.Language.get('assets')}
 					/>
 				</div>
 			</BasePage.SubHeader>
@@ -481,8 +475,6 @@ const List = () => {
 						apiURL={`/o/faro/contacts/${groupId}/asset-summary?channelId=${channelId}&${rangeSelectorParams}`}
 						customDataRenderers={{
 							assetMetricRenderer: columns.assetMetricRenderer,
-							assetObjectTypeRenderer:
-								columns.assetObjectTypeRenderer,
 							assetTitleRenderer: columns.assetTitleRenderer({
 								accountId,
 								accountName,

@@ -256,12 +256,9 @@ const AssetCategories = ({
 	return (
 		<ClayPanel
 			collapsable={collapsable}
+			collapseHeaderClassNames="text-secondary"
 			defaultExpanded={true}
-			displayTitle={
-				<ClayPanel.Title className="panel-title text-secondary">
-					{title ?? Liferay.Language.get('categories')}
-				</ClayPanel.Title>
-			}
+			displayTitle={title ?? Liferay.Language.get('categories')}
 			displayType="unstyled"
 			showCollapseIcon={collapsable}
 		>
@@ -341,7 +338,7 @@ const AssetCategories = ({
 					hasUpdatePermission ? (
 						<AIAssistantTriggerButton
 							anchorId={AI_ASSISTANT_TOOLBAR_TRIGGER_ID}
-							className="ml-2"
+							className="ai-assistant-chat__trigger--categorization ml-2"
 							hideLabel
 							instructionDefinitionScope="cms"
 							label={Liferay.Language.get(

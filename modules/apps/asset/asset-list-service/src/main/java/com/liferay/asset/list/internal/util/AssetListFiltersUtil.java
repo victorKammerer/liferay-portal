@@ -6,10 +6,7 @@
 package com.liferay.asset.list.internal.util;
 
 import com.liferay.object.constants.ObjectFieldConstants;
-import com.liferay.object.model.ObjectDefinition;
 import com.liferay.object.model.ObjectField;
-import com.liferay.object.service.ObjectDefinitionLocalServiceUtil;
-import com.liferay.object.service.ObjectFieldLocalServiceUtil;
 import com.liferay.petra.string.CharPool;
 import com.liferay.petra.string.StringPool;
 import com.liferay.portal.kernel.json.JSONArray;
@@ -23,20 +20,26 @@ import com.liferay.portal.kernel.search.MatchAllQuery;
 import com.liferay.portal.kernel.search.MatchQuery;
 import com.liferay.portal.kernel.search.NestedQuery;
 import com.liferay.portal.kernel.search.Query;
+import com.liferay.portal.kernel.search.StringQuery;
 import com.liferay.portal.kernel.search.TermQuery;
 import com.liferay.portal.kernel.search.TermRangeQuery;
 import com.liferay.portal.kernel.search.WildcardQuery;
+import com.liferay.portal.kernel.search.filter.BooleanFilter;
+import com.liferay.portal.kernel.search.filter.Filter;
+import com.liferay.portal.kernel.search.filter.TermFilter;
+import com.liferay.portal.kernel.search.filter.TermsFilter;
 import com.liferay.portal.kernel.util.FastDateFormatFactoryUtil;
 import com.liferay.portal.kernel.util.GetterUtil;
 import com.liferay.portal.kernel.util.HashMapBuilder;
-import com.liferay.portal.kernel.util.PortalUtil;
 import com.liferay.portal.kernel.util.SetUtil;
 import com.liferay.portal.kernel.util.StringUtil;
 import com.liferay.portal.kernel.util.Validator;
 
 import java.text.Format;
 
+import java.util.ArrayList;
 import java.util.Calendar;
+import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
@@ -54,6 +57,7 @@ public class AssetListFiltersUtil {
 			return new BooleanClause[0];
 		}
 
+		BooleanFilter booleanFilter = new BooleanFilter();
 		BooleanQuery booleanQuery = new BooleanQuery();
 
 		boolean hasMustClause = false;
@@ -61,15 +65,31 @@ public class AssetListFiltersUtil {
 		for (int i = 0; i < filtersJSONArray.length(); i++) {
 			JSONObject jsonObject = filtersJSONArray.getJSONObject(i);
 
+			Filter filter = _toFilter(jsonObject);
+
+			boolean negatedOperator = _isNegatedOperator(
+				jsonObject.getString("operatorName", "contains"));
+
+			if (filter != null) {
+				if (negatedOperator) {
+					booleanFilter.add(filter, BooleanClauseOccur.MUST_NOT);
+				}
+				else {
+					booleanFilter.add(filter, BooleanClauseOccur.MUST);
+
+					hasMustClause = true;
+				}
+
+				continue;
+			}
+
 			Query query = _toQuery(companyId, jsonObject, locale);
 
 			if (query == null) {
 				continue;
 			}
 
-			if (_isNegatedOperator(
-					jsonObject.getString("operatorName", "contains"))) {
-
+			if (negatedOperator) {
 				booleanQuery.add(query, BooleanClauseOccur.MUST_NOT);
 			}
 			else {
@@ -79,7 +99,7 @@ public class AssetListFiltersUtil {
 			}
 		}
 
-		if (!booleanQuery.hasClauses()) {
+		if (!booleanFilter.hasClauses() && !booleanQuery.hasClauses()) {
 			return new BooleanClause[0];
 		}
 
@@ -87,35 +107,13 @@ public class AssetListFiltersUtil {
 			booleanQuery.add(new MatchAllQuery(), BooleanClauseOccur.MUST);
 		}
 
+		if (booleanFilter.hasClauses()) {
+			booleanQuery.setPreBooleanFilter(booleanFilter);
+		}
+
 		return new BooleanClause[] {
 			new BooleanClause<>(booleanQuery, BooleanClauseOccur.MUST)
 		};
-	}
-
-	private static ObjectDefinition _fetchObjectDefinition(
-		long classNameId, long companyId) {
-
-		if (classNameId <= 0) {
-			return null;
-		}
-
-		return ObjectDefinitionLocalServiceUtil.
-			fetchObjectDefinitionByClassName(
-				companyId, PortalUtil.getClassName(classNameId));
-	}
-
-	private static ObjectField _fetchObjectField(
-		long classNameId, long companyId, String name) {
-
-		ObjectDefinition objectDefinition = _fetchObjectDefinition(
-			classNameId, companyId);
-
-		if (objectDefinition == null) {
-			return null;
-		}
-
-		return ObjectFieldLocalServiceUtil.fetchObjectField(
-			objectDefinition.getObjectDefinitionId(), name);
 	}
 
 	private static String _getCommonFieldName(
@@ -134,50 +132,6 @@ public class AssetListFiltersUtil {
 
 	private static String _getCommonFieldType(String propertyName) {
 		return _commonFieldTypesMap.get(propertyName);
-	}
-
-	private static String _getSubfield(Locale locale, ObjectField objectField) {
-		if (objectField.isIndexedAsKeyword()) {
-			return "nestedFieldArray.value_keyword";
-		}
-
-		String dbType = objectField.getDBType();
-
-		if (ObjectFieldConstants.DB_TYPE_BIG_DECIMAL.equals(dbType) ||
-			ObjectFieldConstants.DB_TYPE_DOUBLE.equals(dbType)) {
-
-			return "nestedFieldArray.value_double";
-		}
-
-		if (ObjectFieldConstants.DB_TYPE_BOOLEAN.equals(dbType)) {
-			return "nestedFieldArray.value_boolean";
-		}
-
-		if (ObjectFieldConstants.DB_TYPE_DATE.equals(dbType) ||
-			ObjectFieldConstants.DB_TYPE_DATE_TIME.equals(dbType)) {
-
-			return "nestedFieldArray.value_date";
-		}
-
-		if (ObjectFieldConstants.DB_TYPE_INTEGER.equals(dbType)) {
-			return "nestedFieldArray.value_integer";
-		}
-
-		if (ObjectFieldConstants.DB_TYPE_LONG.equals(dbType)) {
-			return "nestedFieldArray.value_long";
-		}
-
-		if (objectField.isLocalized()) {
-			return Field.getLocalizedName(locale, "nestedFieldArray.value");
-		}
-
-		String indexedLanguageId = objectField.getIndexedLanguageId();
-
-		if (Validator.isNotNull(indexedLanguageId)) {
-			return "nestedFieldArray.value_" + indexedLanguageId;
-		}
-
-		return "nestedFieldArray.value_text";
 	}
 
 	private static boolean _isCommonFieldRow(JSONObject jsonObject) {
@@ -296,6 +250,10 @@ public class AssetListFiltersUtil {
 			return new MatchQuery(field, value);
 		}
 
+		if (Objects.equals(field, Field.USER_NAME)) {
+			value = StringUtil.toLowerCase(value);
+		}
+
 		if (operatorName.equals("contains") ||
 			operatorName.equals("not-contains")) {
 
@@ -332,6 +290,58 @@ public class AssetListFiltersUtil {
 		return padded.substring(0, 8) + (upperBound ? "235959" : "000000");
 	}
 
+	private static Filter _toFilter(JSONObject jsonObject) {
+		if (!_isCommonFieldRow(jsonObject)) {
+			return null;
+		}
+
+		String fieldName = _assetFilterFieldNamesMap.get(
+			jsonObject.getString("propertyName"));
+
+		if (fieldName == null) {
+			return null;
+		}
+
+		JSONArray valueJSONArray = jsonObject.getJSONArray("value");
+
+		if (JSONUtil.isEmpty(valueJSONArray)) {
+			return null;
+		}
+
+		List<String> values = new ArrayList<>();
+
+		for (int i = 0; i < valueJSONArray.length(); i++) {
+			JSONObject itemJSONObject = valueJSONArray.getJSONObject(i);
+
+			String value = itemJSONObject.getString("value");
+
+			if (Validator.isNotNull(value)) {
+				values.add(value);
+			}
+		}
+
+		if (values.isEmpty()) {
+			return null;
+		}
+
+		if (Objects.equals(jsonObject.getString("quantifier"), "all")) {
+			BooleanFilter booleanFilter = new BooleanFilter();
+
+			for (String value : values) {
+				booleanFilter.add(
+					new TermFilter(fieldName, value), BooleanClauseOccur.MUST);
+			}
+
+			return booleanFilter;
+		}
+
+		TermsFilter termsFilter = new TermsFilter(fieldName);
+
+		termsFilter.addValues(values.toArray(new String[0]));
+
+		return termsFilter;
+	}
+
 	private static NestedQuery _toNestedQuery(
 		long companyId, JSONObject jsonObject, Locale locale) {
 
@@ -342,7 +352,7 @@ public class AssetListFiltersUtil {
 			return null;
 		}
 
-		ObjectField objectField = _fetchObjectField(
+		ObjectField objectField = AssetListObjectFieldUtil.fetchObjectField(
 			jsonObject.getLong("classNameId"), companyId, propertyName);
 
 		if (objectField == null) {
@@ -351,7 +361,8 @@ public class AssetListFiltersUtil {
 
 		String operatorName = jsonObject.getString("operatorName", "contains");
 
-		String subfield = _getSubfield(locale, objectField);
+		String subfield = AssetListObjectFieldUtil.getFilterSubfield(
+			locale, objectField);
 
 		Query query = _toValueQuery(
 			jsonObject, objectField, operatorName, subfield, value);
@@ -415,8 +426,23 @@ public class AssetListFiltersUtil {
 		}
 
 		if (_isCommonFieldRow(jsonObject)) {
-			return _toCommonFieldQuery(
-				jsonObject, locale, jsonObject.getString("propertyName"));
+			String propertyName = jsonObject.getString("propertyName");
+
+			if (Objects.equals(propertyName, "keywords")) {
+				String value = jsonObject.getString("value");
+
+				if (Validator.isNull(value)) {
+					return null;
+				}
+
+				if (value.contains(StringPool.SPACE)) {
+					value = StringUtil.quote(value, CharPool.QUOTE);
+				}
+
+				return new StringQuery(value);
+			}
+
+			return _toCommonFieldQuery(jsonObject, locale, propertyName);
 		}
 
 		return _toNestedQuery(companyId, jsonObject, locale);
@@ -555,6 +581,12 @@ public class AssetListFiltersUtil {
 
 	private static final String _TYPE_TEXT = "text";
 
+	private static final Map<String, String> _assetFilterFieldNamesMap =
+		HashMapBuilder.put(
+			"assetCategories", Field.ASSET_CATEGORY_IDS
+		).put(
+			"assetTags", Field.ASSET_TAG_NAMES + ".raw"
+		).build();
 	private static final Map<String, String> _commonFieldTypesMap =
 		HashMapBuilder.put(
 			Field.CREATE_DATE, _TYPE_DATE

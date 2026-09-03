@@ -133,6 +133,7 @@ import com.liferay.object.service.ObjectStateLocalService;
 import com.liferay.object.service.ObjectStateTransitionLocalService;
 import com.liferay.object.service.ObjectValidationRuleLocalService;
 import com.liferay.object.service.test.util.ObjectFieldTestUtil;
+import com.liferay.object.test.util.EncryptedObjectFieldTestUtil;
 import com.liferay.object.test.util.ObjectDefinitionTestUtil;
 import com.liferay.object.test.util.ObjectEntryFolderTestUtil;
 import com.liferay.object.test.util.ObjectRelationshipTestUtil;
@@ -2147,9 +2148,9 @@ public class ObjectEntryLocalServiceTest {
 
 	@Test
 	public void testAddObjectEntryWithEncryptedObjectField() throws Exception {
-		String key = ObjectFieldTestUtil.generateKey("AES");
+		String key = EncryptedObjectFieldTestUtil.generateKey("AES");
 
-		ObjectFieldTestUtil.withEncryptedObjectFieldProperties(
+		EncryptedObjectFieldTestUtil.withEncryptedObjectFieldProperties(
 			"AES", true, key,
 			() -> {
 				_addCustomObjectField(
@@ -2192,7 +2193,7 @@ public class ObjectEntryLocalServiceTest {
 			"objectEntryERC", ObjectDefinitionConstants.GROUP_ID_DEFAULT,
 			_objectDefinition.getObjectDefinitionId());
 
-		ObjectFieldTestUtil.withEncryptedObjectFieldProperties(
+		EncryptedObjectFieldTestUtil.withEncryptedObjectFieldProperties(
 			"", true, "",
 			() -> {
 				AssertUtils.assertFailure(
@@ -2218,7 +2219,7 @@ public class ObjectEntryLocalServiceTest {
 
 				_assertCount(1);
 			});
-		ObjectFieldTestUtil.withEncryptedObjectFieldProperties(
+		EncryptedObjectFieldTestUtil.withEncryptedObjectFieldProperties(
 			"", true, key,
 			() -> {
 				AssertUtils.assertFailure(
@@ -2251,7 +2252,7 @@ public class ObjectEntryLocalServiceTest {
 
 				_assertCount(1);
 			});
-		ObjectFieldTestUtil.withEncryptedObjectFieldProperties(
+		EncryptedObjectFieldTestUtil.withEncryptedObjectFieldProperties(
 			"AES", true, "",
 			() -> {
 				AssertUtils.assertFailure(
@@ -5380,6 +5381,42 @@ public class ObjectEntryLocalServiceTest {
 
 		_objectRelationshipLocalService.deleteObjectRelationship(
 			objectRelationship1);
+	}
+
+	@Test
+	@TestInfo("LPD-103992")
+	public void testGetIndexedValues() throws Exception {
+		String objectFieldName = "a" + RandomTestUtil.randomString();
+
+		ObjectDefinition objectDefinition = _publishCustomObjectDefinition(
+			Collections.singletonList(
+				ObjectFieldUtil.createObjectField(
+					ObjectFieldConstants.BUSINESS_TYPE_TEXT,
+					ObjectFieldConstants.DB_TYPE_STRING, true, false, null,
+					RandomTestUtil.randomString(), objectFieldName, false)));
+
+		String value = RandomTestUtil.randomString();
+
+		ObjectEntry objectEntry = _addObjectEntry(
+			0, objectDefinition.getObjectDefinitionId(),
+			HashMapBuilder.<String, Serializable>put(
+				objectFieldName, value
+			).build());
+
+		objectDefinition.setTitleObjectFieldId(0);
+
+		objectDefinition = _objectDefinitionLocalService.updateObjectDefinition(
+			objectDefinition);
+
+		objectEntry = _objectEntryLocalService.getObjectEntry(
+			objectEntry.getObjectEntryId());
+
+		Map<String, Serializable> indexedValues =
+			_objectEntryLocalService.getIndexedValues(objectEntry);
+
+		Assert.assertEquals(value, indexedValues.get(objectFieldName));
+
+		_objectDefinitionLocalService.deleteObjectDefinition(objectDefinition);
 	}
 
 	@Test
@@ -9870,6 +9907,14 @@ public class ObjectEntryLocalServiceTest {
 		return serviceRegistration::unregister;
 	}
 
+	private ObjectEntry _rewindDisplayDate(ObjectEntry objectEntry) {
+		objectEntry.setDisplayDate(
+			new java.sql.Date(
+				System.currentTimeMillis() - TimeUnit.MINUTE.toMillis(1)));
+
+		return _objectEntryLocalService.updateObjectEntry(objectEntry);
+	}
+
 	private void _testAddObjectEntry(
 			String expectedValue, String fieldName,
 			ObjectDefinition objectDefinition, String value)
@@ -10330,8 +10375,7 @@ public class ObjectEntryLocalServiceTest {
 			HashMapBuilder.<String, Serializable>put(
 				"displayDate",
 				new java.sql.Date(
-					System.currentTimeMillis() +
-						TimeUnit.MILLISECOND.toMillis(1000))
+					System.currentTimeMillis() + TimeUnit.HOUR.toMillis(1))
 			).putAll(
 				requiredValues
 			).build(),
@@ -10348,7 +10392,7 @@ public class ObjectEntryLocalServiceTest {
 		Assert.assertEquals(
 			WorkflowConstants.STATUS_SCHEDULED, objectEntry3.getStatus());
 
-		Thread.sleep(1000);
+		objectEntry3 = _rewindDisplayDate(objectEntry3);
 
 		jobExecutorUnsafeRunnable.run();
 
@@ -10405,8 +10449,7 @@ public class ObjectEntryLocalServiceTest {
 			HashMapBuilder.<String, Serializable>put(
 				"displayDate",
 				new java.sql.Date(
-					System.currentTimeMillis() +
-						TimeUnit.MILLISECOND.toMillis(1000))
+					System.currentTimeMillis() + TimeUnit.HOUR.toMillis(1))
 			).putAll(
 				requiredValues
 			).build(),
@@ -10423,7 +10466,7 @@ public class ObjectEntryLocalServiceTest {
 		Assert.assertEquals(
 			WorkflowConstants.STATUS_DENIED, objectEntry5.getStatus());
 
-		Thread.sleep(1000);
+		objectEntry5 = _rewindDisplayDate(objectEntry5);
 
 		jobExecutorUnsafeRunnable.run();
 

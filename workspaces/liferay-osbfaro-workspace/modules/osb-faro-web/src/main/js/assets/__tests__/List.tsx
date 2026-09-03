@@ -3,11 +3,10 @@ import mockStore, {mockStoreDataLDP} from 'test/mock-store';
 import React from 'react';
 import {ChannelContext} from 'shared/context/channel';
 import {cleanup, fireEvent, render, screen} from '@testing-library/react';
-import {createMemoryHistory} from 'history';
 import {mockChannelContext} from 'test/mock-channel-context';
+import {MemoryRouter} from 'react-router-dom';
 import {Provider} from 'react-redux';
 import {RangeKeyTimeRanges} from 'shared/util/constants';
-import {Router} from 'react-router-dom';
 
 jest.unmock('react-dom');
 
@@ -15,7 +14,6 @@ jest.mock('@liferay/frontend-data-set-web', () => ({
 	...jest.requireActual('@liferay/frontend-data-set-web'),
 	FrontendDataSet: ({
 		additionalAPIURLParametersTransformer,
-		customDataRenderers,
 		emptyState,
 		filters,
 		groupedFilters,
@@ -25,7 +23,6 @@ jest.mock('@liferay/frontend-data-set-web', () => ({
 		views,
 	}: {
 		additionalAPIURLParametersTransformer?: (loadDataArgs: any) => any;
-		customDataRenderers?: {[key: string]: React.FC<any>};
 		emptyState?: {
 			description?: React.ReactNode;
 			image?: string;
@@ -72,24 +69,6 @@ jest.mock('@liferay/frontend-data-set-web', () => ({
 
 				<div data-testid="fds-fields">
 					{JSON.stringify(views?.[0]?.schema?.fields ?? null)}
-				</div>
-
-				<div data-testid="fds-object-type-cells">
-					{[undefined, 'content', 'file', 'unknown'].map((value) => {
-						const ObjectTypeCell =
-							customDataRenderers?.assetObjectTypeRenderer;
-
-						return (
-							ObjectTypeCell && (
-								<div
-									data-testid={`fds-object-type-cell-${value}`}
-									key={String(value)}
-								>
-									<ObjectTypeCell value={value} />
-								</div>
-							)
-						);
-					})}
 				</div>
 
 				{emptyState && (
@@ -227,10 +206,12 @@ jest.mock('@liferay/frontend-data-set-web', () => ({
 
 jest.mock('shared/components/download-report/DownloadStaticCSVReport', () => ({
 	DownloadStaticCSVReport: ({
+		bordered,
 		getFDSQuery,
 		rangeSelectors,
 		type,
 	}: {
+		bordered?: boolean;
 		getFDSQuery?: () => {filter: string; query: string};
 		rangeSelectors?: any;
 		type?: string;
@@ -240,6 +221,10 @@ jest.mock('shared/components/download-report/DownloadStaticCSVReport', () => ({
 		return (
 			<div data-testid="download-csv">
 				<div data-testid="download-csv-type">{type}</div>
+
+				<div data-testid="download-csv-bordered">
+					{JSON.stringify(!!bordered)}
+				</div>
 
 				<div data-testid="download-csv-range-selectors">
 					{JSON.stringify(rangeSelectors ?? null)}
@@ -266,13 +251,19 @@ jest.mock('shared/components/download-report/DownloadStaticCSVReport', () => ({
 
 jest.mock('shared/components/dropdown-range-key/DropdownRangeKey', () => ({
 	DropdownRangeKey: ({
+		bordered,
 		onRangeSelectorChange,
 		rangeSelectors,
 	}: {
+		bordered?: boolean;
 		onRangeSelectorChange: (rs: any) => void;
 		rangeSelectors: any;
 	}) => (
 		<div data-testid="dropdown-range-key">
+			<span data-testid="dropdown-range-key-bordered">
+				{JSON.stringify(!!bordered)}
+			</span>
+
 			<span data-testid="current-range-key">
 				{rangeSelectors.rangeKey}
 			</span>
@@ -318,7 +309,7 @@ jest.mock('shared/util/breadcrumbs', () => ({
 
 jest.mock('react-router-dom', () => ({
 	...jest.requireActual('react-router-dom'),
-	useHistory: jest.fn(),
+	useNavigate: jest.fn(),
 	useParams: () => ({
 		channelId: '123',
 		groupId: '23',
@@ -329,13 +320,7 @@ jest.mock('react-router-dom', () => ({
 
 const mockHistoryPush = jest.fn();
 
-const buildHistory = (path = '/workspace/23/123/assets') => {
-	const history = createMemoryHistory({initialEntries: [path]});
-
-	history.push = mockHistoryPush;
-
-	return history;
-};
+const buildInitialEntries = (path = '/workspace/23/123/assets') => [path];
 
 // LDP is enabled by default so the account/segment filters, which are LDP-only,
 // stay present for the shared assertions and the snapshot.
@@ -344,33 +329,34 @@ const store = mockStore(mockStoreDataLDP);
 
 // Helper: wrap List in the minimum context providers it needs.
 
-const renderList = (
-	{
-		queryString = '',
-		store: storeOverride = store,
-	}: {queryString?: string; store?: typeof store} = {},
-	history = buildHistory(`/workspace/23/123/assets${queryString}`)
-) =>
+const renderList = ({
+	queryString = '',
+	store: storeOverride = store,
+}: {queryString?: string; store?: typeof store} = {}) =>
 	render(
 		<Provider store={storeOverride}>
 			<ChannelContext.Provider value={mockChannelContext() as any}>
-				<Router history={history}>
+				<MemoryRouter
+					initialEntries={buildInitialEntries(
+						`/workspace/23/123/assets${queryString}`
+					)}
+				>
 					<List />
-				</Router>
+				</MemoryRouter>
 			</ChannelContext.Provider>
 		</Provider>
 	);
 
-// Obtain the mocked useHistory so we can configure it per test.
+// Obtain the mocked useNavigate so we can configure it per test.
 
 // eslint-disable-next-line @typescript-eslint/no-var-requires
-const {useHistory} = require('react-router-dom');
+const {useNavigate} = require('react-router-dom');
 
 describe('List', () => {
 	beforeEach(() => {
 		jest.clearAllMocks();
 
-		useHistory.mockReturnValue({push: mockHistoryPush});
+		useNavigate.mockReturnValue(mockHistoryPush);
 	});
 
 	afterEach(cleanup);
@@ -461,6 +447,31 @@ describe('List', () => {
 			expect(
 				screen.getByTestId('dropdown-range-key')
 			).toBeInTheDocument();
+		});
+
+		it('should render the DropdownRangeKey as bordered', () => {
+			renderList();
+
+			expect(
+				screen.getByTestId('dropdown-range-key-bordered')
+			).toHaveTextContent('true');
+		});
+
+		it('should render the DropdownRangeKey before the Download CSV button, separated by a divider', () => {
+			const {container} = renderList();
+
+			const dropdownRangeKey = screen.getByTestId('dropdown-range-key');
+			const downloadCSV = screen.getByTestId('download-csv');
+			const divider = container.querySelector(
+				'.align-self-stretch.border-left'
+			);
+
+			expect(divider).toBeInTheDocument();
+
+			expect(
+				dropdownRangeKey.compareDocumentPosition(downloadCSV) &
+					Node.DOCUMENT_POSITION_FOLLOWING
+			).toBeTruthy();
 		});
 
 		it('should match the snapshot', () => {
@@ -569,31 +580,11 @@ describe('List', () => {
 		});
 	});
 
-	describe('object type column', () => {
+	describe('table columns', () => {
 		const getFields = () =>
 			JSON.parse(screen.getByTestId('fds-fields').textContent);
 
-		const getObjectTypeField = () => {
-			renderList();
-
-			return getFields().find(
-				(field: {fieldName: string}) => field.fieldName === 'objectType'
-			);
-		};
-
-		it('should add an object type column to the table', () => {
-			expect(getObjectTypeField()).toBeDefined();
-		});
-
-		it('should label the object type column "Object Type"', () => {
-			expect(getObjectTypeField().label).toBe('Object Type');
-		});
-
-		it('should make the object type column sortable', () => {
-			expect(getObjectTypeField().sortable).toBe(true);
-		});
-
-		it('should place the object type column after the type column', () => {
+		it('should not show an object type column', () => {
 			renderList();
 
 			const fieldNames = getFields().map(
@@ -603,43 +594,10 @@ describe('List', () => {
 			expect(fieldNames).toEqual([
 				'assetTitle',
 				'assetType',
-				'objectType',
 				'viewsMetric',
 				'impressionsMetric',
 				'downloadsMetric',
 			]);
-		});
-
-		it('should render the content object type as "Content"', () => {
-			renderList();
-
-			expect(
-				screen.getByTestId('fds-object-type-cell-content')
-			).toHaveTextContent('Content');
-		});
-
-		it('should render the file object type as "File"', () => {
-			renderList();
-
-			expect(
-				screen.getByTestId('fds-object-type-cell-file')
-			).toHaveTextContent('File');
-		});
-
-		it('should render nothing when the asset carries no object type', () => {
-			renderList();
-
-			expect(
-				screen.getByTestId('fds-object-type-cell-undefined')
-			).toHaveTextContent('');
-		});
-
-		it('should render nothing for an unrecognized object type', () => {
-			renderList();
-
-			expect(
-				screen.getByTestId('fds-object-type-cell-unknown')
-			).toHaveTextContent('');
 		});
 	});
 
@@ -726,6 +684,14 @@ describe('List', () => {
 			);
 		});
 
+		it('should render the Download CSV button as bordered', () => {
+			renderList();
+
+			expect(
+				screen.getByTestId('download-csv-bordered')
+			).toHaveTextContent('true');
+		});
+
 		it('should pass the current rangeSelectors to the Download CSV button', () => {
 			renderList();
 
@@ -779,7 +745,6 @@ describe('List', () => {
 		const SORTABLE_KEYS = [
 			'assetTitle',
 			'assetType',
-			'objectType',
 			'viewsMetric',
 			'impressionsMetric',
 			'downloadsMetric',
@@ -1059,9 +1024,9 @@ describe('List', () => {
 					<ChannelContext.Provider
 						value={contextWithNoChannel as any}
 					>
-						<Router history={buildHistory()}>
+						<MemoryRouter initialEntries={buildInitialEntries()}>
 							<List />
-						</Router>
+						</MemoryRouter>
 					</ChannelContext.Provider>
 				</Provider>
 			);
