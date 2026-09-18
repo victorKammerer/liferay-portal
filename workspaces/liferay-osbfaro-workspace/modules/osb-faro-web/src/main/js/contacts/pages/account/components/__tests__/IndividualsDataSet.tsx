@@ -1,10 +1,12 @@
 import IndividualsDataSet, {getVisitorType} from '../IndividualsDataSet';
 import React from 'react';
 import {cleanup, render, screen} from '@testing-library/react';
+import {warmFrontendDataSet} from 'test/warm-frontend-data-set';
 
 jest.unmock('react-dom');
 
 let lastFDSProps: any;
+let mockSearch = '';
 
 jest.mock('@liferay/frontend-data-set-web', () => ({
 	...jest.requireActual('@liferay/frontend-data-set-web'),
@@ -17,13 +19,17 @@ jest.mock('@liferay/frontend-data-set-web', () => ({
 
 jest.mock('react-router-dom', () => ({
 	...jest.requireActual('react-router-dom'),
+	useLocation: () => ({search: mockSearch}),
 	useParams: () => ({channelId: '456', groupId: '23', id: 'acc-1'}),
 }));
+
+beforeAll(warmFrontendDataSet);
 
 describe('IndividualsDataSet', () => {
 	beforeEach(() => {
 		jest.clearAllMocks();
 		lastFDSProps = undefined;
+		mockSearch = '';
 	});
 
 	afterEach(cleanup);
@@ -41,7 +47,45 @@ describe('IndividualsDataSet', () => {
 		render(<IndividualsDataSet />);
 
 		expect(lastFDSProps.apiURL).toBe(
-			'/o/faro/contacts/23/account/acc-1/individuals?channelId=456'
+			'/o/faro/contacts/23/account/acc-1/individuals?channelId=456&rangeKey=30'
+		);
+	});
+
+	it('should default the range to the last thirty days', () => {
+		render(<IndividualsDataSet />);
+
+		expect(lastFDSProps.apiURL).toContain('rangeKey=30');
+	});
+
+	it('should request the range that is on the query string', () => {
+		mockSearch = '?rangeKey=7';
+
+		render(<IndividualsDataSet />);
+
+		expect(lastFDSProps.apiURL).toBe(
+			'/o/faro/contacts/23/account/acc-1/individuals?channelId=456&rangeKey=7'
+		);
+	});
+
+	it('should request a custom range by its bounds alone', () => {
+		mockSearch =
+			'?rangeEnd=2026-02-20&rangeKey=CUSTOM&rangeStart=2026-02-10';
+
+		render(<IndividualsDataSet />);
+
+		expect(lastFDSProps.apiURL).toBe(
+			'/o/faro/contacts/23/account/acc-1/individuals?channelId=456&rangeEnd=2026-02-20&rangeStart=2026-02-10'
+		);
+	});
+
+	it('should tell an empty result apart by the selected period', () => {
+		render(<IndividualsDataSet />);
+
+		expect(lastFDSProps.emptyState.description).toBe(
+			'No activities were found on the selected period.'
+		);
+		expect(lastFDSProps.emptyState.title).toBe(
+			'No individuals were found.'
 		);
 	});
 
@@ -62,10 +106,10 @@ describe('IndividualsDataSet', () => {
 			);
 		});
 
-		it('should request only three individuals', () => {
+		it('should request only five individuals', () => {
 			render(<IndividualsDataSet preview />);
 
-			expect(lastFDSProps.views[0].initialPaginationDelta).toBe(3);
+			expect(lastFDSProps.views[0].initialPaginationDelta).toBe(5);
 		});
 
 		it('should hide the management bar, the search and the pagination', () => {
@@ -203,6 +247,39 @@ describe('IndividualsDataSet', () => {
 			'/contacts/individuals/known-individuals/individual-1'
 		);
 		expect(link.props.children).toBe('Ada Lovelace');
+	});
+
+	it('should carry the range to the individual profile', () => {
+		mockSearch =
+			'?rangeEnd=2026-02-20&rangeKey=CUSTOM&rangeStart=2026-02-10';
+
+		render(<IndividualsDataSet />);
+
+		const renderer =
+			lastFDSProps.customDataRenderers.individualNameRenderer;
+
+		const link = renderer({
+			itemData: {id: 'individual-1'},
+			value: 'Ada Lovelace',
+		});
+
+		expect(link.props.href).toContain('rangeEnd=2026-02-20');
+		expect(link.props.href).toContain('rangeKey=CUSTOM');
+		expect(link.props.href).toContain('rangeStart=2026-02-10');
+	});
+
+	it('should not put the channel id on the individual profile query', () => {
+		render(<IndividualsDataSet />);
+
+		const renderer =
+			lastFDSProps.customDataRenderers.individualNameRenderer;
+
+		const link = renderer({
+			itemData: {id: 'individual-1'},
+			value: 'Ada Lovelace',
+		});
+
+		expect(link.props.href).not.toContain('channelId=');
 	});
 
 	it('should format the last active date', () => {

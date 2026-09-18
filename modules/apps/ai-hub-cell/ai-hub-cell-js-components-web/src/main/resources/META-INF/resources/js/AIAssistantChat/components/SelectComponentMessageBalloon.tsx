@@ -4,22 +4,23 @@
  */
 
 import ClayForm, {ClaySelectWithOption} from '@clayui/form';
-import ClayIcon from '@clayui/icon';
 import React, {useId, useState} from 'react';
 
-import {executeHttpRequestAction} from '../api';
+import {AIAssistantActionOutcome, requestActionOutcome} from '../api';
 import {AgentComponent} from '../types';
+import AIAssistantMessageBalloonIcon from './AIAssistantMessageBalloonIcon';
 
 import '../chat.scss';
 
 export interface SelectComponentMessageBalloonProps {
 	component: AgentComponent;
+	onAction?: (outcome: AIAssistantActionOutcome) => void;
 	setIsGenerating: React.Dispatch<React.SetStateAction<boolean>>;
 }
 
 const SelectComponentMessageBalloon: React.FC<
 	SelectComponentMessageBalloonProps
-> = ({component, setIsGenerating}) => {
+> = ({component, onAction, setIsGenerating}) => {
 	const [selectedIndex, setSelectedIndex] = useState('');
 	const [submitted, setSubmitted] = useState(false);
 
@@ -40,18 +41,25 @@ const SelectComponentMessageBalloon: React.FC<
 
 		setIsGenerating(true);
 
-		try {
-			await executeHttpRequestAction(option.action['http-request']);
-		}
-		catch {
+		const outcome = await requestActionOutcome(
+			option.action['http-request']
+		);
+
+		if (!outcome.success) {
 			setIsGenerating(false);
+
+			setSubmitted(false);
+
+			setSelectedIndex('');
 		}
+
+		onAction?.(outcome);
 	}
 
 	return (
 		<div className="ai-assistant-chat__ai-assistant-message-balloon ai-assistant-chat__content-generation-balloon">
 			<div className="ai-assistant-chat__content-generation-balloon-header">
-				<ClayIcon spritemap={Liferay.Icons.spritemap} symbol="stars" />
+				<AIAssistantMessageBalloonIcon />
 
 				<span
 					className="ai-assistant-chat__content-generation-balloon-title"

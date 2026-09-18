@@ -34,7 +34,9 @@ import org.osgi.service.component.annotations.Reference;
  * @author Feliphe Marinho
  */
 @Component(
-	property = "dto.class.name=com.liferay.object.model.ObjectField",
+	property = {
+		"default=true", "dto.class.name=com.liferay.object.model.ObjectField"
+	},
 	service = DTOConverter.class
 )
 public class ObjectFieldDTOConverter
@@ -81,6 +83,9 @@ public class ObjectFieldDTOConverter
 						com.liferay.object.field.setting.util.
 							ObjectFieldSettingUtil.getDefaultValue(
 								null, objectField, null)));
+				setDescription(
+					() -> LocalizedMapUtil.getLanguageIdMap(
+						objectField.getDescriptionMap()));
 				setExternalReferenceCode(objectField::getExternalReferenceCode);
 				setId(objectField::getObjectFieldId);
 				setIndexed(objectField::isIndexed);

@@ -2302,6 +2302,74 @@ jdbc.default.connectionProperties=oracle.jdbc.ReadTimeout=0;oracle.net.CONNECT_T
 		</sequential>
 	</macrodef>
 
+	<macrodef name="get-workspace-bundle-url">
+		<attribute name="mirror.dir" />
+		<attribute name="workspace.dir" />
+
+		<sequential>
+			<beanshell>
+				<![CDATA[
+					import com.liferay.jenkins.results.parser.JenkinsResultsParserUtil;
+
+					import java.io.File;
+
+					import java.util.Properties;
+
+					String mirrorDirName = "@{mirror.dir}";
+
+					if (JenkinsResultsParserUtil.isNullOrEmpty(mirrorDirName)) {
+						return;
+					}
+
+					Properties gradleProperties = JenkinsResultsParserUtil.getProperties(new File[] {new File("@{workspace.dir}", "gradle.properties")});
+
+					String product = gradleProperties.getProperty("liferay.workspace.product");
+
+					if (JenkinsResultsParserUtil.isNullOrEmpty(product)) {
+						return;
+					}
+
+					String productVersion = product.substring(product.indexOf("-") + 1);
+
+					String bundleURL = JenkinsResultsParserUtil.getBuildProperty("portal.bundle.tomcat", new String[] {productVersion});
+
+					if (JenkinsResultsParserUtil.isNullOrEmpty(bundleURL)) {
+						return;
+					}
+
+					File bundleFile = new File(new File(mirrorDirName, product.replaceFirst("-", "/")), bundleURL.substring(bundleURL.lastIndexOf("/") + 1));
+
+					if (!bundleFile.exists()) {
+						return;
+					}
+
+					project.setProperty("workspace.bundle.url", "file:" + bundleFile.getAbsolutePath());
+
+					System.out.println("Using the mirrored bundle at " + bundleFile);
+				]]>
+			</beanshell>
+
+			<fail if:set="env.JENKINS_HOME" message="Unable to find a mirrored bundle for the workspace at @{workspace.dir}." unless:set="workspace.bundle.url" />
+		</sequential>
+	</macrodef>
+
+	<macrodef name="gradle-execute-workspace">
+		<attribute name="task" />
+		<attribute default="" name="test.name" />
+
+		<sequential>
+			<exec dir="${workspace.dir}" executable="./gradlew" failonerror="true">
+				<arg if:set="env.JENKINS_HOME" value="--max-workers=4" />
+				<arg if:set="env.JENKINS_HOME" value="--no-daemon" />
+				<arg value="--stacktrace" />
+				<arg line="${gradle.jvm.args}" />
+				<arg value="@{task}" />
+				<arg line="@{test.name}" />
+				<env key="GIT_DISCOVERY_ACROSS_FILESYSTEM" value="1" />
+			</exec>
+		</sequential>
+	</macrodef>
+
 	<macrodef name="install-lpkg-patch">
 		<attribute name="patch.file.zip.url" />
 
@@ -3461,19 +3529,9 @@ cluster.link.bind.addr["cluster-link-udp"]=${ip.address}</echo>
 				</then>
 			</if>
 
-			<propertycopy from="database.partition.enabled[${env.CI_TEST_SUITE}]" name="database.partition.enabled" override="true" silent="true" />
+			<get-testcase-property property.name="database.partition.enabled" />
 
-			<if>
-				<or>
-					<equals arg1="database.partition.enabled" arg2="" />
-					<not>
-						<isset property="database.partition.enabled" />
-					</not>
-				</or>
-				<then>
-					<get-testcase-property property.name="database.partition.enabled" />
-				</then>
-			</if>
+			<propertycopy from="database.partition.enabled[${env.CI_TEST_SUITE}]" name="database.partition.enabled" silent="true" />
 
 			<get-testcase-property property.name="liferay.online.properties" />
 			<get-testcase-property property.name="portal.version" />
@@ -7716,7 +7774,7 @@ log.sanitizer.enabled=false</echo>
 					</then>
 				</elseif>
 				<else>
-					<var name="app.server.tomcat.version" value="10.1.57" />
+					<var name="app.server.tomcat.version" value="10.1.59" />
 				</else>
 			</if>
 
@@ -12337,6 +12395,187 @@ send_user $expect_out(buffer)]]></echo>
 		/>
 	</target>
 
+	<target name="gradle-execute-modules">
+		<local name="test.task.name" />
+
+		<antelope:stringutil property="test.task.name" string="${test.task}">
+			<antelope:replace regex="\:" replacement="." />
+		</antelope:stringutil>
+
+		<trycatch property="exception.message">
+			<try>
+				<lstopwatch action="start" name="test.execution.duration${test.task.name}" />
+
+				<gradle-execute dir="${dir}" gradlejvmargs="${gradle.jvm.args}" task="${test.task}" test.name="${test.name}" />
+			</try>
+			<catch>
+				<fail>${exception.message}</fail>
+			</catch>
+			<finally>
+				<lstopwatch action="total" name="test.execution.duration${test.task.name}" />
+			</finally>
+		</trycatch>
+	</target>
+
+	<target name="gradle-execute-workspaces">
+		<local name="test.task.name" />
+		<local name="test.task.project.dir" />
+		<local name="workspace.dir" />
+
+		<antelope:stringutil property="test.task.name" string="${test.task}">
+			<antelope:replace regex="\:" replacement="." />
+		</antelope:stringutil>
+
+		<antelope:stringutil property="test.task.project.dir" string="${test.task}">
+			<antelope:replace regex="\:[^\:]+$" replacement="" />
+			<antelope:replace regex="^\:" replacement="" />
+			<antelope:replace regex="\:" replacement="/" />
+		</antelope:stringutil>
+
+		<property location="${dir}" name="workspace.dir" />
+
+		<chmod
+			file="${workspace.dir}/gradlew"
+			perm="a+x"
+		/>
+
+		<trycatch property="exception.message">
+			<try>
+				<lstopwatch action="start" name="test.execution.duration${test.task.name}" />
+
+				<exec dir="${workspace.dir}" executable="./gradlew" failonerror="true">
+					<arg if:set="env.JENKINS_HOME" value="--max-workers=4" />
+					<arg if:set="env.JENKINS_HOME" value="--no-daemon" />
+					<arg value="--stacktrace" />
+					<arg line="${gradle.jvm.args}" />
+					<arg value="${test.task}" />
+					<arg line="${test.name}" />
+					<env key="GIT_DISCOVERY_ACROSS_FILESYSTEM" value="1" />
+				</exec>
+			</try>
+			<catch>
+				<fail>${exception.message}</fail>
+			</catch>
+			<finally>
+				<copy
+					failonerror="false"
+					overwrite="true"
+					todir="${project.dir}/workspaces/test-results"
+				>
+					<fileset
+						dir="${workspace.dir}/${test.task.project.dir}/build/test-results/test"
+						erroronmissingdir="false"
+						includes="TEST-*.xml"
+					/>
+					<flattenmapper />
+				</copy>
+
+				<lstopwatch action="total" name="test.execution.duration${test.task.name}" />
+			</finally>
+		</trycatch>
+	</target>
+
+	<target name="gradle-execute-workspaces-integration">
+		<local name="test.task.name" />
+		<local name="test.task.project.dir" />
+		<local name="test.task.results.dir.name" />
+		<local name="workspace.dir" />
+
+		<antelope:stringutil property="test.task.name" string="${test.task}">
+			<antelope:replace regex="\:" replacement="." />
+		</antelope:stringutil>
+
+		<antelope:stringutil property="test.task.project.dir" string="${test.task}">
+			<antelope:replace regex="\:[^\:]+$" replacement="" />
+			<antelope:replace regex="^\:" replacement="" />
+			<antelope:replace regex="\:" replacement="/" />
+		</antelope:stringutil>
+
+		<antelope:stringutil property="test.task.results.dir.name" string="${test.task}">
+			<antelope:replace regex="^.*\:" replacement="" />
+		</antelope:stringutil>
+
+		<property location="${dir}" name="workspace.dir" />
+
+		<chmod
+			file="${workspace.dir}/gradlew"
+			perm="a+x"
+		/>
+
+		<trycatch property="exception.message">
+			<try>
+				<lstopwatch action="start" name="test.execution.duration${test.task.name}" />
+
+				<gradle-execute-workspace task="initBundle" />
+
+				<copy
+					file="${workspace.dir}/build/license.xml"
+					todir="${workspace.dir}/bundles/deploy"
+				/>
+
+				<gradle-execute-workspace task="deploy" />
+
+				<gradle-execute-workspace task="${test.task}" test.name="${test.name}" />
+			</try>
+			<catch>
+				<fail>${exception.message}</fail>
+			</catch>
+			<finally>
+				<copy
+					failonerror="false"
+					overwrite="true"
+					todir="${project.dir}/workspaces/test-results"
+				>
+					<fileset
+						dir="${workspace.dir}/${test.task.project.dir}/build/test-results/${test.task.results.dir.name}"
+						erroronmissingdir="false"
+						includes="TEST-*.xml"
+					/>
+					<flattenmapper />
+				</copy>
+
+				<lstopwatch action="total" name="test.execution.duration${test.task.name}" />
+			</finally>
+		</trycatch>
+	</target>
+
+	<target name="gradle-execute-workspaces-js-unit">
+		<local name="test.task.name" />
+		<local name="workspace.dir" />
+
+		<antelope:stringutil property="test.task.name" string="${test.task}">
+			<antelope:replace regex="\:" replacement="." />
+		</antelope:stringutil>
+
+		<property location="${dir}" name="workspace.dir" />
+
+		<chmod
+			file="${workspace.dir}/gradlew"
+			perm="a+x"
+		/>
+
+		<trycatch property="exception.message">
+			<try>
+				<lstopwatch action="start" name="test.execution.duration${test.task.name}" />
+
+				<exec dir="${workspace.dir}" executable="./gradlew" failonerror="true">
+					<arg if:set="env.JENKINS_HOME" value="--max-workers=4" />
+					<arg if:set="env.JENKINS_HOME" value="--no-daemon" />
+					<arg value="--stacktrace" />
+					<arg line="${gradle.jvm.args}" />
+					<arg value="${test.task}" />
+					<env key="GIT_DISCOVERY_ACROSS_FILESYSTEM" value="1" />
+				</exec>
+			</try>
+			<catch>
+				<fail>${exception.message}</fail>
+			</catch>
+			<finally>
+				<lstopwatch action="total" name="test.execution.duration${test.task.name}" />
+			</finally>
+		</trycatch>
+	</target>
+
 	<target name="hot-deploy-osgi-apps">
 		<get-testcase-property property.name="hot.deploy.osgi.app.includes" />
 
@@ -12606,6 +12845,35 @@ send_user $expect_out(buffer)]]></echo>
 			</then>
 		</if>
 
+		<if>
+			<available file="${liferay.portal.private.dir}/workspaces" type="dir" />
+			<then>
+				<mkdir dir="workspaces-private/test-results" />
+
+				<copy
+					todir="workspaces-private/test-results"
+				>
+					<fileset
+						casesensitive="yes"
+						dir="${liferay.portal.private.dir}/workspaces"
+					>
+						<exclude name="**/.git/**" />
+						<exclude name="**/.gradle/**" />
+						<exclude name="**/bin/**" />
+						<exclude name="**/build/**" />
+						<exclude name="**/classes/**" />
+						<exclude name="**/dist/**" />
+						<exclude name="**/node_modules/**" />
+						<exclude name="**/src/**" />
+						<exclude name="**/test-classes/**" />
+						<exclude name="**/test-coverage/**" />
+						<exclude name="**/tmp/**" />
+						<include name="**/TEST-*.xml" />
+					</fileset>
+				</copy>
+			</then>
+		</if>
+
 		<path id="junit.reports.paths">
 			<multirootfileset erroronmissingdir="false">
 				<basedir file="asah-integration/test-results" />
@@ -12622,6 +12890,8 @@ send_user $expect_out(buffer)]]></echo>
 				<basedir file="${liferay.faces.bridge.impl.dir}/test/integration" />
 				<basedir file="${liferay.faces.portal.dir}/test/integration" />
 				<basedir file="${test.workspace.dir}" />
+				<basedir file="workspaces" />
+				<basedir file="workspaces-private/test-results" />
 				<exclude name="**/.git/**" />
 				<exclude name="**/.gradle/**" />
 				<exclude name="**/bin/**" />
@@ -13143,18 +13413,6 @@ enterprise.product.commerce.enabled=false</echo>
 				<echo append="true" file="portal-impl/src/portal-ext.properties">
 
 upgrade.database.auto.run=true</echo>
-			</then>
-		</if>
-
-		<if>
-			<or>
-				<equals arg1="${database.partition.copy}" arg2="true" />
-				<equals arg1="${database.partition.export.and.import}" arg2="true" />
-			</or>
-
-			<then>
-				<echo append="true" file="portal-impl/src/portal-ext.properties">
-feature.flag.LPD-11342=true</echo>
 			</then>
 		</if>
 
@@ -14465,6 +14723,19 @@ enterprise.product.enterprise.search.enabled=false</echo>
 			</elseif>
 		</if>
 
+		<get-testcase-property property.name="database.partition.enabled" />
+
+		<propertycopy from="database.partition.enabled[${env.CI_TEST_SUITE}]" name="database.partition.enabled" silent="true" />
+
+		<if>
+			<isset property="database.partition.enabled" />
+			<then>
+				<echo append="true" file="${test.ext.properties.file}">
+					database.partition.enabled=${database.partition.enabled}
+				</echo>
+			</then>
+		</if>
+
 		<get-testcase-property property.name="test.liferay.virtual.instance" />
 
 		<if>
@@ -15126,22 +15397,6 @@ ANT_OPTS=${env.ANT_OPTS}</echo>
 			<param name="test.build.dsr.license.url" value="${test.dsr.license.url}" />
 			<param name="test.build.license.xml.zip.url" value="${test.license.xml.url}" />
 		</antcall>
-
-		<if>
-			<equals arg1="${downgrade.from.original.bundle}" arg2="true" />
-			<then>
-				<delete dir="${test.release.bundle.parent.dir}/bundles/data" />
-
-				<move
-					file="${test.release.bundle.parent.dir}/bundles-original/data"
-					tofile="${test.release.bundle.parent.dir}/bundles/data"
-				/>
-
-				<delete dir="${test.release.bundle.parent.dir}/bundles/data/elasticsearch8" />
-
-				<delete dir="${test.release.bundle.parent.dir}/bundles-original" />
-			</then>
-		</if>
 
 		<get-test-app-server-lib-portal-dir />
 
@@ -17866,6 +18121,74 @@ CATALINA_OPTS="$CATALINA_OPTS -Dcom.sun.management.jmxremote -Dcom.sun.managemen
 				</if>
 			</finally>
 		</trycatch>
+
+		<beanshell>
+			<![CDATA[
+				import java.io.BufferedReader;
+				import java.io.InputStreamReader;
+
+				public boolean hasLeftoverSidecarProcess() {
+					ProcessBuilder processBuilder = new ProcessBuilder(new String[] {"jps", "-v"});
+
+					processBuilder.redirectErrorStream(true);
+
+					Process process = processBuilder.start();
+
+					BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(process.getInputStream()));
+
+					String liferayHome = project.getProperty("liferay.home");
+
+					boolean leftover = false;
+
+					String line = null;
+
+					while ((line = bufferedReader.readLine()) != null) {
+						if (line.contains("LocalProcessLauncher") && line.contains(liferayHome)) {
+							leftover = true;
+						}
+					}
+
+					bufferedReader.close();
+
+					process.waitFor();
+
+					return leftover;
+				}
+
+				if (hasLeftoverSidecarProcess()) {
+					System.out.println("Waiting for the Elasticsearch sidecar left behind by the upgrade JVM to exit");
+
+					long startTime = System.currentTimeMillis();
+
+					long timeoutTime = startTime + 60000;
+
+					while (hasLeftoverSidecarProcess()) {
+						if (System.currentTimeMillis() > timeoutTime) {
+							project.setProperty("leftover.sidecar.message", "The Elasticsearch sidecar started by the upgrade JVM is still running after 60 seconds. It holds the node lock the next portal needs.");
+
+							break;
+						}
+
+						Thread.sleep(5000);
+					}
+
+					if (project.getProperty("leftover.sidecar.message") == null) {
+						System.out.println("The Elasticsearch sidecar left behind by the upgrade JVM exited after " + ((System.currentTimeMillis() - startTime) / 1000) + " seconds");
+					}
+				}
+			]]>
+		</beanshell>
+
+		<if>
+			<isset property="leftover.sidecar.message" />
+			<then>
+				<antcall target="print-jstack-logs">
+					<param name="process.name" value="LocalProcessLauncher" />
+				</antcall>
+
+				<fail message="${leftover.sidecar.message}" />
+			</then>
+		</if>
 	</target>
 
 	<target name="validate-db-partition-schemas">

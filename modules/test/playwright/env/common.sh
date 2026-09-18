@@ -1,5 +1,28 @@
 #!/bin/bash
 
+function assert_clean_upgrade_log {
+	local upgrade_log="${LIFERAY_HOME}/tools/portal-tools-db-upgrade-client/logs/upgrade.log"
+
+	if [ ! -f "${upgrade_log}" ]
+	then
+		echo "Unable to find upgrade log at ${upgrade_log}."
+
+		exit 1
+	fi
+
+	local unclean_log_entries
+
+	unclean_log_entries=$(grep -E "^[0-9]{4}-[0-9]{2}-[0-9]{2}[[:space:]]+[0-9]{2}:[0-9]{2}:[0-9]{2}([.,][0-9]{3})?[[:space:]]+(ERROR|FATAL|WARN)" "${upgrade_log}" | grep -v "Do NOT use sidecar in production" || true)
+
+	if [ -n "${unclean_log_entries}" ]
+	then
+		echo "Upgrade log contains ERROR, FATAL, or WARN entries:"
+		printf "%s\n" "${unclean_log_entries}"
+
+		exit 1
+	fi
+}
+
 function cluster_set_up {
 	local jvm_heap_override=${3}
 
@@ -539,6 +562,20 @@ function prepare_additional_bundles {
 	done
 }
 
+function rebuild_legacy_database {
+	local data_archive_type=${1}
+	local portal_version=${2}
+
+	cd "${_PORTAL_PROJECT_DIR}"
+
+	ant -f build-test.xml \
+		-Ddata.archive.type="${data_archive_type}" \
+		-Dkeep.cached.app.server.data=true \
+		-Dportal.version="${portal_version}" \
+		-Dskip.get.testcase.database.properties=true \
+		rebuild-legacy-database
+}
+
 function set_variables {
 	local playwright_env_dir=$(dirname ${BASH_SOURCE[0]})
 
@@ -822,6 +859,31 @@ function update_property {
 	do
 		sed -i "s/${property_name}=.*/${property_name}=${property_value}/g" "${properties_file}"
 	done
+}
+
+function upgrade_legacy_database_set_up {
+	local custom_upgrade_properties=${3}
+	local data_archive_type=${1}
+	local portal_version=${2}
+
+	rebuild_legacy_database "${data_archive_type}" "${portal_version}"
+
+	if [[ -n ${custom_upgrade_properties} ]]
+	then
+		ant -f build-test.xml \
+			-Dcustom.upgrade.properties="${custom_upgrade_properties}" \
+			-Dportal.version="${portal_version}" \
+			-Dtest.class=PortalSmokeUpgrade \
+			upgrade-legacy-database
+	else
+		ant -f build-test.xml \
+			-Dportal.version="${portal_version}" \
+			upgrade-legacy-database
+	fi
+
+	assert_clean_upgrade_log
+
+	default_set_up
 }
 
 function validate_environment_variables {

@@ -335,6 +335,11 @@ public class AssetVocabularyLocalServiceImpl
 	}
 
 	@Override
+	public int getCompanyVocabulariesCount(long companyId) {
+		return assetVocabularyPersistence.countByCompanyId(companyId);
+	}
+
+	@Override
 	public List<AssetVocabulary> getGroupsVocabularies(long[] groupIds) {
 		return getGroupsVocabularies(groupIds, null);
 	}
@@ -350,6 +355,10 @@ public class AssetVocabularyLocalServiceImpl
 	@Override
 	public List<AssetVocabulary> getGroupsVocabularies(
 		long[] groupIds, String className, long classTypePK) {
+
+		if (ArrayUtil.isEmpty(groupIds)) {
+			return Collections.emptyList();
+		}
 
 		List<AssetVocabulary> vocabularies =
 			assetVocabularyPersistence.findByGroupId(groupIds);
@@ -400,6 +409,10 @@ public class AssetVocabularyLocalServiceImpl
 
 	@Override
 	public List<AssetVocabulary> getGroupVocabularies(long[] groupIds) {
+		if (ArrayUtil.isEmpty(groupIds)) {
+			return Collections.emptyList();
+		}
+
 		return assetVocabularyPersistence.findByGroupId(groupIds);
 	}
 
@@ -407,11 +420,19 @@ public class AssetVocabularyLocalServiceImpl
 	public List<AssetVocabulary> getGroupVocabularies(
 		long[] groupIds, int[] visibilityTypes) {
 
+		if (ArrayUtil.isEmpty(groupIds)) {
+			return Collections.emptyList();
+		}
+
 		return assetVocabularyPersistence.findByG_V(groupIds, visibilityTypes);
 	}
 
 	@Override
 	public int getGroupVocabulariesCount(long[] groupIds) {
+		if (ArrayUtil.isEmpty(groupIds)) {
+			return 0;
+		}
+
 		return assetVocabularyPersistence.countByGroupId(groupIds);
 	}
 

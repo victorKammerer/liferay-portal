@@ -73,14 +73,14 @@ public abstract class BaseAccountAddressChannelResourceImpl
 	 * curl -X 'DELETE' 'http://localhost:8080/o/headless-commerce-admin-channel/v1.0/account-address-channels/{accountAddressChannelId}'  -u 'test@liferay.com:test'
 	 */
 	@io.swagger.v3.oas.annotations.Operation(
-		description = "Deletes the account-address-channel binding by its internal ID. Idempotent. A follow-up call on an entity that has already been deleted returns 404. Calls CommerceChannelRelService.deleteCommerceChannelRel. Validation -- NoSuchChannelRelException -> 404 when channel rel id not found."
+		description = "Deletes the account-address-channel binding by its internal ID. Idempotent. A follow-up call on an entity that has already been deleted returns 404. Calls CommerceChannelRelService.deleteCommerceChannelRel. Validation -- NoSuchChannelRelException -> 404 when channel rel ID not found."
 	)
 	@io.swagger.v3.oas.annotations.Parameters(
 		value = {
 			@io.swagger.v3.oas.annotations.Parameter(
 				description = "Identifier of an account-address-channel binding. Addresses a single mapping that scopes an account address to a specific channel for shipping or billing eligibility.",
 				in = io.swagger.v3.oas.annotations.enums.ParameterIn.PATH,
-				name = "accountAddressChannelId"
+				name = "accountAddressChannelId", required = true
 			)
 		}
 	)
@@ -157,14 +157,14 @@ public abstract class BaseAccountAddressChannelResourceImpl
 	 * curl -X 'GET' 'http://localhost:8080/o/headless-commerce-admin-channel/v1.0/account-addresses/by-externalReferenceCode/{externalReferenceCode}/account-address-channels'  -u 'test@liferay.com:test'
 	 */
 	@io.swagger.v3.oas.annotations.Operation(
-		description = "Lists the AccountAddressChannel entries belonging to the parent AccountAddress, addressed by external reference code (ERC). Calls AddressLocalService.fetchAddressByExternalReferenceCode + CommerceChannelRelService.getCommerceChannelRels + CommerceChannelRelService.getCommerceChannelRelsCount. Validation -- NoSuchAddressException -> 404 when address erc not found. List query support — page and pageSize paginate the related entries."
+		description = "Lists the AccountAddressChannel entries belonging to the parent AccountAddress, addressed by external reference code (ERC). Calls AddressLocalService.fetchAddressByExternalReferenceCode + CommerceChannelRelService.getCommerceChannelRels + CommerceChannelRelService.getCommerceChannelRelsCount. Validation -- NoSuchAddressException -> 404 when address ERC not found. List query support — page and pageSize paginate the related entries."
 	)
 	@io.swagger.v3.oas.annotations.Parameters(
 		value = {
 			@io.swagger.v3.oas.annotations.Parameter(
 				description = "External reference code that addresses the target resource on the `by-externalReferenceCode` paths. The code is the integration-supplied idempotency key, unique within the resource scope; it is assigned by the client rather than the server.",
 				in = io.swagger.v3.oas.annotations.enums.ParameterIn.PATH,
-				name = "externalReferenceCode"
+				name = "externalReferenceCode", required = true
 			),
 			@io.swagger.v3.oas.annotations.Parameter(
 				description = "Comma-separated list of nested fields to embed in each returned resource. Each value names a relationship exposed on the resource; when omitted, those relationships are not expanded inline.",
@@ -214,14 +214,14 @@ public abstract class BaseAccountAddressChannelResourceImpl
 	 * curl -X 'GET' 'http://localhost:8080/o/headless-commerce-admin-channel/v1.0/account-addresses/{addressId}/account-address-channels'  -u 'test@liferay.com:test'
 	 */
 	@io.swagger.v3.oas.annotations.Operation(
-		description = "Lists the AccountAddressChannel entries belonging to the parent AccountAddress, addressed by internal ID. Calls AddressLocalService.fetchAddress + CommerceChannelRelService.getCommerceChannelRels + CommerceChannelRelService.getCommerceChannelRelsCount. Validation -- None (returns empty page when address id not found or no matches). List query support — page and pageSize paginate the related entries."
+		description = "Lists the AccountAddressChannel entries belonging to the parent AccountAddress, addressed by internal ID. Calls AddressLocalService.fetchAddress + CommerceChannelRelService.getCommerceChannelRels + CommerceChannelRelService.getCommerceChannelRelsCount. Validation -- None (returns empty page when address ID not found or no matches). List query support — page and pageSize paginate the related entries."
 	)
 	@io.swagger.v3.oas.annotations.Parameters(
 		value = {
 			@io.swagger.v3.oas.annotations.Parameter(
 				description = "Identifier of an account address. Addresses a single postal address attached to a commerce account.",
 				in = io.swagger.v3.oas.annotations.enums.ParameterIn.PATH,
-				name = "addressId"
+				name = "addressId", required = true
 			),
 			@io.swagger.v3.oas.annotations.Parameter(
 				description = "OData v4 filter expression that narrows the result set. Supported fields depend on the endpoint and are sourced from the matching entity model; see the per-resource list operation description for specifics. For example, filter=externalReferenceCode eq 'AB-34098-789-N'.",
@@ -293,14 +293,14 @@ public abstract class BaseAccountAddressChannelResourceImpl
 	 * curl -X 'POST' 'http://localhost:8080/o/headless-commerce-admin-channel/v1.0/account-addresses/by-externalReferenceCode/{externalReferenceCode}/account-address-channels' -d $'{"addressChannelExternalReferenceCode": ___, "addressChannelId": ___, "addressExternalReferenceCode": ___, "addressId": ___}' --header 'Content-Type: application/json' -u 'test@liferay.com:test'
 	 */
 	@io.swagger.v3.oas.annotations.Operation(
-		description = "Creates a new account-address-channel binding under the parent AccountAddress, addressed by external reference code (ERC). Calls AddressLocalService.fetchAddressByExternalReferenceCode + CommerceChannelService.fetchCommerceChannel | CommerceChannelService.fetchCommerceChannelByExternalReferenceCode + CommerceChannelRelService.addCommerceChannelRel. Validation -- NoSuchAddressException -> 404 when address erc not found; NoSuchChannelException -> 404 when referenced channel id/erc not found. Side effects -- creates address-to-channel relation binding."
+		description = "Creates a new account-address-channel binding under the parent AccountAddress, addressed by external reference code (ERC). Calls AddressLocalService.fetchAddressByExternalReferenceCode + CommerceChannelService.fetchCommerceChannel | CommerceChannelService.fetchCommerceChannelByExternalReferenceCode + CommerceChannelRelService.addCommerceChannelRel. Validation -- NoSuchAddressException -> 404 when address ERC not found; NoSuchChannelException -> 404 when referenced channel ID/ERC not found. Side effects -- creates address-to-channel relation binding."
 	)
 	@io.swagger.v3.oas.annotations.Parameters(
 		value = {
 			@io.swagger.v3.oas.annotations.Parameter(
 				description = "External reference code that addresses the target resource on the `by-externalReferenceCode` paths. The code is the integration-supplied idempotency key, unique within the resource scope; it is assigned by the client rather than the server.",
 				in = io.swagger.v3.oas.annotations.enums.ParameterIn.PATH,
-				name = "externalReferenceCode"
+				name = "externalReferenceCode", required = true
 			)
 		}
 	)
@@ -336,14 +336,14 @@ public abstract class BaseAccountAddressChannelResourceImpl
 	 * curl -X 'POST' 'http://localhost:8080/o/headless-commerce-admin-channel/v1.0/account-addresses/{addressId}/account-address-channels' -d $'{"addressChannelExternalReferenceCode": ___, "addressChannelId": ___, "addressExternalReferenceCode": ___, "addressId": ___}' --header 'Content-Type: application/json' -u 'test@liferay.com:test'
 	 */
 	@io.swagger.v3.oas.annotations.Operation(
-		description = "Creates a new account-address-channel binding under the parent AccountAddress, addressed by internal ID. Calls CommerceChannelService.fetchCommerceChannel | CommerceChannelService.fetchCommerceChannelByExternalReferenceCode + CommerceChannelRelService.addCommerceChannelRel. Validation -- NoSuchChannelException -> 404 when referenced channel id/erc not found. Side effects -- creates address-to-channel relation binding."
+		description = "Creates a new account-address-channel binding under the parent AccountAddress, addressed by internal ID. Calls CommerceChannelService.fetchCommerceChannel | CommerceChannelService.fetchCommerceChannelByExternalReferenceCode + CommerceChannelRelService.addCommerceChannelRel. Validation -- NoSuchChannelException -> 404 when referenced channel ID/ERC not found. Side effects -- creates address-to-channel relation binding."
 	)
 	@io.swagger.v3.oas.annotations.Parameters(
 		value = {
 			@io.swagger.v3.oas.annotations.Parameter(
 				description = "Identifier of an account address. Addresses a single postal address attached to a commerce account.",
 				in = io.swagger.v3.oas.annotations.enums.ParameterIn.PATH,
-				name = "addressId"
+				name = "addressId", required = true
 			)
 		}
 	)
@@ -1058,4 +1058,4 @@ public abstract class BaseAccountAddressChannelResourceImpl
 		LogFactoryUtil.getLog(BaseAccountAddressChannelResourceImpl.class);
 
 }
-// LIFERAY-REST-BUILDER-HASH:-443096806
+// LIFERAY-REST-BUILDER-HASH:1585377370

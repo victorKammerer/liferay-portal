@@ -15,6 +15,7 @@ import com.fasterxml.jackson.annotation.JsonValue;
 import com.liferay.headless.admin.user.dto.v1_0.Creator;
 import com.liferay.petra.function.UnsafeSupplier;
 import com.liferay.petra.string.StringBundler;
+import com.liferay.portal.kernel.json.JSONFactoryUtil;
 import com.liferay.portal.kernel.util.StringUtil;
 import com.liferay.portal.vulcan.graphql.annotation.GraphQLField;
 import com.liferay.portal.vulcan.graphql.annotation.GraphQLName;
@@ -31,6 +32,8 @@ import java.io.Serializable;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 
+import java.util.Arrays;
+import java.util.Collection;
 import java.util.Date;
 import java.util.Iterator;
 import java.util.Map;
@@ -380,6 +383,63 @@ public class PageSpecificationVersion implements Serializable {
 	private Supplier<PageSpecification> _pageSpecificationSupplier;
 
 	@io.swagger.v3.oas.annotations.media.Schema(
+		description = "The page specification version's page experiences. It is not returned by default. It can be embedded via nestedFields."
+	)
+	@Valid
+	public PageSpecificationVersionPageExperience[]
+		getPageSpecificationVersionPageExperiences() {
+
+		if (_pageSpecificationVersionPageExperiencesSupplier != null) {
+			pageSpecificationVersionPageExperiences =
+				_pageSpecificationVersionPageExperiencesSupplier.get();
+
+			_pageSpecificationVersionPageExperiencesSupplier = null;
+		}
+
+		return pageSpecificationVersionPageExperiences;
+	}
+
+	public void setPageSpecificationVersionPageExperiences(
+		PageSpecificationVersionPageExperience[]
+			pageSpecificationVersionPageExperiences) {
+
+		this.pageSpecificationVersionPageExperiences =
+			pageSpecificationVersionPageExperiences;
+
+		_pageSpecificationVersionPageExperiencesSupplier = null;
+	}
+
+	@JsonIgnore
+	public void setPageSpecificationVersionPageExperiences(
+		UnsafeSupplier<PageSpecificationVersionPageExperience[], Exception>
+			pageSpecificationVersionPageExperiencesUnsafeSupplier) {
+
+		_pageSpecificationVersionPageExperiencesSupplier = () -> {
+			try {
+				return pageSpecificationVersionPageExperiencesUnsafeSupplier.
+					get();
+			}
+			catch (RuntimeException runtimeException) {
+				throw runtimeException;
+			}
+			catch (Exception exception) {
+				throw new RuntimeException(exception);
+			}
+		};
+	}
+
+	@GraphQLField(
+		description = "The page specification version's page experiences. It is not returned by default. It can be embedded via nestedFields."
+	)
+	@JsonProperty(access = JsonProperty.Access.READ_WRITE)
+	protected PageSpecificationVersionPageExperience[]
+		pageSpecificationVersionPageExperiences;
+
+	@JsonIgnore
+	private Supplier<PageSpecificationVersionPageExperience[]>
+		_pageSpecificationVersionPageExperiencesSupplier;
+
+	@io.swagger.v3.oas.annotations.media.Schema(
 		description = "The page specification version's status."
 	)
 	@JsonGetter("status")
@@ -652,6 +712,33 @@ public class PageSpecificationVersion implements Serializable {
 			sb.append(String.valueOf(pageSpecification));
 		}
 
+		PageSpecificationVersionPageExperience[]
+			pageSpecificationVersionPageExperiences =
+				getPageSpecificationVersionPageExperiences();
+
+		if (pageSpecificationVersionPageExperiences != null) {
+			if (sb.length() > 1) {
+				sb.append(", ");
+			}
+
+			sb.append("\"pageSpecificationVersionPageExperiences\": ");
+
+			sb.append("[");
+
+			for (int i = 0; i < pageSpecificationVersionPageExperiences.length;
+				 i++) {
+
+				sb.append(
+					String.valueOf(pageSpecificationVersionPageExperiences[i]));
+
+				if ((i + 1) < pageSpecificationVersionPageExperiences.length) {
+					sb.append(", ");
+				}
+			}
+
+			sb.append("]");
+		}
+
 		Status status = getStatus();
 
 		if (status != null) {
@@ -825,6 +912,27 @@ public class PageSpecificationVersion implements Serializable {
 		return sb.toString();
 	}
 
+	private static String _toJSON(Object value) {
+		if (value instanceof Collection) {
+			return String.valueOf(
+				JSONFactoryUtil.createJSONArray((Collection<?>)value));
+		}
+		else if (value instanceof Map) {
+			return String.valueOf(
+				JSONFactoryUtil.createJSONObject((Map<?, ?>)value));
+		}
+		else if (value instanceof Object[]) {
+			return String.valueOf(
+				JSONFactoryUtil.createJSONArray(
+					Arrays.asList((Object[])value)));
+		}
+		else if (value instanceof String) {
+			return StringBundler.concat("\"", _escape(value), "\"");
+		}
+
+		return String.valueOf(value);
+	}
+
 	private static final String[][] _JSON_ESCAPE_STRINGS = {
 		{"\\", "\"", "\b", "\f", "\n", "\r", "\t"},
 		{"\\\\", "\\\"", "\\b", "\\f", "\\n", "\\r", "\\t"}
@@ -833,4 +941,4 @@ public class PageSpecificationVersion implements Serializable {
 	private Map<String, Serializable> _extendedProperties;
 
 }
-// LIFERAY-REST-BUILDER-HASH:947369518
+// LIFERAY-REST-BUILDER-HASH:-1205976476

@@ -77,14 +77,14 @@ public abstract class BaseProductConfigurationListResourceImpl
 	 * curl -X 'DELETE' 'http://localhost:8080/o/headless-commerce-admin-catalog/v1.0/product-configuration-lists/{id}'  -u 'test@liferay.com:test'
 	 */
 	@io.swagger.v3.oas.annotations.Operation(
-		description = "Deletes the product configuration list identified by id. Returns 404 when the id is not found. Side effects -- Cascades deletion of configuration list assignment rows and configuration entry rows attached to the list."
+		description = "Deletes the product configuration list identified by ID. Returns 404 when the ID is not found. Side effects -- Cascades deletion of configuration list assignment rows and configuration entry rows attached to the list."
 	)
 	@io.swagger.v3.oas.annotations.Parameters(
 		value = {
 			@io.swagger.v3.oas.annotations.Parameter(
 				description = "Internal numeric identifier of the target resource. Counterpart to the `by-externalReferenceCode` path variant; identifiers are server-assigned and stable across the resource's lifetime.",
 				in = io.swagger.v3.oas.annotations.enums.ParameterIn.PATH,
-				name = "id"
+				name = "id", required = true
 			)
 		}
 	)
@@ -168,7 +168,7 @@ public abstract class BaseProductConfigurationListResourceImpl
 			@io.swagger.v3.oas.annotations.Parameter(
 				description = "External reference code that addresses the target resource on the `by-externalReferenceCode` paths. The code is the integration-supplied idempotency key, unique within the resource scope; POST against this path is upsert (create when absent, replace when present).",
 				in = io.swagger.v3.oas.annotations.enums.ParameterIn.PATH,
-				name = "externalReferenceCode"
+				name = "externalReferenceCode", required = true
 			)
 		}
 	)
@@ -199,14 +199,14 @@ public abstract class BaseProductConfigurationListResourceImpl
 	 * curl -X 'GET' 'http://localhost:8080/o/headless-commerce-admin-catalog/v1.0/product-configuration-lists/{id}'  -u 'test@liferay.com:test'
 	 */
 	@io.swagger.v3.oas.annotations.Operation(
-		description = "Fetches the product configuration list identified by id. Returns 404 when the id is not found."
+		description = "Fetches the product configuration list identified by ID. Returns 404 when the ID is not found."
 	)
 	@io.swagger.v3.oas.annotations.Parameters(
 		value = {
 			@io.swagger.v3.oas.annotations.Parameter(
 				description = "Internal numeric identifier of the target resource. Counterpart to the `by-externalReferenceCode` path variant; identifiers are server-assigned and stable across the resource's lifetime.",
 				in = io.swagger.v3.oas.annotations.enums.ParameterIn.PATH,
-				name = "id"
+				name = "id", required = true
 			)
 		}
 	)
@@ -244,7 +244,7 @@ public abstract class BaseProductConfigurationListResourceImpl
 			@io.swagger.v3.oas.annotations.Parameter(
 				description = "External reference code that addresses the target resource on the `by-externalReferenceCode` paths. The code is the integration-supplied idempotency key, unique within the resource scope; POST against this path is upsert (create when absent, replace when present).",
 				in = io.swagger.v3.oas.annotations.enums.ParameterIn.PATH,
-				name = "externalReferenceCode"
+				name = "externalReferenceCode", required = true
 			)
 		}
 	)
@@ -348,14 +348,14 @@ public abstract class BaseProductConfigurationListResourceImpl
 	 * curl -X 'PATCH' 'http://localhost:8080/o/headless-commerce-admin-catalog/v1.0/product-configuration-lists/{id}' -d $'{"catalogExternalReferenceCode": ___, "catalogId": ___, "createDate": ___, "customFields": ___, "displayDate": ___, "expirationDate": ___, "externalReferenceCode": ___, "master": ___, "name": ___, "neverExpire": ___, "parentProductConfigurationListExternalReferenceCode": ___, "parentProductConfigurationListId": ___, "priority": ___, "productConfigurations": ___}' --header 'Content-Type: application/json' -u 'test@liferay.com:test'
 	 */
 	@io.swagger.v3.oas.annotations.Operation(
-		description = "Partially updates the product configuration list identified by id, applying any nested product configurations. Returns 404 when the id is not found. Side effects -- Reindexes; updates display/expiration date and custom field storage; cascades into nested product configurations."
+		description = "Partially updates the product configuration list identified by ID, applying any nested product configurations. Returns 404 when the ID is not found. Side effects -- Reindexes; updates display/expiration date and custom field storage; cascades into nested product configurations."
 	)
 	@io.swagger.v3.oas.annotations.Parameters(
 		value = {
 			@io.swagger.v3.oas.annotations.Parameter(
 				description = "Internal numeric identifier of the target resource. Counterpart to the `by-externalReferenceCode` path variant; identifiers are server-assigned and stable across the resource's lifetime.",
 				in = io.swagger.v3.oas.annotations.enums.ParameterIn.PATH,
-				name = "id"
+				name = "id", required = true
 			)
 		}
 	)
@@ -395,7 +395,7 @@ public abstract class BaseProductConfigurationListResourceImpl
 			@io.swagger.v3.oas.annotations.Parameter(
 				description = "External reference code that addresses the target resource on the `by-externalReferenceCode` paths. The code is the integration-supplied idempotency key, unique within the resource scope; POST against this path is upsert (create when absent, replace when present).",
 				in = io.swagger.v3.oas.annotations.enums.ParameterIn.PATH,
-				name = "externalReferenceCode"
+				name = "externalReferenceCode", required = true
 			)
 		}
 	)
@@ -1397,4 +1397,4 @@ public abstract class BaseProductConfigurationListResourceImpl
 		LogFactoryUtil.getLog(BaseProductConfigurationListResourceImpl.class);
 
 }
-// LIFERAY-REST-BUILDER-HASH:1991682581
+// LIFERAY-REST-BUILDER-HASH:-1476595357

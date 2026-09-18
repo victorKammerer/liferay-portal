@@ -233,6 +233,16 @@ public class TaxonomyCategoryResourceTest
 
 	@Override
 	@Test
+	public void testGetAssetLibraryTaxonomyCategoriesPageWithSortInteger()
+		throws Exception {
+
+		_scopeType = Scope.Type.ASSET_LIBRARY;
+
+		super.testGetAssetLibraryTaxonomyCategoriesPageWithSortInteger();
+	}
+
+	@Override
+	@Test
 	public void testGetAssetLibraryTaxonomyCategoriesPageWithSortString()
 		throws Exception {
 
@@ -288,6 +298,46 @@ public class TaxonomyCategoryResourceTest
 			parentAssetCategory, serviceContext);
 		AssetCategory assetCategory2 = _addAssetCategory(
 			_assetVocabulary, new Date(), parentAssetCategory, serviceContext);
+
+		for (EntityField entityField : entityFields) {
+			_assertTaxonomyCategoriesPageOrder(
+				entityField, assetCategory1, assetCategory2, "asc",
+				parentAssetCategory);
+			_assertTaxonomyCategoriesPageOrder(
+				entityField, assetCategory2, assetCategory1, "desc",
+				parentAssetCategory);
+		}
+	}
+
+	@Override
+	@Test
+	public void testGetTaxonomyCategoryTaxonomyCategoriesPageWithSortInteger()
+		throws Exception {
+
+		List<EntityField> entityFields = getEntityFields(
+			EntityField.Type.INTEGER);
+
+		if (ListUtil.isEmpty(entityFields)) {
+			return;
+		}
+
+		ServiceContext serviceContext =
+			ServiceContextTestUtil.getServiceContext();
+
+		AssetCategory parentAssetCategory =
+			_assetCategoryLocalService.addCategory(
+				TestPropsValues.getUserId(), testGroup.getGroupId(),
+				RandomTestUtil.randomString(),
+				_assetVocabulary.getVocabularyId(), serviceContext);
+
+		AssetCategory assetCategory1 = _addAssetCategory(
+			_assetVocabulary, new Date(), parentAssetCategory, serviceContext);
+
+		AssetCategory assetCategory2 = _addAssetCategory(
+			_assetVocabulary, new Date(), parentAssetCategory, serviceContext);
+
+		_addAssetCategory(
+			_assetVocabulary, new Date(), assetCategory2, serviceContext);
 
 		for (EntityField entityField : entityFields) {
 			_assertTaxonomyCategoriesPageOrder(
@@ -583,6 +633,7 @@ public class TaxonomyCategoryResourceTest
 
 		super.testPutSiteTaxonomyCategoryByExternalReferenceCode();
 
+		_testPutSiteTaxonomyCategoryByExternalReferenceCodeDeletesTaxonomyCategoryProperty();
 		_testPutSiteTaxonomyCategoryByExternalReferenceCodeUpdatesParentToDefault();
 		_testPutSiteTaxonomyCategoryByExternalReferenceCodeUpdatesTaxonomyCategoryProperty();
 		_testPutSiteTaxonomyCategoryByExternalReferenceCodeWithParentTaxonomyCategory();
@@ -2187,6 +2238,52 @@ public class TaxonomyCategoryResourceTest
 		_testPostTaxonomyCategoryBatch(
 			createStrategy, parameter, parameterValue, parentTaxonomyCategory,
 			parentTaxonomyVocabulary, taxonomyCategory);
+	}
+
+	private void _testPutSiteTaxonomyCategoryByExternalReferenceCodeDeletesTaxonomyCategoryProperty()
+		throws Exception {
+
+		TaxonomyCategory taxonomyCategory =
+			testPutSiteTaxonomyCategoryByExternalReferenceCode_addTaxonomyCategory();
+
+		String propertyKey = RandomTestUtil.randomString();
+		String propertyValue = RandomTestUtil.randomString();
+
+		_assetCategoryPropertyLocalService.addCategoryProperty(
+			TestPropsValues.getUserId(),
+			GetterUtil.getLong(taxonomyCategory.getId()), propertyKey,
+			propertyValue);
+
+		String deletedPropertyKey = RandomTestUtil.randomString();
+
+		_assetCategoryPropertyLocalService.addCategoryProperty(
+			TestPropsValues.getUserId(),
+			GetterUtil.getLong(taxonomyCategory.getId()), deletedPropertyKey,
+			RandomTestUtil.randomString());
+
+		taxonomyCategory.setTaxonomyCategoryProperties(
+			new TaxonomyCategoryProperty[] {
+				new TaxonomyCategoryProperty() {
+					{
+						key = propertyKey;
+						value = propertyValue;
+					}
+				}
+			});
+
+		TaxonomyCategory putTaxonomyCategory =
+			taxonomyCategoryResource.
+				putSiteTaxonomyCategoryByExternalReferenceCode(
+					taxonomyCategory.getSiteId(),
+					taxonomyCategory.getExternalReferenceCode(),
+					taxonomyCategory);
+
+		Map<String, String> map = _toMap(
+			putTaxonomyCategory.getTaxonomyCategoryProperties());
+
+		Assert.assertNull(map.get(deletedPropertyKey));
+		Assert.assertEquals(propertyValue, map.get(propertyKey));
+		Assert.assertEquals(map.toString(), 1, map.size());
 	}
 
 	private void _testPutSiteTaxonomyCategoryByExternalReferenceCodeUpdatesParentToDefault()

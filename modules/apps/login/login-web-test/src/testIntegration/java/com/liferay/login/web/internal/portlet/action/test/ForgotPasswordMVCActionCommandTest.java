@@ -14,6 +14,7 @@ import com.liferay.portal.kernel.model.Ticket;
 import com.liferay.portal.kernel.model.TicketConstants;
 import com.liferay.portal.kernel.model.User;
 import com.liferay.portal.kernel.portlet.bridges.mvc.MVCActionCommand;
+import com.liferay.portal.kernel.security.pwd.PasswordEncryptor;
 import com.liferay.portal.kernel.service.CompanyLocalServiceUtil;
 import com.liferay.portal.kernel.service.PasswordPolicyLocalService;
 import com.liferay.portal.kernel.service.PasswordPolicyRelLocalService;
@@ -28,6 +29,7 @@ import com.liferay.portal.kernel.test.randomizerbumpers.UniqueStringRandomizerBu
 import com.liferay.portal.kernel.test.rule.AggregateTestRule;
 import com.liferay.portal.kernel.test.rule.DeleteAfterTestRun;
 import com.liferay.portal.kernel.test.util.PrefsPropsTestUtil;
+import com.liferay.portal.kernel.test.util.PropsValuesTestUtil;
 import com.liferay.portal.kernel.test.util.RandomTestUtil;
 import com.liferay.portal.kernel.test.util.ServiceContextTestUtil;
 import com.liferay.portal.kernel.test.util.TestPropsValues;
@@ -46,12 +48,18 @@ import com.liferay.portlet.passwordpoliciesadmin.util.test.PasswordPolicyTestUti
 
 import java.util.Date;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.junit.Assert;
 import org.junit.ClassRule;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+
+import org.osgi.framework.Bundle;
+import org.osgi.framework.BundleContext;
+import org.osgi.framework.FrameworkUtil;
+import org.osgi.framework.ServiceRegistration;
 
 /**
  * @author Alvaro Saugar
@@ -64,6 +72,17 @@ public class ForgotPasswordMVCActionCommandTest {
 	@Rule
 	public static final AggregateTestRule aggregateTestRule =
 		new LiferayIntegrationTestRule();
+
+	@Test
+	public void testEqualPasswordHashCount() throws Exception {
+		_createUser(false, false);
+
+		Assert.assertEquals(1, _getPasswordHashCount(_user.getEmailAddress()));
+		Assert.assertEquals(
+			1,
+			_getPasswordHashCount(
+				RandomTestUtil.randomString() + "@liferay.com"));
+	}
 
 	@Test
 	public void testLDAPPasswordPolicyPreventsLDAPUserPasswordReset()
@@ -198,11 +217,17 @@ public class ForgotPasswordMVCActionCommandTest {
 			_getMockLiferayPortletActionRequest()
 		throws Exception {
 
+		return _getMockLiferayPortletActionRequest(_user.getEmailAddress());
+	}
+
+	private MockLiferayPortletActionRequest _getMockLiferayPortletActionRequest(
+			String emailAddress)
+		throws Exception {
+
 		MockLiferayPortletActionRequest mockLiferayPortletActionRequest =
 			new MockLiferayPortletActionRequest();
 
-		mockLiferayPortletActionRequest.addParameter(
-			"login", _user.getEmailAddress());
+		mockLiferayPortletActionRequest.addParameter("login", emailAddress);
 		mockLiferayPortletActionRequest.setAttribute(
 			JavaConstants.JAKARTA_PORTLET_CONFIG, null);
 		mockLiferayPortletActionRequest.setAttribute(
@@ -219,6 +244,61 @@ public class ForgotPasswordMVCActionCommandTest {
 			WebKeys.THEME_DISPLAY, themeDisplay);
 
 		return mockLiferayPortletActionRequest;
+	}
+
+	private int _getPasswordHashCount(String emailAddress) throws Exception {
+		AtomicInteger atomicInteger = new AtomicInteger();
+
+		Bundle bundle = FrameworkUtil.getBundle(getClass());
+
+		BundleContext bundleContext = bundle.getBundleContext();
+
+		ServiceRegistration<PasswordEncryptor> serviceRegistration =
+			bundleContext.registerService(
+				PasswordEncryptor.class,
+				new TestPasswordEncryptor(atomicInteger),
+				HashMapDictionaryBuilder.<String, Object>put(
+					"service.ranking", Integer.MAX_VALUE
+				).put(
+					"type",
+					new String[] {
+						PasswordEncryptor.TYPE_BCRYPT,
+						PasswordEncryptor.TYPE_DEFAULT,
+						PasswordEncryptor.TYPE_MD2, PasswordEncryptor.TYPE_MD5,
+						PasswordEncryptor.TYPE_NONE,
+						PasswordEncryptor.TYPE_PBKDF2,
+						PasswordEncryptor.TYPE_SHA,
+						PasswordEncryptor.TYPE_SHA_256,
+						PasswordEncryptor.TYPE_SHA_384,
+						PasswordEncryptor.TYPE_SSHA,
+						PasswordEncryptor.TYPE_UFC_CRYPT
+					}
+				).build());
+
+		try (ConfigurationTemporarySwapper configurationTemporarySwapper =
+				new ConfigurationTemporarySwapper(
+					"com.liferay.captcha.configuration.CaptchaConfiguration",
+					HashMapDictionaryBuilder.<String, Object>put(
+						"sendPasswordCaptchaEnabled", false
+					).build());
+			SafeCloseable safeCloseable1 =
+				PrefsPropsTestUtil.swapWithSafeCloseable(
+					_user.getCompanyId(),
+					PropsKeys.USERS_REMINDER_QUERIES_ENABLED,
+					Boolean.FALSE.toString());
+			SafeCloseable safeCloseable2 =
+				PropsValuesTestUtil.swapWithSafeCloseable(
+					"LOGIN_SECURE_FORGOT_PASSWORD", true)) {
+
+			_mvcActionCommand.processAction(
+				_getMockLiferayPortletActionRequest(emailAddress),
+				new MockLiferayPortletActionResponse());
+		}
+		finally {
+			serviceRegistration.unregister();
+		}
+
+		return atomicInteger.get();
 	}
 
 	private List<Ticket> _processAction() throws Exception {
@@ -279,5 +359,25 @@ public class ForgotPasswordMVCActionCommandTest {
 
 	@Inject
 	private UserLocalService _userLocalService;
+
+	private static class TestPasswordEncryptor implements PasswordEncryptor {
+
+		@Override
+		public String encrypt(
+			String algorithm, String plaintextPassword,
+			String encryptedPassword, boolean upgradeHashSecurity) {
+
+			_atomicInteger.incrementAndGet();
+
+			return RandomTestUtil.randomString();
+		}
+
+		private TestPasswordEncryptor(AtomicInteger atomicInteger) {
+			_atomicInteger = atomicInteger;
+		}
+
+		private final AtomicInteger _atomicInteger;
+
+	}
 
 }

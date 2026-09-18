@@ -13,7 +13,8 @@ export type LoginScreenName =
 	| 'demo.company.admin'
 	| 'demo.organization.owner'
 	| 'demo.unprivileged'
-	| 'test';
+	| 'test'
+	| 'user';
 
 export const userData = {
 	'demo.company.admin': {
@@ -36,12 +37,16 @@ export const userData = {
 		password: liferayConfig.environment.password,
 		surname: 'Test',
 	},
+	'user': {
+		password: liferayConfig.environment.password,
+	},
 };
 
 interface LoginOptions {
 	domain?: string;
 	loginUrl?: string;
 	page: Page;
+	password?: string;
 	rememberMe?: boolean;
 	screenName: LoginScreenName | string;
 }
@@ -96,14 +101,16 @@ export async function performLoginViaApi({
 	domain = '@liferay.com',
 	loginUrl = liferayConfig.environment.baseUrl,
 	page,
+	password = undefined,
 	rememberMe = true,
 	screenName,
 }: LoginOptions) {
-	const {password} = userData[screenName || 'test'];
+	const resolvedPassword =
+		password ?? userData[screenName || 'test'].password;
 
 	const params = new URLSearchParams({
 		login: `${screenName}${domain}`,
-		password,
+		password: resolvedPassword,
 		rememberMe: String(rememberMe),
 	});
 

@@ -53,7 +53,7 @@ customEnvFrom: {}
 customInitContainers:
     x-license-sync:
         -   containerTemplate: |
-                {{- if .license.enabled }}
+                {{- if .licensing.enabled }}
                 -   command:
                         -   bash
                         -   /liferay-init-scripts/deploy-sync.sh
@@ -61,7 +61,7 @@ customInitContainers:
                         -   name: LIFERAY_SYNC_DEST
                             value: /opt/liferay/deploy/license.xml
                         -   name: LIFERAY_SYNC_INTERVAL
-                            value: {{ .license.syncInterval | quote }}
+                            value: {{ .licensing.syncInterval | quote }}
                         -   name: LIFERAY_SYNC_MARKER
                             value: /opt/liferay/.liferay-license-sync.sha
                         -   name: LIFERAY_SYNC_SOURCE
@@ -79,7 +79,7 @@ customInitContainers:
                             type: RuntimeDefault
                     volumeMounts:
                         -   mountPath: /liferay-init-scripts/deploy-sync.sh
-                            name: {{ .license.initScriptsVolumeName }}
+                            name: {{ .licensing.initScriptsVolumeName }}
                             subPath: deploy-sync.sh
                         -   mountPath: /secret
                             name: liferay-license
@@ -128,6 +128,7 @@ customInitContainers:
                                 /temp/liferay/reports \
                                 /temp/liferay/routes \
                                 /temp/liferay/work \
+                                /temp/mnt/liferay/patching \
                                 /temp/osgi/client-extensions \
                                 /temp/osgi/configs \
                                 /temp/osgi/modules \
@@ -153,36 +154,58 @@ customInitContainers:
                                 cp --force --recursive --verbose /opt/liferay/glowroot/* /temp/liferay/glowroot
                             fi
 
-                            if [ ! -f /temp/tomcat/conf/server.xml ]
+                            if [ ! -d /temp/osgi/marketplace ] || [ -z "$(ls --almost-all /temp/osgi/marketplace)" ]
                             then
-                                mkdir --parents /temp/tomcat/conf
+                                mkdir --parents /temp/osgi/marketplace
 
-                                cp /opt/liferay/tomcat/conf/logging.properties /temp/tomcat/conf/logging.properties
+                                cp --force --recursive --verbose /opt/liferay/osgi/marketplace/. /temp/osgi/marketplace
+                            fi
 
-                                echo -e "\norg.apache.catalina.tribes.membership.cloud.level=SEVERE" >> /temp/tomcat/conf/logging.properties
+                            if [ -z "$(ls --almost-all /temp/osgi/modules)" ]
+                            then
+                                cp --force --recursive --verbose /opt/liferay/osgi/modules/. /temp/osgi/modules
+                            fi
 
-                                cat /opt/liferay/tomcat/conf/server.xml | sed '/<!--.*-->/d' | sed '/<!--/,/-->/d' > /temp/tomcat/conf/server.xml
+                            mkdir --parents /temp/tomcat/conf
 
-                                IFS='' read -r -d '' SERVER_XML_CLUSTER <<EOF
-                                <Cluster className="org.apache.catalina.ha.tcp.SimpleTcpCluster">
-                                    <Manager className="com.liferay.support.tomcat.session.LiferayDeltaManager" />
-                                    <Channel className="org.apache.catalina.tribes.group.GroupChannel">
-                                        <Membership
-                                            className="org.apache.catalina.tribes.membership.cloud.CloudMembershipService"
-                                            membershipProviderClassName="org.apache.catalina.tribes.membership.cloud.DNSMembershipProvider"
+                            sed '/<Manager/d' /opt/liferay/tomcat/conf/context.xml > /temp/tomcat/conf/context.xml
+
+                            cp /opt/liferay/tomcat/conf/logging.properties /temp/tomcat/conf/logging.properties
+
+                            echo -e "\norg.apache.catalina.ha.level=INFO\norg.apache.catalina.tribes.membership.cloud.level=SEVERE" >> /temp/tomcat/conf/logging.properties
+
+                            cat /opt/liferay/tomcat/conf/server.xml | sed '/<!--.*-->/d' | sed '/<!--/,/-->/d' > /temp/tomcat/conf/server.xml
+
+                            {{- with .tomcat.maxThreads }}
+
+                            sed --in-place 's/maxThreads="[0-9]*"/maxThreads="{{ . }}"/' /temp/tomcat/conf/server.xml
+                            {{- end }}
+
+                            IFS='' read -r -d '' SERVER_XML_CLUSTER <<EOF
+                            <Cluster className="org.apache.catalina.ha.tcp.SimpleTcpCluster">
+                                <Manager className="com.liferay.support.tomcat.session.LiferayDeltaManager" />
+                                <Channel className="org.apache.catalina.tribes.group.GroupChannel">
+                                    <Membership
+                                        className="org.apache.catalina.tribes.membership.cloud.CloudMembershipService"
+                                        membershipProviderClassName="org.apache.catalina.tribes.membership.cloud.DNSMembershipProvider"
+                                    />
+                                    <Receiver
+                                        address="auto"
+                                        autoBind="0"
+                                        className="org.apache.catalina.tribes.transport.nio.NioReceiver"
+                                        port="4100"
+                                    />
+                                    <Sender className="org.apache.catalina.tribes.transport.ReplicationTransmitter">
+                                        <Transport
+                                            className="org.apache.catalina.tribes.transport.nio.PooledParallelSender"
+                                            timeout="300000"
                                         />
-                                        <Sender className="org.apache.catalina.tribes.transport.ReplicationTransmitter">
-                                            <Transport
-                                                className="org.apache.catalina.tribes.transport.nio.PooledParallelSender"
-                                                timeout="300000"
-                                            />
-                                        </Sender>
-                                    </Channel>
-                                </Cluster>
+                                    </Sender>
+                                </Channel>
+                            </Cluster>
                             EOF
 
-                                sed --in-place '/<Engine/r'<(echo "${SERVER_XML_CLUSTER}") /temp/tomcat/conf/server.xml
-                            fi
+                            sed --in-place '/<Engine/r'<(echo "${SERVER_XML_CLUSTER}") /temp/tomcat/conf/server.xml
 
                             if [ -d /opt/liferay/deploy ] && [ -z "$(ls --all /temp/liferay/deploy/*license* 2>/dev/null)" ]
                             then
@@ -361,17 +384,27 @@ image:
     repository: liferay/dxp
     tag: 2026.q1.8-lts
 initContainers: []
-license:
+licensing:
     activationCodeSecretKey: activationCode
     activationCodeSecretName: ""
+    dxpVersion: ""
     enabled: false
     initScriptsVolumeName: liferay-init-scripts-default
-    secretName: ""
-    syncInterval: 60
-licensing:
-    enabled: false
     offline: false
     offlineActivationBundle: ""
+    onlineActivationWorkflow:
+        clusterRoleName: online-activation-cluster-role
+        clusterWorkflowTemplateName: online-activation-cluster-workflow-template
+        enabled: true
+        serviceAccountName: online-activation-service-account
+        ttlSecondsAfterCompletion: 3600
+        userAccess:
+            roleName: online-activation-user-role
+            serviceAccountName: online-activation-user-service-account
+            tokenSecretName: online-activation-user-token
+        workflowTemplateName: online-activation-workflow-template
+    secretName: ""
+    syncInterval: 60
 livenessProbe:
     failureThreshold: 3
     httpGet:
@@ -401,6 +434,11 @@ network:
     hostnames: []
     perHostnameRoutes: false
     securityPolicyAuthorizationSpec: {}
+    sessionPersistence:
+        cookieConfig:
+            lifetimeType: Session
+        sessionName: LIFERAY_SESSION
+        type: Cookie
     timeouts: {}
 networkPolicy:
     allowGatewayIngress: true
@@ -432,8 +470,14 @@ ports:
     -   containerPort: 4000
         name: glowroot
         protocol: TCP
+    -   containerPort: 4100
+        name: session
+        protocol: TCP
     -   containerPort: 7800
         name: cluster
+        protocol: TCP
+    -   containerPort: 7801
+        name: cluster-tx
         protocol: TCP
     -   containerPort: 8000
         name: debug
@@ -481,6 +525,8 @@ startupProbe:
     periodSeconds: 10
     timeoutSeconds: 5
 tolerations: []
+tomcat:
+    maxThreads: ""
 updateStrategy:
     type: RollingUpdate
 volumeClaimTemplates:
@@ -493,6 +539,9 @@ volumeClaimTemplates:
                 requests:
                     storage: 1Gi
 volumeMounts:
+    -   mountPath: /mnt/liferay/patching
+        name: liferay-persistent-volume
+        subPath: mnt/liferay/patching
     -   mountPath: /opt/liferay/data
         name: liferay-persistent-volume
         subPath: liferay/data
@@ -517,6 +566,9 @@ volumeMounts:
     -   mountPath: /opt/liferay/osgi/configs
         name: liferay-persistent-volume
         subPath: osgi/configs
+    -   mountPath: /opt/liferay/osgi/marketplace
+        name: liferay-persistent-volume
+        subPath: osgi/marketplace
     -   mountPath: /opt/liferay/osgi/modules
         name: liferay-persistent-volume
         subPath: osgi/modules
@@ -538,6 +590,9 @@ volumeMounts:
     -   mountPath: /opt/liferay/routes
         name: liferay-persistent-volume
         subPath: liferay/routes
+    -   mountPath: /opt/liferay/tomcat/conf/context.xml
+        name: liferay-persistent-volume
+        subPath: tomcat/conf/context.xml
     -   mountPath: /opt/liferay/tomcat/conf/logging.properties
         name: liferay-persistent-volume
         subPath: tomcat/conf/logging.properties

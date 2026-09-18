@@ -11,6 +11,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 
 import com.liferay.petra.function.UnsafeSupplier;
 import com.liferay.petra.string.StringBundler;
+import com.liferay.portal.kernel.json.JSONFactoryUtil;
 import com.liferay.portal.kernel.util.StringUtil;
 import com.liferay.portal.vulcan.graphql.annotation.GraphQLField;
 import com.liferay.portal.vulcan.graphql.annotation.GraphQLName;
@@ -28,6 +29,8 @@ import java.io.Serializable;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 
+import java.util.Arrays;
+import java.util.Collection;
 import java.util.Date;
 import java.util.Iterator;
 import java.util.Map;
@@ -60,7 +63,7 @@ public class Attachment implements Serializable {
 	}
 
 	@io.swagger.v3.oas.annotations.media.Schema(
-		description = "Base64-encoded payload used only when supplying the file body inline; decoded server-side and stored as a new document-library file entry. Mutually exclusive with `src`; ignored when `src` is supplied. Not populated on read responses.",
+		description = "Base64-encoded payload of the file. On write it supplies the file body inline; it is decoded server-side and stored as a new document-library file entry, is mutually exclusive with `src`, and is ignored when `src` is supplied. On read it is always populated, so an exported payload carries its content instead of a `src` URL pointing back at the source environment.",
 		example = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8/5+hHgAHggJ/PchI7wAAAABJRU5ErkJggg=="
 	)
 	public String getAttachment() {
@@ -97,7 +100,7 @@ public class Attachment implements Serializable {
 	}
 
 	@GraphQLField(
-		description = "Base64-encoded payload used only when supplying the file body inline; decoded server-side and stored as a new document-library file entry. Mutually exclusive with `src`; ignored when `src` is supplied. Not populated on read responses."
+		description = "Base64-encoded payload of the file. On write it supplies the file body inline; it is decoded server-side and stored as a new document-library file entry, is mutually exclusive with `src`, and is ignored when `src` is supplied. On read it is always populated, so an exported payload carries its content instead of a `src` URL pointing back at the source environment."
 	)
 	@JsonProperty(access = JsonProperty.Access.READ_WRITE)
 	protected String attachment;
@@ -1419,6 +1422,27 @@ public class Attachment implements Serializable {
 		return sb.toString();
 	}
 
+	private static String _toJSON(Object value) {
+		if (value instanceof Collection) {
+			return String.valueOf(
+				JSONFactoryUtil.createJSONArray((Collection<?>)value));
+		}
+		else if (value instanceof Map) {
+			return String.valueOf(
+				JSONFactoryUtil.createJSONObject((Map<?, ?>)value));
+		}
+		else if (value instanceof Object[]) {
+			return String.valueOf(
+				JSONFactoryUtil.createJSONArray(
+					Arrays.asList((Object[])value)));
+		}
+		else if (value instanceof String) {
+			return StringBundler.concat("\"", _escape(value), "\"");
+		}
+
+		return String.valueOf(value);
+	}
+
 	private static final String[][] _JSON_ESCAPE_STRINGS = {
 		{"\\", "\"", "\b", "\f", "\n", "\r", "\t"},
 		{"\\\\", "\\\"", "\\b", "\\f", "\\n", "\\r", "\\t"}
@@ -1427,4 +1451,4 @@ public class Attachment implements Serializable {
 	private Map<String, Serializable> _extendedProperties;
 
 }
-// LIFERAY-REST-BUILDER-HASH:1704614327
+// LIFERAY-REST-BUILDER-HASH:-432670162

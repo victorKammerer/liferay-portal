@@ -7,7 +7,15 @@ package com.liferay.portal.security.audit.configuration.web.internal.portlet.act
 
 import com.liferay.configuration.admin.constants.ConfigurationAdminPortletKeys;
 import com.liferay.portal.configuration.module.configuration.ConfigurationProvider;
+import com.liferay.portal.kernel.audit.AuditException;
+import com.liferay.portal.kernel.audit.AuditMessage;
+import com.liferay.portal.kernel.audit.AuditRouterUtil;
 import com.liferay.portal.kernel.feature.flag.FeatureFlagManagerUtil;
+import com.liferay.portal.kernel.json.JSONObject;
+import com.liferay.portal.kernel.json.JSONUtil;
+import com.liferay.portal.kernel.log.Log;
+import com.liferay.portal.kernel.log.LogFactoryUtil;
+import com.liferay.portal.kernel.model.User;
 import com.liferay.portal.kernel.portlet.bridges.mvc.BaseMVCActionCommand;
 import com.liferay.portal.kernel.portlet.bridges.mvc.MVCActionCommand;
 import com.liferay.portal.kernel.security.auth.PrincipalException;
@@ -22,6 +30,7 @@ import com.liferay.portal.kernel.util.PortalUtil;
 import com.liferay.portal.kernel.util.WebKeys;
 import com.liferay.portal.security.audit.configuration.AuditConfiguration;
 import com.liferay.portal.security.audit.configuration.web.internal.util.AuditConfigurationOverrideUtil;
+import com.liferay.portal.security.audit.router.configuration.FileSystemAuditMessageProcessorConfiguration;
 import com.liferay.portal.security.audit.router.configuration.PersistentAuditMessageProcessorConfiguration;
 
 import jakarta.portlet.ActionRequest;
@@ -54,6 +63,8 @@ public class SaveAuditConfigurationMVCActionCommand
 		PermissionChecker permissionChecker =
 			PermissionThreadLocal.getPermissionChecker();
 		String portletId = PortalUtil.getPortletId(actionRequest);
+		ThemeDisplay themeDisplay = (ThemeDisplay)actionRequest.getAttribute(
+			WebKeys.THEME_DISPLAY);
 
 		if (portletId.equals(ConfigurationAdminPortletKeys.SYSTEM_SETTINGS)) {
 			if (!permissionChecker.isOmniadmin()) {
@@ -79,6 +90,26 @@ public class SaveAuditConfigurationMVCActionCommand
 
 				_configurationProvider.saveSystemConfiguration(
 					AuditConfiguration.class, properties);
+
+				_routePseudonymizationChangeAuditMessage(
+					actionRequest, auditConfiguration.pseudonymizationEnabled(),
+					themeDisplay);
+			}
+
+			Dictionary<String, Object>
+				fileSystemAuditMessageProcessorConfigurationProperties =
+					_getFileSystemAuditMessageProcessorConfigurationProperties(
+						actionRequest,
+						_configurationProvider.getSystemConfiguration(
+							FileSystemAuditMessageProcessorConfiguration.
+								class));
+
+			if (!fileSystemAuditMessageProcessorConfigurationProperties.
+					isEmpty()) {
+
+				_configurationProvider.saveSystemConfiguration(
+					FileSystemAuditMessageProcessorConfiguration.class,
+					fileSystemAuditMessageProcessorConfigurationProperties);
 			}
 
 			Dictionary<String, Object>
@@ -98,9 +129,6 @@ public class SaveAuditConfigurationMVCActionCommand
 			}
 		}
 		else {
-			ThemeDisplay themeDisplay =
-				(ThemeDisplay)actionRequest.getAttribute(WebKeys.THEME_DISPLAY);
-
 			long companyId = themeDisplay.getCompanyId();
 
 			FeatureFlagManagerUtil.checkEnabled(companyId, "LPD-6417");
@@ -113,12 +141,35 @@ public class SaveAuditConfigurationMVCActionCommand
 			if (!AuditConfigurationOverrideUtil.isOverridden(
 					AuditConfiguration.class, "enabled")) {
 
+				AuditConfiguration auditConfiguration =
+					_configurationProvider.getCompanyConfiguration(
+						AuditConfiguration.class, companyId);
+
 				_configurationProvider.saveCompanyConfiguration(
 					AuditConfiguration.class, companyId,
 					_getAuditConfigurationProperties(
+						actionRequest, auditConfiguration));
+
+				_routePseudonymizationChangeAuditMessage(
+					actionRequest, auditConfiguration.pseudonymizationEnabled(),
+					themeDisplay);
+			}
+
+			Dictionary<String, Object>
+				fileSystemAuditMessageProcessorConfigurationProperties =
+					_getFileSystemAuditMessageProcessorConfigurationProperties(
 						actionRequest,
 						_configurationProvider.getCompanyConfiguration(
-							AuditConfiguration.class, companyId)));
+							FileSystemAuditMessageProcessorConfiguration.class,
+							companyId));
+
+			if (!fileSystemAuditMessageProcessorConfigurationProperties.
+					isEmpty()) {
+
+				_configurationProvider.saveCompanyConfiguration(
+					FileSystemAuditMessageProcessorConfiguration.class,
+					companyId,
+					fileSystemAuditMessageProcessorConfigurationProperties);
 			}
 
 			Dictionary<String, Object>
@@ -151,6 +202,11 @@ public class SaveAuditConfigurationMVCActionCommand
 			"enabled",
 			ParamUtil.getBoolean(
 				actionRequest, "enabled", auditConfiguration.enabled())
+		).put(
+			"pseudonymizationEnabled",
+			ParamUtil.getBoolean(
+				actionRequest, "pseudonymizationEnabled",
+				auditConfiguration.pseudonymizationEnabled())
 		).build();
 	}
 
@@ -159,6 +215,67 @@ public class SaveAuditConfigurationMVCActionCommand
 		AuditConfiguration auditConfiguration) {
 
 		return auditConfiguration.auditMessageMaxQueueSize();
+	}
+
+	private Dictionary<String, Object>
+		_getFileSystemAuditMessageProcessorConfigurationProperties(
+			ActionRequest actionRequest,
+			FileSystemAuditMessageProcessorConfiguration
+				fileSystemAuditMessageProcessorConfiguration) {
+
+		Dictionary<String, Object> properties = new HashMapDictionary<>();
+
+		if (!AuditConfigurationOverrideUtil.isOverridden(
+				FileSystemAuditMessageProcessorConfiguration.class,
+				"enabled")) {
+
+			properties.put(
+				"enabled",
+				ParamUtil.getBoolean(
+					actionRequest, "fileSystemAuditMessageProcessorEnabled",
+					fileSystemAuditMessageProcessorConfiguration.enabled()));
+		}
+
+		if (!AuditConfigurationOverrideUtil.isOverridden(
+				FileSystemAuditMessageProcessorConfiguration.class,
+				"generateChecksum")) {
+
+			properties.put(
+				"generateChecksum",
+				ParamUtil.getBoolean(
+					actionRequest,
+					"fileSystemAuditMessageProcessorGenerateChecksum",
+					fileSystemAuditMessageProcessorConfiguration.
+						generateChecksum()));
+		}
+
+		if (!AuditConfigurationOverrideUtil.isOverridden(
+				FileSystemAuditMessageProcessorConfiguration.class,
+				"outputDirectory")) {
+
+			properties.put(
+				"outputDirectory",
+				ParamUtil.getString(
+					actionRequest,
+					"fileSystemAuditMessageProcessorOutputDirectory",
+					fileSystemAuditMessageProcessorConfiguration.
+						outputDirectory()));
+		}
+
+		if (!AuditConfigurationOverrideUtil.isOverridden(
+				FileSystemAuditMessageProcessorConfiguration.class,
+				"outputFormat")) {
+
+			properties.put(
+				"outputFormat",
+				ParamUtil.getString(
+					actionRequest,
+					"fileSystemAuditMessageProcessorOutputFormat",
+					fileSystemAuditMessageProcessorConfiguration.
+						outputFormat()));
+		}
+
+		return properties;
 	}
 
 	private Dictionary<String, Object>
@@ -206,6 +323,54 @@ public class SaveAuditConfigurationMVCActionCommand
 
 		return properties;
 	}
+
+	private void _routePseudonymizationChangeAuditMessage(
+		ActionRequest actionRequest, boolean previousPseudonymizationEnabled,
+		ThemeDisplay themeDisplay) {
+
+		if (!FeatureFlagManagerUtil.isEnabled(
+				themeDisplay.getCompanyId(), "LPD-6417")) {
+
+			return;
+		}
+
+		boolean pseudonymizationEnabled = ParamUtil.getBoolean(
+			actionRequest, "pseudonymizationEnabled",
+			previousPseudonymizationEnabled);
+
+		if (previousPseudonymizationEnabled == pseudonymizationEnabled) {
+			return;
+		}
+
+		JSONObject additionalInfoJSONObject = JSONUtil.put(
+			"attributes",
+			JSONUtil.putAll(
+				JSONUtil.put(
+					"name", "pseudonymizationEnabled"
+				).put(
+					"newValue", pseudonymizationEnabled
+				).put(
+					"oldValue", previousPseudonymizationEnabled
+				)));
+
+		try {
+			User user = themeDisplay.getUser();
+
+			AuditRouterUtil.route(
+				new AuditMessage(
+					themeDisplay.getCompanyId(), themeDisplay.getUserId(),
+					user.getFullName(), additionalInfoJSONObject,
+					AuditConfiguration.class.getName(),
+					String.valueOf(themeDisplay.getCompanyId()),
+					"AUDIT_CONFIG_CHANGE", null));
+		}
+		catch (AuditException auditException) {
+			_log.error(auditException);
+		}
+	}
+
+	private static final Log _log = LogFactoryUtil.getLog(
+		SaveAuditConfigurationMVCActionCommand.class);
 
 	@Reference
 	private ConfigurationProvider _configurationProvider;

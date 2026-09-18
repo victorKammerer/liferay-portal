@@ -11,6 +11,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 
 import com.liferay.petra.function.UnsafeSupplier;
 import com.liferay.petra.string.StringBundler;
+import com.liferay.portal.kernel.json.JSONFactoryUtil;
 import com.liferay.portal.kernel.util.StringUtil;
 import com.liferay.portal.vulcan.graphql.annotation.GraphQLField;
 import com.liferay.portal.vulcan.graphql.annotation.GraphQLName;
@@ -25,6 +26,8 @@ import jakarta.xml.bind.annotation.XmlRootElement;
 
 import java.io.Serializable;
 
+import java.util.Arrays;
+import java.util.Collection;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Objects;
@@ -105,7 +108,7 @@ public class SkuVirtualSettingsFileEntry implements Serializable {
 	private Supplier<Map<String, Map<String, String>>> _actionsSupplier;
 
 	@io.swagger.v3.oas.annotations.media.Schema(
-		description = "Base64-encoded file uploaded as the asset for this entry on create or update; write-only and not returned on read. The resolved download URL is exposed through `src`.",
+		description = "Base64-encoded file uploaded as the asset for this entry on create or update. On read it is always populated, so an exported payload carries its content instead of the `src` download URL pointing back at the source environment.",
 		example = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8/5+hHgAHggJ/PchI7wAAAABJRU5ErkJggg=="
 	)
 	public String getAttachment() {
@@ -142,7 +145,7 @@ public class SkuVirtualSettingsFileEntry implements Serializable {
 	}
 
 	@GraphQLField(
-		description = "Base64-encoded file uploaded as the asset for this entry on create or update; write-only and not returned on read. The resolved download URL is exposed through `src`."
+		description = "Base64-encoded file uploaded as the asset for this entry on create or update. On read it is always populated, so an exported payload carries its content instead of the `src` download URL pointing back at the source environment."
 	)
 	@JsonProperty(access = JsonProperty.Access.READ_WRITE)
 	protected String attachment;
@@ -539,6 +542,27 @@ public class SkuVirtualSettingsFileEntry implements Serializable {
 		return sb.toString();
 	}
 
+	private static String _toJSON(Object value) {
+		if (value instanceof Collection) {
+			return String.valueOf(
+				JSONFactoryUtil.createJSONArray((Collection<?>)value));
+		}
+		else if (value instanceof Map) {
+			return String.valueOf(
+				JSONFactoryUtil.createJSONObject((Map<?, ?>)value));
+		}
+		else if (value instanceof Object[]) {
+			return String.valueOf(
+				JSONFactoryUtil.createJSONArray(
+					Arrays.asList((Object[])value)));
+		}
+		else if (value instanceof String) {
+			return StringBundler.concat("\"", _escape(value), "\"");
+		}
+
+		return String.valueOf(value);
+	}
+
 	private static final String[][] _JSON_ESCAPE_STRINGS = {
 		{"\\", "\"", "\b", "\f", "\n", "\r", "\t"},
 		{"\\\\", "\\\"", "\\b", "\\f", "\\n", "\\r", "\\t"}
@@ -547,4 +571,4 @@ public class SkuVirtualSettingsFileEntry implements Serializable {
 	private Map<String, Serializable> _extendedProperties;
 
 }
-// LIFERAY-REST-BUILDER-HASH:1279615741
+// LIFERAY-REST-BUILDER-HASH:-2024839920

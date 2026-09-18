@@ -31,7 +31,8 @@ public class CPDefinitionOptionValueRelServiceWrapper
 
 	@Override
 	public CPDefinitionOptionValueRel addCPDefinitionOptionValueRel(
-			long cpDefinitionOptionRelId, long cpInstanceId, String key,
+			String externalReferenceCode, long cpDefinitionOptionRelId,
+			long cpInstanceId, String key,
 			java.util.Map<java.util.Locale, String> nameMap,
 			boolean preselected, java.math.BigDecimal deltaPrice,
 			double priority, java.math.BigDecimal quantity,
@@ -40,19 +41,22 @@ public class CPDefinitionOptionValueRelServiceWrapper
 		throws com.liferay.portal.kernel.exception.PortalException {
 
 		return _cpDefinitionOptionValueRelService.addCPDefinitionOptionValueRel(
-			cpDefinitionOptionRelId, cpInstanceId, key, nameMap, preselected,
-			deltaPrice, priority, quantity, unitOfMeasureKey, serviceContext);
+			externalReferenceCode, cpDefinitionOptionRelId, cpInstanceId, key,
+			nameMap, preselected, deltaPrice, priority, quantity,
+			unitOfMeasureKey, serviceContext);
 	}
 
 	@Override
 	public CPDefinitionOptionValueRel addCPDefinitionOptionValueRel(
-			long cpDefinitionOptionRelId, String key,
-			java.util.Map<java.util.Locale, String> nameMap, double priority,
+			String externalReferenceCode, long cpDefinitionOptionRelId,
+			String key, java.util.Map<java.util.Locale, String> nameMap,
+			double priority,
 			com.liferay.portal.kernel.service.ServiceContext serviceContext)
 		throws com.liferay.portal.kernel.exception.PortalException {
 
 		return _cpDefinitionOptionValueRelService.addCPDefinitionOptionValueRel(
-			cpDefinitionOptionRelId, key, nameMap, priority, serviceContext);
+			externalReferenceCode, cpDefinitionOptionRelId, key, nameMap,
+			priority, serviceContext);
 	}
 
 	@Override
@@ -80,6 +84,17 @@ public class CPDefinitionOptionValueRelServiceWrapper
 
 		return _cpDefinitionOptionValueRelService.
 			fetchCPDefinitionOptionValueRel(cpDefinitionOptionRelId, key);
+	}
+
+	@Override
+	public CPDefinitionOptionValueRel
+			fetchCPDefinitionOptionValueRelByExternalReferenceCode(
+				String externalReferenceCode, long companyId)
+		throws com.liferay.portal.kernel.exception.PortalException {
+
+		return _cpDefinitionOptionValueRelService.
+			fetchCPDefinitionOptionValueRelByExternalReferenceCode(
+				externalReferenceCode, companyId);
 	}
 
 	@Override
@@ -130,6 +145,16 @@ public class CPDefinitionOptionValueRelServiceWrapper
 
 		return _cpDefinitionOptionValueRelService.
 			getCPDefinitionOptionValueRelsCount(cpDefinitionOptionRelId);
+	}
+
+	@Override
+	public CPDefinitionOptionValueRel getOrAddEmptyCPDefinitionOptionValueRel(
+			String externalReferenceCode, long cpDefinitionOptionRelId)
+		throws com.liferay.portal.kernel.exception.PortalException {
+
+		return _cpDefinitionOptionValueRelService.
+			getOrAddEmptyCPDefinitionOptionValueRel(
+				externalReferenceCode, cpDefinitionOptionRelId);
 	}
 
 	/**
@@ -205,6 +230,15 @@ public class CPDefinitionOptionValueRelServiceWrapper
 	}
 
 	@Override
+	public CPDefinitionOptionValueRel updateExternalReferenceCode(
+			long cpDefinitionOptionValueRelId, String externalReferenceCode)
+		throws com.liferay.portal.kernel.exception.PortalException {
+
+		return _cpDefinitionOptionValueRelService.updateExternalReferenceCode(
+			cpDefinitionOptionValueRelId, externalReferenceCode);
+	}
+
+	@Override
 	public CPDefinitionOptionValueRelService getWrappedService() {
 		return _cpDefinitionOptionValueRelService;
 	}
@@ -220,4 +254,4 @@ public class CPDefinitionOptionValueRelServiceWrapper
 		_cpDefinitionOptionValueRelService;
 
 }
-// LIFERAY-SERVICE-BUILDER-HASH:-1462777871
+// LIFERAY-SERVICE-BUILDER-HASH:-1183389987

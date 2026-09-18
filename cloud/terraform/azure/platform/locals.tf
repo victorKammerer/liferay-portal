@@ -8,7 +8,10 @@ locals {
 		}
 	} : var.cluster_secret_store.provider_hcl
 	crossplane_iam_grantable_role_definition_ids=[
+		basename(data.azurerm_role_definition.backup_operator.role_definition_id),
 		basename(data.azurerm_role_definition.key_vault_crypto_service_encryption_user.role_definition_id),
+		basename(data.azurerm_role_definition.reader.role_definition_id),
+		basename(data.azurerm_role_definition.storage_account_backup_contributor.role_definition_id),
 		basename(data.azurerm_role_definition.storage_blob_data_contributor.role_definition_id),
 		basename(data.azurerm_role_definition.storage_blob_data_reader.role_definition_id),
 	]
@@ -50,6 +53,7 @@ locals {
 		name="external-secrets"
 		namespace="external-secrets-system"
 	}
+	keda_enabled=var.keda_config.enabled && var.observability_config.enabled
 	resource_group_name=var.deployment_name
 	system_node_pool_vm_size=one([
 		for agent_pool_profile in data.azurerm_kubernetes_cluster.aks.agent_pool_profile :

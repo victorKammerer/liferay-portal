@@ -744,6 +744,9 @@ public class PortletDataContextImpl implements PortletDataContext {
 
 		Element groupElement = getExportDataGroupElement(modelClassSimpleName);
 
+		Map<String, Element> exportDataElements = _getExportDataElements(
+			groupElement);
+
 		Element element = null;
 
 		if (classedModel instanceof StagedModel) {
@@ -751,14 +754,15 @@ public class PortletDataContextImpl implements PortletDataContext {
 
 			String path = ExportImportPathUtil.getModelPath(stagedModel);
 
-			element = _getDataElement(groupElement, "path", path);
+			element = exportDataElements.get(
+				_getExportDataElementKey("path", path));
 
 			if (element != null) {
 				return element;
 			}
 
-			element = _getDataElement(
-				groupElement, "uuid", stagedModel.getUuid());
+			element = exportDataElements.get(
+				_getExportDataElementKey("uuid", stagedModel.getUuid()));
 
 			if (element != null) {
 				return element;
@@ -777,6 +781,14 @@ public class PortletDataContextImpl implements PortletDataContext {
 			StagedModel stagedModel = (StagedModel)classedModel;
 
 			element.addAttribute("uuid", stagedModel.getUuid());
+
+			exportDataElements.putIfAbsent(
+				_getExportDataElementKey(
+					"path", ExportImportPathUtil.getModelPath(stagedModel)),
+				element);
+			exportDataElements.putIfAbsent(
+				_getExportDataElementKey("uuid", stagedModel.getUuid()),
+				element);
 		}
 
 		return element;
@@ -815,35 +827,22 @@ public class PortletDataContextImpl implements PortletDataContext {
 	public Element getImportDataElement(
 		String name, String attribute, String value) {
 
-		Element importDataElement = null;
-		String key = StringPool.BLANK;
-
-		if (_importDataElements != null) {
-			String selfPath = _importDataRootElement.attributeValue(
-				"self-path");
-
-			if (Validator.isNotNull(selfPath)) {
-				key = StringBundler.concat(
-					selfPath, CharPool.POUND, name, CharPool.POUND, attribute,
-					CharPool.POUND, value);
-
-				importDataElement = _importDataElements.get(key);
-
-				if (importDataElement != null) {
-					return importDataElement;
-				}
-			}
-		}
-
 		Element groupElement = getImportDataGroupElement(name);
 
-		importDataElement = _getDataElement(groupElement, attribute, value);
-
-		if (Validator.isNotNull(key)) {
-			_importDataElements.put(key, importDataElement);
+		if (_importDataElementsMap == null) {
+			return _getDataElement(groupElement, attribute, value);
 		}
 
-		return importDataElement;
+		Map<String, List<Element>> importDataElements = _getImportDataElements(
+			name, attribute, groupElement);
+
+		List<Element> elements = importDataElements.get(value);
+
+		if (ListUtil.isEmpty(elements)) {
+			return null;
+		}
+
+		return elements.get(0);
 	}
 
 	@Override
@@ -1653,6 +1652,8 @@ public class PortletDataContextImpl implements PortletDataContext {
 
 	@Override
 	public void setExportDataRootElement(Element exportDataRootElement) {
+		_exportDataElementsMap.clear();
+
 		_exportDataRootElement = exportDataRootElement;
 	}
 
@@ -1671,15 +1672,22 @@ public class PortletDataContextImpl implements PortletDataContext {
 		boolean importDataElementCacheEnabled) {
 
 		if (importDataElementCacheEnabled) {
-			_importDataElements = new HashMap<>();
+			_importDataElementsMap = new HashMap<>();
+			_importDataGroupElements = new HashMap<>();
 		}
 		else {
-			_importDataElements = null;
+			_importDataElementsMap = null;
+			_importDataGroupElements = null;
 		}
 	}
 
 	@Override
 	public void setImportDataRootElement(Element importDataRootElement) {
+		if (_importDataElementsMap != null) {
+			_importDataElementsMap.clear();
+			_importDataGroupElements.clear();
+		}
+
 		_importDataRootElement = importDataRootElement;
 	}
 
@@ -2061,33 +2069,23 @@ public class PortletDataContextImpl implements PortletDataContext {
 			return SAXReaderUtil.createElement("EMPTY-ELEMENT");
 		}
 
-		Element groupElement = null;
-		String key = StringPool.BLANK;
+		if (_importDataGroupElements != null) {
+			Element groupElement = _importDataGroupElements.get(name);
 
-		if (_importDataElements != null) {
-			String selfPath = _importDataRootElement.attributeValue(
-				"self-path");
-
-			if (Validator.isNotNull(selfPath)) {
-				key = StringBundler.concat(selfPath, CharPool.POUND, name);
-
-				groupElement = _importDataElements.get(key);
-
-				if (groupElement != null) {
-					return groupElement;
-				}
+			if (groupElement != null) {
+				return groupElement;
 			}
 		}
 
-		groupElement = _deepSearchForFirstChildElement(
+		Element groupElement = _deepSearchForFirstChildElement(
 			_importDataRootElement, name);
 
 		if (groupElement == null) {
 			groupElement = SAXReaderUtil.createElement("EMPTY-ELEMENT");
 		}
 
-		if (Validator.isNotNull(key)) {
-			_importDataElements.put(key, groupElement);
+		if (_importDataGroupElements != null) {
+			_importDataGroupElements.put(name, groupElement);
 		}
 
 		return groupElement;
@@ -2115,21 +2113,43 @@ public class PortletDataContextImpl implements PortletDataContext {
 					Element groupElement = getImportDataGroupElement(
 						clazz.getSimpleName());
 
-					Predicate<Element> childElementPredicate =
-						childElement -> Objects.equals(
-							childElement.attributeValue("uuid"), uuid);
+					if (_importDataElementsMap == null) {
+						referenceDataElement =
+							_searchFirstChildElementWithPredicate(
+								groupElement, "staged-model",
+								childElement -> {
+									if (!Objects.equals(
+											childElement.attributeValue("uuid"),
+											uuid)) {
 
-					if (groupId != null) {
-						childElementPredicate = childElementPredicate.and(
-							childElement -> Objects.equals(
-								childElement.attributeValue("group-id"),
-								groupId));
+										return false;
+									}
+
+									if ((groupId == null) ||
+										Objects.equals(
+											childElement.attributeValue(
+												"group-id"),
+											groupId)) {
+
+										return true;
+									}
+
+									return false;
+								});
 					}
+					else {
+						Map<String, List<Element>> importDataElements =
+							_getImportDataElements(
+								clazz.getSimpleName(), "uuid", groupElement);
 
-					referenceDataElement =
-						_searchFirstChildElementWithPredicate(
-							groupElement, "staged-model",
-							childElementPredicate);
+						referenceDataElement = _searchFirstElementWithPredicate(
+							importDataElements.get(uuid),
+							element ->
+								(groupId == null) ||
+								Objects.equals(
+									element.attributeValue("group-id"),
+									groupId));
+					}
 				}
 
 				if (referenceDataElement == null) {
@@ -2464,6 +2484,36 @@ public class PortletDataContextImpl implements PortletDataContext {
 				childElement.attributeValue(attribute), value));
 	}
 
+	private String _getExportDataElementKey(String attribute, String value) {
+		return StringBundler.concat(attribute, CharPool.POUND, value);
+	}
+
+	private Map<String, Element> _getExportDataElements(Element groupElement) {
+		Map<String, Element> exportDataElements = _exportDataElementsMap.get(
+			groupElement.getName());
+
+		if (exportDataElements != null) {
+			return exportDataElements;
+		}
+
+		exportDataElements = new HashMap<>();
+
+		for (Element element : groupElement.elements("staged-model")) {
+			exportDataElements.putIfAbsent(
+				_getExportDataElementKey(
+					"path", element.attributeValue("path")),
+				element);
+			exportDataElements.putIfAbsent(
+				_getExportDataElementKey(
+					"uuid", element.attributeValue("uuid")),
+				element);
+		}
+
+		_exportDataElementsMap.put(groupElement.getName(), exportDataElements);
+
+		return exportDataElements;
+	}
+
 	private long _getGroupId(ClassedModel classedModel) {
 		if (classedModel instanceof GroupedModel) {
 			GroupedModel groupedModel = (GroupedModel)classedModel;
@@ -2472,6 +2522,33 @@ public class PortletDataContextImpl implements PortletDataContext {
 		}
 
 		return 0;
+	}
+
+	private Map<String, List<Element>> _getImportDataElements(
+		String name, String attribute, Element groupElement) {
+
+		String key = StringBundler.concat(name, CharPool.POUND, attribute);
+
+		Map<String, List<Element>> importDataElements =
+			_importDataElementsMap.get(key);
+
+		if (importDataElements != null) {
+			return importDataElements;
+		}
+
+		importDataElements = new HashMap<>();
+
+		for (Element element : groupElement.elements("staged-model")) {
+			List<Element> elements = importDataElements.computeIfAbsent(
+				element.attributeValue(attribute),
+				attributeValue -> new ArrayList<>());
+
+			elements.add(element);
+		}
+
+		_importDataElementsMap.put(key, importDataElements);
+
+		return importDataElements;
 	}
 
 	private long _getOldPrimaryKey(Map<Long, Long> map, long value) {
@@ -2757,6 +2834,22 @@ public class PortletDataContextImpl implements PortletDataContext {
 		return null;
 	}
 
+	private Element _searchFirstElementWithPredicate(
+		List<Element> elements, Predicate<Element> elementPredicate) {
+
+		if (elements == null) {
+			return null;
+		}
+
+		for (Element element : elements) {
+			if (elementPredicate.test(element)) {
+				return element;
+			}
+		}
+
+		return null;
+	}
+
 	private static final Class<?>[] _XSTREAM_DEFAULT_ALLOWED_TYPES = {
 		boolean[].class, byte[].class, Date.class, Date[].class, double[].class,
 		float[].class, int[].class, Locale.class, long[].class, Number.class,
@@ -2781,10 +2874,13 @@ public class PortletDataContextImpl implements PortletDataContext {
 	private Date _endDate;
 	private final Map<String, List<ExpandoColumn>> _expandoColumnsMap =
 		new HashMap<>();
+	private final Map<String, Map<String, Element>> _exportDataElementsMap =
+		new HashMap<>();
 	private transient Element _exportDataRootElement;
 	private String _exportImportProcessId;
 	private long _groupId;
-	private Map<String, Element> _importDataElements;
+	private Map<String, Map<String, List<Element>>> _importDataElementsMap;
+	private Map<String, Element> _importDataGroupElements;
 	private transient Element _importDataRootElement;
 	private transient long[] _layoutIds;
 	private String _layoutSetPrototypeUuid;

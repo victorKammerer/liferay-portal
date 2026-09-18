@@ -16,13 +16,15 @@ import GroupByPicker, {
 import React, {useState} from 'react';
 import StatesRenderer from 'shared/components/states-renderer/StatesRenderer';
 import {AssetObjectTypes} from 'shared/util/constants';
+import {getAssetDescriptorByRESTType} from 'assets/descriptors';
 import {getMimeType} from 'assets/components/mime-type';
 import {getSafeRangeSelectors} from 'shared/util/util';
 import {ITopAsset, TopAssetMetric} from 'shared/api/assets';
 import {RangeSelectors, SafeRangeSelectors} from 'shared/types';
 import {Routes, setUriQueryValues, toRoute} from 'shared/util/router';
 import {toThousands} from 'shared/util/numbers';
-import {useHistory, useParams} from 'react-router-dom';
+import {useHistoryAdapter} from 'shared/hooks/useHistoryAdapter';
+import {useParams} from 'react-router-dom';
 import {useRequest} from 'shared/hooks/useRequest';
 
 const TABS = ['content', 'files'] as const;
@@ -40,17 +42,6 @@ const TAB_GROUP_BY_METRICS: Record<(typeof TABS)[number], GroupByMetric[]> = {
 		GroupByMetric.VIEWS,
 	],
 };
-
-const ASSET_ROUTE_MAP = {
-	blog: Routes.ASSETS_BLOGS_OVERVIEW,
-	document: Routes.ASSETS_DOCUMENTS_AND_MEDIA_OVERVIEW,
-	form: Routes.ASSETS_FORMS_OVERVIEW,
-	webContent: Routes.ASSETS_WEB_CONTENT_OVERVIEW,
-} as const;
-
-const getAssetRoute = (assetType?: string) =>
-	ASSET_ROUTE_MAP[assetType as keyof typeof ASSET_ROUTE_MAP] ??
-	Routes.ASSETS_OBJECT_ENTRY_OVERVIEW;
 
 export interface ITopAssetsRequestVariables extends SafeRangeSelectors {
 	channelId: string;
@@ -78,7 +69,7 @@ const TopAssetsTabContent: React.FC<ITopAssetsTabContentProps> = ({
 	routeQueries,
 	setGroupBy,
 }) => {
-	const {channelId, groupId} = useParams<{
+	const {channelId = '', groupId = ''} = useParams<{
 		channelId: string;
 		groupId: string;
 	}>();
@@ -138,20 +129,19 @@ const TopAssetsTabContent: React.FC<ITopAssetsTabContentProps> = ({
 
 							const href = setUriQueryValues(
 								routeQueries,
-								toRoute(getAssetRoute(asset.assetType), {
+								toRoute(Routes.ASSETS_DASHBOARD_OVERVIEW, {
 									assetId: asset.id,
+									assetType: getAssetDescriptorByRESTType(
+										asset.assetType
+									).slug,
 									channelId,
 									groupId,
 									touchpoint: 'overview',
 									...(asset.assetType && {
-										type: encodeURIComponent(
-											asset.assetType
-										),
+										type: asset.assetType,
 									}),
 									...(asset.assetTitle && {
-										title: encodeURIComponent(
-											asset.assetTitle
-										),
+										title: asset.assetTitle,
 									}),
 								})
 							);
@@ -200,6 +190,7 @@ interface ITopAssetsBaseCardProps {
 	dataSourceFn: (variables: any) => Promise<{items: ITopAsset[]}> | undefined;
 	dataSourceParams: object;
 	routeQueries: {[key: string]: any};
+	showViewAll?: boolean;
 	skipRequest?: boolean;
 }
 
@@ -208,6 +199,7 @@ const TopAssetsBaseCard: React.FC<ITopAssetsBaseCardProps> = ({
 	dataSourceFn,
 	dataSourceParams,
 	routeQueries,
+	showViewAll = true,
 	skipRequest,
 }) => (
 	<BaseCard
@@ -222,6 +214,7 @@ const TopAssetsBaseCard: React.FC<ITopAssetsBaseCardProps> = ({
 				dataSourceParams={dataSourceParams}
 				rangeSelectors={rangeSelectors}
 				routeQueries={routeQueries}
+				showViewAll={showViewAll}
 				skipRequest={skipRequest}
 			/>
 		)}
@@ -238,10 +231,11 @@ const TopAssetsWithData: React.FC<ITopAssetsWithDataProps> = ({
 	dataSourceParams,
 	rangeSelectors,
 	routeQueries,
+	showViewAll,
 	skipRequest,
 }) => {
-	const history = useHistory();
-	const {channelId, groupId} = useParams<{
+	const history = useHistoryAdapter();
+	const {channelId = '', groupId = ''} = useParams<{
 		channelId: string;
 		groupId: string;
 	}>();
@@ -291,6 +285,18 @@ const TopAssetsWithData: React.FC<ITopAssetsWithDataProps> = ({
 
 	const isLoading = loading && !skipRequest;
 
+	/**
+	 * `.top-assets` zeroes the table's bottom margin so that the footer alone
+	 * separates the last row from the card edge. Without a footer the pane has
+	 * to carry that spacing, or the table collides with the bottom border. The
+	 * `pb-4` matches the table's own suppressed margin, which is what the Top
+	 * Pages and Top Asset Categories cards fall back on.
+	 */
+
+	const showFooter = !!showViewAll && assets.length > 0;
+
+	const tabContentClassName = showFooter ? 'pb-0' : 'pb-4';
+
 	const tabContent = (
 		<TopAssetsTabContent
 			assets={assets}
@@ -311,15 +317,15 @@ const TopAssetsWithData: React.FC<ITopAssetsWithDataProps> = ({
 			</ClayTabs>
 
 			<ClayTabs.Content activeIndex={activeTab} fade>
-				<ClayTabs.TabPane className="pb-0">
+				<ClayTabs.TabPane className={tabContentClassName}>
 					{tabContent}
 				</ClayTabs.TabPane>
-				<ClayTabs.TabPane className="pb-0">
+				<ClayTabs.TabPane className={tabContentClassName}>
 					{tabContent}
 				</ClayTabs.TabPane>
 			</ClayTabs.Content>
 
-			{assets.length > 0 && (
+			{showFooter && (
 				<div className="d-flex p-3">
 					<ClayButton
 						borderless

@@ -75,7 +75,7 @@ liferay-default:
                 envFrom:
                     -   secretRef:
                             name: managed-service-details
-                image: gcr.io/cloud-sql-connectors/cloud-sql-proxy:2.14.1
+                image: gcr.io/cloud-sql-connectors/cloud-sql-proxy:2.25.4
                 name: cloud-sql-proxy
                 restartPolicy: Always
                 securityContext:
@@ -127,15 +127,12 @@ liferay-default:
                     defaultMode: 0755
                     name: liferay-init-scripts-gcp
                 name: liferay-init-scripts-gcp
-    license:
-        enabled: true
     marketplace:
         csi:
             driver: filestore.csi.storage.gke.io
             volumeAttributes:
                 protocol: NFS_V3
                 volume: marketplace
-        enabled: true
         size: 10Gi
     network:
         enabled: true

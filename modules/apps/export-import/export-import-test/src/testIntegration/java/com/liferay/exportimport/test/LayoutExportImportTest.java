@@ -10,6 +10,7 @@ import com.liferay.depot.constants.DepotConstants;
 import com.liferay.depot.model.DepotEntry;
 import com.liferay.depot.service.DepotEntryGroupRelLocalService;
 import com.liferay.depot.service.DepotEntryLocalService;
+import com.liferay.document.library.constants.DLPortletKeys;
 import com.liferay.document.library.kernel.service.DLAppLocalService;
 import com.liferay.document.library.test.util.DLAppTestUtil;
 import com.liferay.dynamic.data.mapping.form.field.type.constants.DDMFormFieldTypeConstants;
@@ -17,12 +18,18 @@ import com.liferay.dynamic.data.mapping.model.DDMForm;
 import com.liferay.dynamic.data.mapping.model.DDMFormField;
 import com.liferay.dynamic.data.mapping.model.DDMStructure;
 import com.liferay.dynamic.data.mapping.model.DDMTemplate;
+import com.liferay.dynamic.data.mapping.service.DDMStructureLocalServiceUtil;
 import com.liferay.dynamic.data.mapping.test.util.DDMStructureTestUtil;
 import com.liferay.dynamic.data.mapping.test.util.DDMTemplateTestUtil;
 import com.liferay.exportimport.kernel.configuration.ExportImportConfigurationFactory;
+import com.liferay.exportimport.kernel.configuration.ExportImportConfigurationSettingsMapFactoryUtil;
+import com.liferay.exportimport.kernel.configuration.constants.ExportImportConfigurationConstants;
 import com.liferay.exportimport.kernel.exception.LARTypeException;
 import com.liferay.exportimport.kernel.lar.ExportImportHelperUtil;
 import com.liferay.exportimport.kernel.lar.PortletDataHandlerKeys;
+import com.liferay.exportimport.kernel.model.ExportImportConfiguration;
+import com.liferay.exportimport.kernel.service.ExportImportConfigurationLocalServiceUtil;
+import com.liferay.exportimport.kernel.service.ExportImportLocalServiceUtil;
 import com.liferay.exportimport.kernel.staging.StagingUtil;
 import com.liferay.exportimport.test.util.lar.BaseExportImportTestCase;
 import com.liferay.fragment.constants.FragmentConstants;
@@ -38,11 +45,14 @@ import com.liferay.fragment.service.FragmentEntryLocalService;
 import com.liferay.friendly.url.constants.FriendlyURLEntryConstants;
 import com.liferay.friendly.url.model.FriendlyURLEntry;
 import com.liferay.friendly.url.service.FriendlyURLEntryLocalService;
+import com.liferay.journal.constants.JournalContentPortletKeys;
 import com.liferay.journal.constants.JournalFolderConstants;
+import com.liferay.journal.constants.JournalPortletKeys;
 import com.liferay.journal.model.JournalArticle;
 import com.liferay.journal.service.JournalArticleLocalService;
 import com.liferay.journal.test.util.JournalTestUtil;
 import com.liferay.layout.friendly.url.LayoutFriendlyURLEntryHelper;
+import com.liferay.layout.page.template.admin.constants.LayoutPageTemplateAdminPortletKeys;
 import com.liferay.layout.page.template.constants.LayoutPageTemplateEntryTypeConstants;
 import com.liferay.layout.page.template.model.LayoutPageTemplateEntry;
 import com.liferay.layout.page.template.service.LayoutPageTemplateEntryLocalService;
@@ -54,6 +64,7 @@ import com.liferay.layout.utility.page.kernel.constants.LayoutUtilityPageEntryCo
 import com.liferay.layout.utility.page.model.LayoutUtilityPageEntry;
 import com.liferay.layout.utility.page.service.LayoutUtilityPageEntryLocalService;
 import com.liferay.petra.io.StreamUtil;
+import com.liferay.petra.lang.SafeCloseable;
 import com.liferay.petra.string.StringPool;
 import com.liferay.portal.kernel.exception.LayoutFriendlyURLsException;
 import com.liferay.portal.kernel.exception.LocaleException;
@@ -64,19 +75,24 @@ import com.liferay.portal.kernel.log.Log;
 import com.liferay.portal.kernel.log.LogFactoryUtil;
 import com.liferay.portal.kernel.model.Company;
 import com.liferay.portal.kernel.model.Group;
+import com.liferay.portal.kernel.model.GroupConstants;
 import com.liferay.portal.kernel.model.Layout;
 import com.liferay.portal.kernel.model.LayoutConstants;
 import com.liferay.portal.kernel.model.LayoutPrototype;
 import com.liferay.portal.kernel.model.LayoutSetPrototype;
 import com.liferay.portal.kernel.model.Repository;
+import com.liferay.portal.kernel.model.User;
 import com.liferay.portal.kernel.portletfilerepository.PortletFileRepositoryUtil;
 import com.liferay.portal.kernel.repository.model.FileEntry;
+import com.liferay.portal.kernel.security.auth.CompanyThreadLocal;
 import com.liferay.portal.kernel.service.CompanyLocalService;
 import com.liferay.portal.kernel.service.LayoutLocalService;
 import com.liferay.portal.kernel.service.LayoutSetPrototypeLocalService;
 import com.liferay.portal.kernel.service.ServiceContext;
 import com.liferay.portal.kernel.test.TestInfo;
 import com.liferay.portal.kernel.test.rule.AggregateTestRule;
+import com.liferay.portal.kernel.test.rule.DeleteAfterTestRun;
+import com.liferay.portal.kernel.test.util.CompanyTestUtil;
 import com.liferay.portal.kernel.test.util.GroupTestUtil;
 import com.liferay.portal.kernel.test.util.RandomTestUtil;
 import com.liferay.portal.kernel.test.util.ServiceContextTestUtil;
@@ -102,8 +118,11 @@ import com.liferay.portal.test.rule.LiferayIntegrationTestRule;
 import com.liferay.segments.service.SegmentsExperienceLocalService;
 import com.liferay.sites.kernel.util.Sites;
 
+import jakarta.portlet.PortletPreferences;
+
 import java.io.ByteArrayInputStream;
 import java.io.InputStream;
+import java.io.Serializable;
 
 import java.util.Arrays;
 import java.util.Collection;
@@ -180,6 +199,47 @@ public class LayoutExportImportTest extends BaseExportImportTestCase {
 				layout2.getUuid(), importedGroup.getGroupId(), false);
 
 		Assert.assertNotNull(importedLayout2);
+	}
+
+	@Test
+	public void testDeleteMissingLayoutsPrivate() throws Exception {
+		Layout layout1 = LayoutTestUtil.addTypePortletLayout(group, true);
+		Layout layout2 = LayoutTestUtil.addTypePortletLayout(group, true);
+
+		exportLayouts(
+			ExportImportHelperUtil.getLayoutIds(
+				_layoutLocalService.getLayouts(group.getGroupId(), true)),
+			getExportParameterMap(), false, true);
+
+		importLayouts(getImportParameterMap(), false, true);
+
+		Assert.assertEquals(
+			_layoutLocalService.getLayoutsCount(group, true),
+			_layoutLocalService.getLayoutsCount(importedGroup, true));
+
+		LayoutTestUtil.addTypePortletLayout(importedGroup, true);
+
+		Map<String, String[]> parameterMap = getImportParameterMap();
+
+		parameterMap.put(
+			PortletDataHandlerKeys.DELETE_MISSING_LAYOUTS,
+			new String[] {Boolean.TRUE.toString()});
+
+		exportLayouts(
+			new long[] {layout1.getLayoutId()}, getExportParameterMap(), false,
+			true);
+
+		importLayouts(parameterMap, false, true);
+
+		Assert.assertEquals(
+			_layoutLocalService.getLayoutsCount(group, true),
+			_layoutLocalService.getLayoutsCount(importedGroup, true));
+		Assert.assertNotNull(
+			_layoutLocalService.fetchLayoutByUuidAndGroupId(
+				layout1.getUuid(), importedGroup.getGroupId(), true));
+		Assert.assertNotNull(
+			_layoutLocalService.fetchLayoutByUuidAndGroupId(
+				layout2.getUuid(), importedGroup.getGroupId(), true));
 	}
 
 	@Test
@@ -278,6 +338,85 @@ public class LayoutExportImportTest extends BaseExportImportTestCase {
 		finally {
 			importedGroup = originalImportedGroup;
 			group = originalGroup;
+		}
+	}
+
+	@Test
+	@TestInfo("LPS-91440")
+	public void testExportImportCompanyGroupLayoutPageTemplateEntryIntoAnotherInstance()
+		throws Exception {
+
+		_layoutPrototype = LayoutTestUtil.addLayoutPrototype(
+			RandomTestUtil.randomString());
+
+		LayoutPageTemplateEntry layoutPageTemplateEntry =
+			_layoutPageTemplateEntryLocalService.
+				fetchFirstLayoutPageTemplateEntry(
+					_layoutPrototype.getLayoutPrototypeId());
+
+		Company company = _companyLocalService.getCompany(
+			TestPropsValues.getCompanyId());
+
+		Group companyGroup = company.getGroup();
+
+		User user = TestPropsValues.getUser();
+
+		Map<String, Serializable> exportLayoutSettingsMap =
+			ExportImportConfigurationSettingsMapFactoryUtil.
+				buildExportLayoutSettingsMap(
+					user, companyGroup.getGroupId(), false, new long[0],
+					HashMapBuilder.put(
+						PortletDataHandlerKeys.PORTLET_DATA,
+						new String[] {Boolean.TRUE.toString()}
+					).put(
+						PortletDataHandlerKeys.PORTLET_DATA +
+							StringPool.UNDERLINE +
+								LayoutPageTemplateAdminPortletKeys.
+									LAYOUT_PAGE_TEMPLATES,
+						new String[] {Boolean.TRUE.toString()}
+					).put(
+						PortletDataHandlerKeys.PORTLET_DATA_ALL,
+						new String[] {Boolean.FALSE.toString()}
+					).build());
+
+		ExportImportConfiguration exportImportConfiguration =
+			ExportImportConfigurationLocalServiceUtil.
+				addDraftExportImportConfiguration(
+					user.getUserId(),
+					ExportImportConfigurationConstants.TYPE_EXPORT_LAYOUT,
+					exportLayoutSettingsMap);
+
+		larFile = ExportImportLocalServiceUtil.exportLayoutsAsFile(
+			exportImportConfiguration);
+
+		_company = CompanyTestUtil.addCompany(true);
+
+		User companyAdminUser = UserTestUtil.getAdminUser(
+			_company.getCompanyId());
+
+		try (SafeCloseable safeCloseable =
+				CompanyThreadLocal.setCompanyIdWithSafeCloseable(
+					_company.getCompanyId())) {
+
+			Group newCompanyGroup = _company.getGroup();
+
+			try (LogCapture logCapture = LoggerTestUtil.configureLog4JLogger(
+					"com.liferay.batch.engine.internal." +
+						"BatchEngineImportTaskExecutorImpl",
+					LoggerTestUtil.ERROR)) {
+
+				_importLayouts(companyAdminUser, newCompanyGroup);
+
+				List<LogEntry> logEntries = logCapture.getLogEntries();
+
+				Assert.assertTrue(logEntries.toString(), logEntries.isEmpty());
+			}
+
+			Assert.assertNotNull(
+				_layoutPageTemplateEntryLocalService.
+					fetchLayoutPageTemplateEntryByExternalReferenceCode(
+						layoutPageTemplateEntry.getExternalReferenceCode(),
+						newCompanyGroup.getGroupId()));
 		}
 	}
 
@@ -604,6 +743,93 @@ public class LayoutExportImportTest extends BaseExportImportTestCase {
 		Assert.assertEquals(
 			fieldValueJSONObject.toString(), importedGroup.getGroupId(),
 			fieldValueJSONObject.getLong("groupId"));
+	}
+
+	@Test
+	@TestInfo("LPS-91735")
+	public void testExportImportGlobalDDMStructureViaInstances()
+		throws Exception {
+
+		Company company = _companyLocalService.getCompany(
+			TestPropsValues.getCompanyId());
+
+		Group companyGroup = company.getGroup();
+
+		_ddmStructure = DDMStructureTestUtil.addStructure(
+			companyGroup.getGroupId(), JournalArticle.class.getName());
+
+		User user = TestPropsValues.getUser();
+
+		Map<String, Serializable> exportLayoutSettingsMap =
+			ExportImportConfigurationSettingsMapFactoryUtil.
+				buildExportLayoutSettingsMap(
+					user, companyGroup.getGroupId(), false, new long[0],
+					HashMapBuilder.put(
+						PortletDataHandlerKeys.PORTLET_DATA,
+						new String[] {Boolean.TRUE.toString()}
+					).put(
+						PortletDataHandlerKeys.PORTLET_DATA +
+							StringPool.UNDERLINE +
+								DLPortletKeys.DOCUMENT_LIBRARY,
+						new String[] {Boolean.FALSE.toString()}
+					).put(
+						PortletDataHandlerKeys.PORTLET_DATA +
+							StringPool.UNDERLINE + JournalPortletKeys.JOURNAL,
+						new String[] {Boolean.TRUE.toString()}
+					).put(
+						PortletDataHandlerKeys.PORTLET_DATA_ALL,
+						new String[] {Boolean.FALSE.toString()}
+					).build());
+
+		ExportImportConfiguration exportImportConfiguration =
+			ExportImportConfigurationLocalServiceUtil.
+				addDraftExportImportConfiguration(
+					user.getUserId(),
+					ExportImportConfigurationConstants.TYPE_EXPORT_LAYOUT,
+					exportLayoutSettingsMap);
+
+		larFile = ExportImportLocalServiceUtil.exportLayoutsAsFile(
+			exportImportConfiguration);
+
+		_company = CompanyTestUtil.addCompany(true);
+
+		User companyAdminUser = UserTestUtil.getAdminUser(
+			_company.getCompanyId());
+
+		try (SafeCloseable safeCloseable =
+				CompanyThreadLocal.setCompanyIdWithSafeCloseable(
+					_company.getCompanyId())) {
+
+			Group newCompanyGroup = _company.getGroup();
+
+			Map<String, Serializable> importLayoutSettingsMap =
+				ExportImportConfigurationSettingsMapFactoryUtil.
+					buildImportLayoutSettingsMap(
+						companyAdminUser, newCompanyGroup.getGroupId(), false,
+						null, getImportParameterMap());
+
+			ExportImportConfiguration importExportImportConfiguration =
+				ExportImportConfigurationLocalServiceUtil.
+					addDraftExportImportConfiguration(
+						companyAdminUser.getUserId(),
+						ExportImportConfigurationConstants.TYPE_IMPORT_LAYOUT,
+						importLayoutSettingsMap);
+
+			try (LogCapture logCapture = LoggerTestUtil.configureLog4JLogger(
+					"com.liferay.exportimport", LoggerTestUtil.ERROR)) {
+
+				ExportImportLocalServiceUtil.importLayouts(
+					importExportImportConfiguration, larFile);
+
+				List<LogEntry> logEntries = logCapture.getLogEntries();
+
+				Assert.assertTrue(logEntries.toString(), logEntries.isEmpty());
+			}
+
+			Assert.assertNotNull(
+				DDMStructureLocalServiceUtil.fetchDDMStructureByUuidAndGroupId(
+					_ddmStructure.getUuid(), newCompanyGroup.getGroupId()));
+		}
 	}
 
 	@Test
@@ -952,6 +1178,48 @@ public class LayoutExportImportTest extends BaseExportImportTestCase {
 	}
 
 	@Test
+	public void testExportImportLayoutsTwiceIntoAnotherInstance()
+		throws Exception {
+
+		LayoutTestUtil.addTypePortletLayout(group);
+
+		long[] layoutIds = ExportImportHelperUtil.getLayoutIds(
+			_layoutLocalService.getLayouts(group.getGroupId(), false));
+
+		Map<String, String[]> exportParameterMap = getExportParameterMap();
+
+		exportParameterMap.put(
+			PortletDataHandlerKeys.PORTLET_DATA,
+			new String[] {Boolean.FALSE.toString()});
+
+		exportLayouts(layoutIds, exportParameterMap);
+
+		_company = CompanyTestUtil.addCompany(true);
+
+		User adminUser = UserTestUtil.getAdminUser(_company.getCompanyId());
+
+		try (SafeCloseable safeCloseable =
+				CompanyThreadLocal.setCompanyIdWithSafeCloseable(
+					_company.getCompanyId())) {
+
+			UserTestUtil.setUser(adminUser);
+
+			Group newCompanyGroup = GroupTestUtil.addGroup(
+				_company.getCompanyId(), adminUser.getUserId(),
+				GroupConstants.DEFAULT_PARENT_GROUP_ID);
+
+			_importLayouts(adminUser, newCompanyGroup);
+			_importLayouts(adminUser, newCompanyGroup);
+
+			Assert.assertEquals(
+				_layoutLocalService.getLayoutsCount(group, false),
+				_layoutLocalService.getLayoutsCount(newCompanyGroup, false));
+		}
+
+		UserTestUtil.setUser(TestPropsValues.getUser());
+	}
+
+	@Test
 	public void testExportImportLayoutsValidAvailableLocales()
 		throws Exception {
 
@@ -959,6 +1227,62 @@ public class LayoutExportImportTest extends BaseExportImportTestCase {
 			Arrays.asList(LocaleUtil.US, LocaleUtil.US),
 			Arrays.asList(LocaleUtil.US, LocaleUtil.SPAIN, LocaleUtil.US),
 			false);
+	}
+
+	@Test
+	public void testExportImportLayoutsWithJournalContentPortletIntoAnotherInstance()
+		throws Exception {
+
+		JournalArticle journalArticle = JournalTestUtil.addArticle(
+			group.getGroupId(),
+			JournalFolderConstants.DEFAULT_PARENT_FOLDER_ID);
+
+		String portletId = LayoutTestUtil.addPortletToLayout(
+			layout, JournalContentPortletKeys.JOURNAL_CONTENT,
+			HashMapBuilder.put(
+				"articleExternalReferenceCode",
+				new String[] {journalArticle.getExternalReferenceCode()}
+			).put(
+				"groupExternalReferenceCode",
+				new String[] {group.getExternalReferenceCode()}
+			).build());
+
+		exportLayouts(
+			new long[] {layout.getLayoutId()}, getExportParameterMap());
+
+		_company = CompanyTestUtil.addCompany(true);
+
+		User adminUser = UserTestUtil.getAdminUser(_company.getCompanyId());
+
+		try (SafeCloseable safeCloseable =
+				CompanyThreadLocal.setCompanyIdWithSafeCloseable(
+					_company.getCompanyId())) {
+
+			Group newCompanyGroup = GroupTestUtil.addGroup(
+				_company.getCompanyId(), adminUser.getUserId(),
+				GroupConstants.DEFAULT_PARENT_GROUP_ID);
+
+			_importLayouts(adminUser, newCompanyGroup);
+
+			importedLayout = _layoutLocalService.getLayoutByUuidAndGroupId(
+				layout.getUuid(), newCompanyGroup.getGroupId(), false);
+
+			PortletPreferences portletPreferences =
+				LayoutTestUtil.getPortletPreferences(importedLayout, portletId);
+
+			JournalArticle importedJournalArticle =
+				_journalArticleLocalService.
+					fetchLatestArticleByExternalReferenceCode(
+						newCompanyGroup.getGroupId(),
+						portletPreferences.getValue(
+							"articleExternalReferenceCode", null));
+
+			Assert.assertEquals(
+				journalArticle.getTitle(), importedJournalArticle.getTitle());
+			Assert.assertEquals(
+				journalArticle.getContent(),
+				importedJournalArticle.getContent());
+		}
 	}
 
 	@Test
@@ -1520,6 +1844,24 @@ public class LayoutExportImportTest extends BaseExportImportTestCase {
 		return fragmentEntryLinks.get(0);
 	}
 
+	private void _importLayouts(User user, Group targetGroup) throws Exception {
+		Map<String, Serializable> importLayoutSettingsMap =
+			ExportImportConfigurationSettingsMapFactoryUtil.
+				buildImportLayoutSettingsMap(
+					user, targetGroup.getGroupId(), false, null,
+					getImportParameterMap());
+
+		ExportImportConfiguration exportImportConfiguration =
+			ExportImportConfigurationLocalServiceUtil.
+				addDraftExportImportConfiguration(
+					user.getUserId(),
+					ExportImportConfigurationConstants.TYPE_IMPORT_LAYOUT,
+					importLayoutSettingsMap);
+
+		ExportImportLocalServiceUtil.importLayouts(
+			exportImportConfiguration, larFile);
+	}
+
 	private void _testExportImportLayoutUtilityPageEntryWithPreviewFileEntry()
 		throws Exception {
 
@@ -1573,8 +1915,14 @@ public class LayoutExportImportTest extends BaseExportImportTestCase {
 	private static final Log _log = LogFactoryUtil.getLog(
 		LayoutExportImportTest.class);
 
+	@DeleteAfterTestRun
+	private Company _company;
+
 	@Inject
 	private CompanyLocalService _companyLocalService;
+
+	@DeleteAfterTestRun
+	private DDMStructure _ddmStructure;
 
 	@Inject
 	private DepotEntryGroupRelLocalService _depotEntryGroupRelLocalService;
@@ -1616,6 +1964,9 @@ public class LayoutExportImportTest extends BaseExportImportTestCase {
 	@Inject
 	private LayoutPageTemplateEntryLocalService
 		_layoutPageTemplateEntryLocalService;
+
+	@DeleteAfterTestRun
+	private LayoutPrototype _layoutPrototype;
 
 	@Inject
 	private LayoutServiceContextHelper _layoutServiceContextHelper;

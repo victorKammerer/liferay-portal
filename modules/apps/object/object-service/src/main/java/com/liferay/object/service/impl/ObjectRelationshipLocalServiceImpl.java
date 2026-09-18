@@ -71,7 +71,8 @@ import com.liferay.portal.aop.AopService;
 import com.liferay.portal.kernel.dao.jdbc.CurrentConnection;
 import com.liferay.portal.kernel.dao.orm.FinderCacheUtil;
 import com.liferay.portal.kernel.exception.PortalException;
-import com.liferay.portal.kernel.feature.flag.FeatureFlagManagerUtil;
+import com.liferay.portal.kernel.license.util.App;
+import com.liferay.portal.kernel.license.util.LicenseManagerUtil;
 import com.liferay.portal.kernel.log.Log;
 import com.liferay.portal.kernel.log.LogFactoryUtil;
 import com.liferay.portal.kernel.model.SystemEventConstants;
@@ -107,6 +108,7 @@ import java.sql.Connection;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -1061,6 +1063,7 @@ public class ObjectRelationshipLocalServiceImpl
 				existingObjectField.getDBColumnName(),
 				existingObjectField.getDBTableName(),
 				existingObjectField.getDBType(),
+				existingObjectField.getDescriptionMap(),
 				existingObjectField.isIndexed(),
 				existingObjectField.isIndexedAsKeyword(),
 				existingObjectField.getIndexedLanguageId(),
@@ -1246,6 +1249,15 @@ public class ObjectRelationshipLocalServiceImpl
 			DynamicObjectDefinitionTableUtil.getAlterTableAddColumnSQL(
 				dbTableName, objectField.getBusinessType(),
 				objectField.getDBColumnName(), "Long"));
+
+		if (!objectDefinition2.isUnmodifiableSystemObject()) {
+			runSQL(
+				DynamicObjectDefinitionTableUtil.
+					getInsertMissingExtensionTableRowsSQL(
+						dbTableName,
+						objectDefinition2.getPKObjectFieldDBColumnName(),
+						objectDefinition2.getDBTableName()));
+		}
 
 		ObjectDBManagerUtil.createIndexMetadata(
 			_currentConnection.getConnection(
@@ -1523,16 +1535,25 @@ public class ObjectRelationshipLocalServiceImpl
 			return 0;
 		}
 
+		Collection<Column<DynamicObjectDefinitionTable, ?>> columns =
+			extensionDynamicObjectDefinitionTable.getColumns();
+
+		Predicate leftJoinPredicate = null;
+
+		if (columns.size() > 1) {
+			leftJoinPredicate =
+				extensionDynamicObjectDefinitionTable.getPrimaryKeyColumn(
+				).eq(
+					dynamicObjectDefinitionTable.getPrimaryKeyColumn()
+				);
+		}
+
 		DSLQuery dslQuery = DSLQueryFactoryUtil.countDistinct(
 			ObjectEntryTable.INSTANCE.objectEntryId
 		).from(
 			dynamicObjectDefinitionTable
-		).innerJoinON(
-			extensionDynamicObjectDefinitionTable,
-			extensionDynamicObjectDefinitionTable.getPrimaryKeyColumn(
-			).eq(
-				dynamicObjectDefinitionTable.getPrimaryKeyColumn()
-			)
+		).leftJoinOn(
+			extensionDynamicObjectDefinitionTable, leftJoinPredicate
 		).innerJoinON(
 			ObjectEntryTable.INSTANCE,
 			ObjectEntryTable.INSTANCE.objectEntryId.eq(
@@ -2147,8 +2168,7 @@ public class ObjectRelationshipLocalServiceImpl
 			ObjectDefinition objectDefinition2)
 		throws PortalException {
 
-		if (FeatureFlagManagerUtil.isEnabled(
-				objectDefinition1.getCompanyId(), "LPD-58677") &&
+		if (LicenseManagerUtil.isAppEnabled(App.CMP) &&
 			ObjectDefinitionUtil.isInvokerBundleAllowed() &&
 			objectDefinition1.isUnmodifiableSystemObject() &&
 			objectDefinition2.isModifiableAndSystem()) {

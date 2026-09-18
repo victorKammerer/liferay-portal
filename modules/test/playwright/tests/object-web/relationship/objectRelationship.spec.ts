@@ -1412,19 +1412,12 @@ test.describe('Manage object relationships through Model Builder', () => {
 			});
 
 			await test.step('assert that a "Learn more" link is displayed in the warning toast and leads to a learn recource', async () => {
-				const pagePromise = page.waitForEvent('popup');
-
-				await page.getByRole('link', {name: 'Learn more.'}).click();
-
-				const liferayLearnPage = await pagePromise;
-
-				await liferayLearnPage.waitForLoadState();
-
 				await expect(
-					liferayLearnPage.getByRole('heading', {
-						name: 'Accessing Accounts Data from Custom Object',
-					})
-				).toBeVisible();
+					page.getByRole('link', {name: 'Learn more.'})
+				).toHaveAttribute(
+					'href',
+					/accessing-accounts-data-from-custom-objects/
+				);
 			});
 		}
 	);
@@ -2419,7 +2412,7 @@ test.describe('Manage object relationships through Objects Admin UI', () => {
 		}
 	);
 
-	test('object relationship autocomplete field filters object definition by label', async ({
+	test('object relationship autocomplete field loads more object definitions on scroll', async ({
 		apiHelpers,
 		objectRelationshipsPage,
 		page,
@@ -2461,22 +2454,26 @@ test.describe('Manage object relationships through Objects Admin UI', () => {
 
 		await manyRecordsInput.fill(objectDefinitionERCPrefix);
 
-		const options = page.getByRole('option');
+		const lastObjectDefinitionOption = page.getByRole('option', {
+			name: objectDefinitionERCPrefix + '9',
+		});
 
-		await expect(options).toHaveCount(20);
+		await expect(async () => {
+			await page.getByRole('listbox').evaluate((listbox) => {
+				const menu = listbox.parentElement as HTMLElement;
 
-		await expect(
-			page.getByRole('option', {name: objectDefinitionERCPrefix + '21'})
-		).toHaveCount(0);
+				menu.scrollTo(0, menu.scrollHeight);
+			});
 
-		await manyRecordsInput.fill(objectDefinitionERCPrefix + '21');
+			await expect(lastObjectDefinitionOption).toBeVisible({
+				timeout: 2000,
+			});
+		}).toPass();
 
-		await page
-			.getByRole('option', {name: objectDefinitionERCPrefix + '21'})
-			.click();
+		await lastObjectDefinitionOption.click();
 
 		await expect(manyRecordsInput).toHaveValue(
-			objectDefinitionERCPrefix + '21'
+			objectDefinitionERCPrefix + '9'
 		);
 
 		await objectRelationshipFormPage.reverseOrderButton.click();
@@ -4258,6 +4255,14 @@ test.describe('Manage object relationship entries', () => {
 					.getByText('Entry B', {exact: true})
 					.first()
 					.click();
+
+				await expect(
+					page.locator('iframe[title="Select"]')
+				).toBeHidden();
+
+				await expect(
+					page.getByRole('row').filter({hasText: 'Entry B'}).first()
+				).toBeVisible();
 
 				await viewObjectEntriesPage.goto(objectDefinition.className);
 

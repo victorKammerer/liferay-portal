@@ -76,14 +76,14 @@ public abstract class BaseProductConfigurationListOrderTypeResourceImpl
 	 * curl -X 'DELETE' 'http://localhost:8080/o/headless-commerce-admin-catalog/v1.0/product-configuration-list-order-types/{productConfigurationListOrderTypeId}'  -u 'test@liferay.com:test'
 	 */
 	@io.swagger.v3.oas.annotations.Operation(
-		description = "Removes the order type binding identified by id from its product configuration list. Returns 404 when the record is not found. Side effects -- Removes the order type <-> configuration list association."
+		description = "Removes the order type binding identified by ID from its product configuration list. Returns 404 when the record is not found. Side effects -- Removes the order type <-> configuration list association."
 	)
 	@io.swagger.v3.oas.annotations.Parameters(
 		value = {
 			@io.swagger.v3.oas.annotations.Parameter(
 				description = "Identifier of an order-type binding on a product configuration list. Addresses a single order-type-scoped override entry within the parent configuration list.",
 				in = io.swagger.v3.oas.annotations.enums.ParameterIn.PATH,
-				name = "productConfigurationListOrderTypeId"
+				name = "productConfigurationListOrderTypeId", required = true
 			)
 		}
 	)
@@ -163,14 +163,14 @@ public abstract class BaseProductConfigurationListOrderTypeResourceImpl
 	 * curl -X 'GET' 'http://localhost:8080/o/headless-commerce-admin-catalog/v1.0/product-configuration-lists/by-externalReferenceCode/{externalReferenceCode}/product-configuration-list-order-types'  -u 'test@liferay.com:test'
 	 */
 	@io.swagger.v3.oas.annotations.Operation(
-		description = "Lists the order type bindings of the product configuration list identified by external reference code. Resolves the addressed record by external reference code, then applies the same behavior as the by-id variant. Returns 404 when the external reference code is not found."
+		description = "Lists the order type bindings of the product configuration list identified by external reference code. Resolves the addressed record by external reference code, then applies the same behavior as the by-ID variant. Returns 404 when the external reference code is not found."
 	)
 	@io.swagger.v3.oas.annotations.Parameters(
 		value = {
 			@io.swagger.v3.oas.annotations.Parameter(
 				description = "External reference code that addresses the target resource on the `by-externalReferenceCode` paths. The code is the integration-supplied idempotency key, unique within the resource scope; POST against this path is upsert (create when absent, replace when present).",
 				in = io.swagger.v3.oas.annotations.enums.ParameterIn.PATH,
-				name = "externalReferenceCode"
+				name = "externalReferenceCode", required = true
 			),
 			@io.swagger.v3.oas.annotations.Parameter(
 				description = "One-based page index. Combined with pageSize to paginate the result set; defaults to 1 when omitted.",
@@ -215,14 +215,14 @@ public abstract class BaseProductConfigurationListOrderTypeResourceImpl
 	 * curl -X 'GET' 'http://localhost:8080/o/headless-commerce-admin-catalog/v1.0/product-configuration-lists/{id}/product-configuration-list-order-types'  -u 'test@liferay.com:test'
 	 */
 	@io.swagger.v3.oas.annotations.Operation(
-		description = "Lists the order type bindings of the product configuration list identified by id. Validation -- None at this layer."
+		description = "Lists the order type bindings of the product configuration list identified by ID. Validation -- None at this layer."
 	)
 	@io.swagger.v3.oas.annotations.Parameters(
 		value = {
 			@io.swagger.v3.oas.annotations.Parameter(
 				description = "Internal numeric identifier of the target resource. Counterpart to the `by-externalReferenceCode` path variant; identifiers are server-assigned and stable across the resource's lifetime.",
 				in = io.swagger.v3.oas.annotations.enums.ParameterIn.PATH,
-				name = "id"
+				name = "id", required = true
 			),
 			@io.swagger.v3.oas.annotations.Parameter(
 				description = "OData v4 filter expression that narrows the result set. Supported fields depend on the endpoint and are sourced from the matching entity model (typically createDate, externalReferenceCode, modifiedDate, productExternalReferenceCode, productId, and similar). Example -- filter=productId eq 12345.",
@@ -289,14 +289,14 @@ public abstract class BaseProductConfigurationListOrderTypeResourceImpl
 	 * curl -X 'POST' 'http://localhost:8080/o/headless-commerce-admin-catalog/v1.0/product-configuration-lists/by-externalReferenceCode/{externalReferenceCode}/product-configuration-list-order-types' -d $'{"orderTypeExternalReferenceCode": ___, "orderTypeId": ___, "priority": ___, "productConfigurationListExternalReferenceCode": ___, "productConfigurationListId": ___}' --header 'Content-Type: application/json' -u 'test@liferay.com:test'
 	 */
 	@io.swagger.v3.oas.annotations.Operation(
-		description = "Binds a commerce order type to the product configuration list identified by external reference code. Resolves the addressed record by external reference code, then applies the same behavior as the by-id variant. Returns 404 when the external reference code is not found, and 404 when the order type lookup fails. Side effects -- Creates a configuration list assignment binding the order type to the configuration list."
+		description = "Binds a commerce order type to the product configuration list identified by external reference code. Resolves the addressed record by external reference code, then applies the same behavior as the by-ID variant. Returns 404 when the external reference code is not found, and 404 when the order type lookup fails. Side effects -- Creates a configuration list assignment binding the order type to the configuration list."
 	)
 	@io.swagger.v3.oas.annotations.Parameters(
 		value = {
 			@io.swagger.v3.oas.annotations.Parameter(
 				description = "External reference code that addresses the target resource on the `by-externalReferenceCode` paths. The code is the integration-supplied idempotency key, unique within the resource scope; POST against this path is upsert (create when absent, replace when present).",
 				in = io.swagger.v3.oas.annotations.enums.ParameterIn.PATH,
-				name = "externalReferenceCode"
+				name = "externalReferenceCode", required = true
 			)
 		}
 	)
@@ -333,14 +333,14 @@ public abstract class BaseProductConfigurationListOrderTypeResourceImpl
 	 * curl -X 'POST' 'http://localhost:8080/o/headless-commerce-admin-catalog/v1.0/product-configuration-lists/{id}/product-configuration-list-order-types' -d $'{"orderTypeExternalReferenceCode": ___, "orderTypeId": ___, "priority": ___, "productConfigurationListExternalReferenceCode": ___, "productConfigurationListId": ___}' --header 'Content-Type: application/json' -u 'test@liferay.com:test'
 	 */
 	@io.swagger.v3.oas.annotations.Operation(
-		description = "Binds a commerce order type to the product configuration list identified by id. Returns 404 when the id is not found, and 404 when the order type lookup fails. Side effects -- Creates a configuration list assignment binding the order type to the configuration list."
+		description = "Binds a commerce order type to the product configuration list identified by ID. Returns 404 when the ID is not found, and 404 when the order type lookup fails. Side effects -- Creates a configuration list assignment binding the order type to the configuration list."
 	)
 	@io.swagger.v3.oas.annotations.Parameters(
 		value = {
 			@io.swagger.v3.oas.annotations.Parameter(
 				description = "Internal numeric identifier of the target resource. Counterpart to the `by-externalReferenceCode` path variant; identifiers are server-assigned and stable across the resource's lifetime.",
 				in = io.swagger.v3.oas.annotations.enums.ParameterIn.PATH,
-				name = "id"
+				name = "id", required = true
 			)
 		}
 	)
@@ -1166,4 +1166,4 @@ public abstract class BaseProductConfigurationListOrderTypeResourceImpl
 			BaseProductConfigurationListOrderTypeResourceImpl.class);
 
 }
-// LIFERAY-REST-BUILDER-HASH:469111042
+// LIFERAY-REST-BUILDER-HASH:-1897659700

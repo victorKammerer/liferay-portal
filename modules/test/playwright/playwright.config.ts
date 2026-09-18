@@ -123,6 +123,7 @@ import {config as layoutAdminWebConfig} from './tests/layout-admin-web/main/conf
 import {config as layoutContentPageEditorWebFormContainerConfig} from './tests/layout-content-page-editor-web/form-container/config';
 import {config as layoutContentPageEditorWebFragmentsConfig} from './tests/layout-content-page-editor-web/fragments/config';
 import {config as layoutContentPageEditorWebConfig} from './tests/layout-content-page-editor-web/main/config';
+import {config as layoutContentWebConfig} from './tests/layout-content-web/main/config';
 import {config as layoutLockedLayoutsWebConfig} from './tests/layout-locked-layouts-web/main/config';
 import {config as layoutPageTemplateAdminWebConfig} from './tests/layout-page-template-admin-web/main/config';
 import {config as layoutSetPrototypeWebConfig} from './tests/layout-set-prototype-web/main/config';
@@ -171,6 +172,15 @@ import {config as osbFaroWebSettingsConfig} from './tests/osb-faro-web/settings/
 import {config as passwordPoliciesAdminWebFirstLoginConfig} from './tests/password-policies-admin-web/first-login/config';
 import {config as passwordPoliciesAdminWebConfig} from './tests/password-policies-admin-web/main/config';
 import {config as passwordPoliciesAdminWebSetupAdminConfig} from './tests/password-policies-admin-web/setup-admin/config';
+import {config as portalDbInfrastructureUpgradePortal6130Config} from './tests/portal-db-infrastructure/upgrade-portal-6130/config';
+import {config as portalDbInfrastructureUpgradePortal621021Config} from './tests/portal-db-infrastructure/upgrade-portal-621021/config';
+import {config as portalDbInfrastructureUpgradePortal625Config} from './tests/portal-db-infrastructure/upgrade-portal-625/config';
+import {config as portalDbInfrastructureUpgradePortal70106Config} from './tests/portal-db-infrastructure/upgrade-portal-70106/config';
+import {config as portalDbInfrastructureUpgradePortal7110Config} from './tests/portal-db-infrastructure/upgrade-portal-7110/config';
+import {config as portalDbInfrastructureUpgradePortal71103Config} from './tests/portal-db-infrastructure/upgrade-portal-71103/config';
+import {config as portalDbInfrastructureUpgradePortal7210Config} from './tests/portal-db-infrastructure/upgrade-portal-7210/config';
+import {config as portalDbInfrastructureUpgradePortal7310Config} from './tests/portal-db-infrastructure/upgrade-portal-7310/config';
+import {config as portalDbInfrastructureUpgradePortal7413Config} from './tests/portal-db-infrastructure/upgrade-portal-7413/config';
 import {config as portalDefaultPermissionsWebConfig} from './tests/portal-default-permissions-web/main/config';
 import {config as portalImplMainConfig} from './tests/portal-impl/main/config';
 import {config as portalImplPortletConfig} from './tests/portal-impl/portlet/config';
@@ -211,12 +221,10 @@ import {config as scimConfiguraitonWebConfig} from './tests/scim-configuration-w
 import {config as searchExperiencesWebConfig} from './tests/search-experiences-web/main/config';
 import {config as segmentExperimentWebConfig} from './tests/segment-experiment-web/main/config';
 import {config as segmentsWebConfig} from './tests/segments-web/main/config';
-import {config as seoStudioWebConfig} from './tests/seo-studio-web/main/config';
+import {config as serverAdminWebDatabaseMigrationConfig} from './tests/server-admin-web/database-migration/config';
 import {config as serverAdminWebConfig} from './tests/server-admin-web/main/config';
 import {config as pageManagementSiteConfig} from './tests/setup/page-management-site/main/config';
 import {config as pageManagementSiteTeardownConfig} from './tests/setup/page-management-site/teardown/config';
-import {config as seoStudioSiteConfig} from './tests/setup/seo-studio-site/main/config';
-import {config as seoStudioSiteTeardownConfig} from './tests/setup/seo-studio-site/teardown/config';
 import {config as siteCmsSiteConfig} from './tests/setup/site-cms-site/main/config';
 import {config as siteCmsSiteTeardownConfig} from './tests/setup/site-cms-site/teardown/config';
 import {config as siteAdminWebConfig} from './tests/site-admin-web/main/config';
@@ -255,8 +263,6 @@ import {config as marketplaceConfig} from './tests/workspaces/liferay-workspace-
 const setupProjects = [
 	pageManagementSiteConfig,
 	pageManagementSiteTeardownConfig,
-	seoStudioSiteConfig,
-	seoStudioSiteTeardownConfig,
 	siteCmsSiteConfig,
 	siteCmsSiteTeardownConfig,
 ];
@@ -386,6 +392,7 @@ export default defineConfig({
 		layoutContentPageEditorWebConfig,
 		layoutContentPageEditorWebFormContainerConfig,
 		layoutContentPageEditorWebFragmentsConfig,
+		layoutContentWebConfig,
 		layoutLockedLayoutsWebConfig,
 		layoutPageTemplateAdminWebConfig,
 		layoutSetPrototypeWebConfig,
@@ -435,6 +442,15 @@ export default defineConfig({
 		passwordPoliciesAdminWebConfig,
 		passwordPoliciesAdminWebFirstLoginConfig,
 		passwordPoliciesAdminWebSetupAdminConfig,
+		portalDbInfrastructureUpgradePortal6130Config,
+		portalDbInfrastructureUpgradePortal621021Config,
+		portalDbInfrastructureUpgradePortal625Config,
+		portalDbInfrastructureUpgradePortal70106Config,
+		portalDbInfrastructureUpgradePortal71103Config,
+		portalDbInfrastructureUpgradePortal7110Config,
+		portalDbInfrastructureUpgradePortal7210Config,
+		portalDbInfrastructureUpgradePortal7310Config,
+		portalDbInfrastructureUpgradePortal7413Config,
 		portalDefaultPermissionsWebConfig,
 		portalImplMainConfig,
 		portalImplPortletConfig,
@@ -476,8 +492,8 @@ export default defineConfig({
 		searchExperiencesWebConfig,
 		segmentExperimentWebConfig,
 		segmentsWebConfig,
-		seoStudioWebConfig,
 		serverAdminWebConfig,
+		serverAdminWebDatabaseMigrationConfig,
 		siteAdminWebConfig,
 		siteCmpSiteInitializerConfig,
 		siteCmsSiteInitializerConfig,

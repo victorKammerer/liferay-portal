@@ -54,7 +54,6 @@ import com.liferay.portal.kernel.service.GroupLocalService;
 import com.liferay.portal.kernel.service.ResourceLocalService;
 import com.liferay.portal.kernel.service.ServiceContext;
 import com.liferay.portal.kernel.service.UserLocalService;
-import com.liferay.portal.kernel.transaction.TransactionCommitCallbackUtil;
 import com.liferay.portal.kernel.util.Http;
 import com.liferay.portal.kernel.util.HttpComponentsUtil;
 import com.liferay.portal.kernel.util.ListUtil;
@@ -429,16 +428,9 @@ public class OAuth2ApplicationLocalServiceImpl
 		String clientSecret = oAuth2Application.getClientSecret();
 
 		if (KeyReferenceUtil.isKeyReference(clientSecret)) {
-			long companyId = oAuth2Application.getCompanyId();
-
-			TransactionCommitCallbackUtil.registerCallback(
-				() -> {
-					_secretManager.deleteSecret(
-						companyId,
-						KeyReferenceUtil.toKeyReference(clientSecret));
-
-					return null;
-				});
+			_secretManager.deleteSecret(
+				oAuth2Application.getCompanyId(),
+				KeyReferenceUtil.toKeyReference(clientSecret));
 		}
 
 		List<OAuth2Authorization> oAuth2Authorizations =
@@ -541,13 +533,6 @@ public class OAuth2ApplicationLocalServiceImpl
 	public OAuth2Application updateExternalReferenceCode(
 			OAuth2Application oAuth2Application, String externalReferenceCode)
 		throws PortalException {
-
-		if (Objects.equals(
-				oAuth2Application.getExternalReferenceCode(),
-				externalReferenceCode)) {
-
-			return oAuth2Application;
-		}
 
 		oAuth2Application.setExternalReferenceCode(externalReferenceCode);
 
@@ -776,7 +761,8 @@ public class OAuth2ApplicationLocalServiceImpl
 	}
 
 	private void _setClientSecret(
-		String clientSecret, OAuth2Application oAuth2Application) {
+			String clientSecret, OAuth2Application oAuth2Application)
+		throws PortalException {
 
 		if (Validator.isNull(clientSecret) || !PropsValues.FIPS_ENABLED) {
 			oAuth2Application.setClientSecret(clientSecret);
@@ -791,16 +777,9 @@ public class OAuth2ApplicationLocalServiceImpl
 		oAuth2Application.setClientSecret(
 			KeyReferenceUtil.toKeyReferenceString(keyReference));
 
-		long companyId = oAuth2Application.getCompanyId();
-
-		TransactionCommitCallbackUtil.registerCallback(
-			() -> {
-				try (Secret secret = new Secret(keyReference, clientSecret)) {
-					_secretManager.putSecret(companyId, secret);
-				}
-
-				return null;
-			});
+		try (Secret secret = new Secret(keyReference, clientSecret)) {
+			_secretManager.putSecret(oAuth2Application.getCompanyId(), secret);
+		}
 	}
 
 	private void _validate(

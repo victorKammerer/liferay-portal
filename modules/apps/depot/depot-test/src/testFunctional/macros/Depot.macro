@@ -635,7 +635,7 @@ definition {
 	@summary = "Default summary"
 	macro getGroupID(depotName = null) {
 		ApplicationsMenu.gotoPortlet(
-			category = "Content",
+			category = "In Maintenance",
 			panel = "Applications",
 			portlet = "Asset Libraries");
 
@@ -681,7 +681,7 @@ definition {
 		}
 
 		ApplicationsMenu.gotoPortlet(
-			category = "Content",
+			category = "In Maintenance",
 			panel = "Applications",
 			portlet = "Asset Libraries");
 
@@ -767,6 +767,8 @@ definition {
 		LexiconCard.clickEllipsisItem(
 			card = ${userScreenName},
 			item = "Remove Membership");
+
+		AssertConfirm.assertConfirmationNoError(value1 = "Only direct memberships will be removed. Inherited memberships (from an organization or a user group) will remain.");
 
 		Alert.viewSuccessMessage();
 	}

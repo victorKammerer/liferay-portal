@@ -32,12 +32,13 @@ jest.mock('shared/hooks/useRequest', () => ({
 
 const mockPush = jest.fn();
 
-const mockUnlisten = jest.fn();
-
 jest.mock('react-router-dom', () => ({
 	...jest.requireActual('react-router-dom'),
-	useHistory: () => ({listen: () => mockUnlisten, push: mockPush}),
 	useParams: () => ({channelId: '5', groupId: '23', id: 'acc-1'}),
+}));
+
+jest.mock('shared/hooks/useHistoryAdapter', () => ({
+	useHistoryAdapter: () => ({push: mockPush}),
 }));
 
 const mockedUseRequest = useRequest as jest.Mock;
@@ -576,6 +577,26 @@ describe('TopAssets', () => {
 			expect(
 				screen.getByRole('button', {name: 'View All'})
 			).toBeInTheDocument();
+		});
+	});
+
+	describe('bottom spacing', () => {
+		it('should leave the tab pane bottom unpadded when the View All footer follows the table', () => {
+			const {container} = renderTopAssets();
+
+			expect(container.querySelector('.tab-pane.active')).toHaveClass(
+				'pb-0'
+			);
+		});
+
+		it('should pad the tab pane bottom when no assets leave the card without a footer', () => {
+			mockUseRequestWith({data: {items: []}});
+
+			const {container} = renderTopAssets();
+
+			expect(container.querySelector('.tab-pane.active')).toHaveClass(
+				'pb-4'
+			);
 		});
 	});
 

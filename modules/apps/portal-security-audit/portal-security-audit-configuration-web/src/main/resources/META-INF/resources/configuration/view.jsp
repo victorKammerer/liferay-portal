@@ -13,6 +13,8 @@ AuditConfigurationDisplayContext auditConfigurationDisplayContext = (AuditConfig
 
 <aui:input disabled="<%= auditConfigurationDisplayContext.isEnabledOverridden() %>" helpMessage="<%= auditConfigurationDisplayContext.getEnabledHelpMessage() %>" name="enabled" type="checkbox" value="<%= auditConfigurationDisplayContext.isEnabled() %>" />
 
+<aui:input disabled="<%= auditConfigurationDisplayContext.isPseudonymizationEnabledOverridden() %>" helpMessage="<%= auditConfigurationDisplayContext.getPseudonymizationEnabledHelpMessage() %>" label="pseudonymization-enabled" name="pseudonymizationEnabled" type="checkbox" value="<%= auditConfigurationDisplayContext.isPseudonymizationEnabled() %>" />
+
 <h3 class="sheet-subtitle"><liferay-ui:message key="database-processor" /></h3>
 
 <aui:input disabled="<%= auditConfigurationDisplayContext.isPersistentAuditMessageProcessorEnabledOverridden() %>" helpMessage="<%= auditConfigurationDisplayContext.getPersistentAuditMessageProcessorEnabledHelpMessage() %>" label="enable-database-processor" name="persistentAuditMessageProcessorEnabled" type="checkbox" value="<%= auditConfigurationDisplayContext.isPersistentAuditMessageProcessorEnabled() %>" />
@@ -20,3 +22,47 @@ AuditConfigurationDisplayContext auditConfigurationDisplayContext = (AuditConfig
 <aui:input disabled="<%= auditConfigurationDisplayContext.isPersistentAuditMessageProcessorBufferSizeOverridden() %>" helpMessage="<%= auditConfigurationDisplayContext.getPersistentAuditMessageProcessorBufferSizeHelpMessage() %>" label="buffer-size" min="0" name="persistentAuditMessageProcessorBufferSize" type="number" value="<%= auditConfigurationDisplayContext.getPersistentAuditMessageProcessorBufferSize() %>" />
 
 <aui:input disabled="<%= auditConfigurationDisplayContext.isPersistentAuditMessageProcessorFlushIntervalOverridden() %>" helpMessage="<%= auditConfigurationDisplayContext.getPersistentAuditMessageProcessorFlushIntervalHelpMessage() %>" label="flush-interval-in-milliseconds" min="1" name="persistentAuditMessageProcessorFlushInterval" type="number" value="<%= auditConfigurationDisplayContext.getPersistentAuditMessageProcessorFlushInterval() %>" />
+
+<h3 class="sheet-subtitle"><liferay-ui:message key="file-system-processor" /></h3>
+
+<aui:input disabled="<%= auditConfigurationDisplayContext.isFileSystemAuditMessageProcessorEnabledOverridden() %>" helpMessage="<%= auditConfigurationDisplayContext.getFileSystemAuditMessageProcessorEnabledHelpMessage() %>" label="enable-file-system-processor" name="fileSystemAuditMessageProcessorEnabled" type="checkbox" value="<%= auditConfigurationDisplayContext.isFileSystemAuditMessageProcessorEnabled() %>" />
+
+<aui:input disabled="<%= auditConfigurationDisplayContext.isFileSystemAuditMessageProcessorGenerateChecksumOverridden() %>" helpMessage="<%= auditConfigurationDisplayContext.getFileSystemAuditMessageProcessorGenerateChecksumHelpMessage() %>" label="generate-checksum" name="fileSystemAuditMessageProcessorGenerateChecksum" type="checkbox" value="<%= auditConfigurationDisplayContext.isFileSystemAuditMessageProcessorGenerateChecksum() %>" />
+
+<aui:input disabled="<%= auditConfigurationDisplayContext.isFileSystemAuditMessageProcessorOutputDirectoryOverridden() %>" helpMessage="<%= auditConfigurationDisplayContext.getFileSystemAuditMessageProcessorOutputDirectoryHelpMessage() %>" label="output-directory" name="fileSystemAuditMessageProcessorOutputDirectory" type="text" value="<%= auditConfigurationDisplayContext.getFileSystemAuditMessageProcessorOutputDirectory() %>" />
+
+<aui:select disabled="<%= auditConfigurationDisplayContext.isFileSystemAuditMessageProcessorOutputFormatOverridden() %>" helpMessage="<%= auditConfigurationDisplayContext.getFileSystemAuditMessageProcessorOutputFormatHelpMessage() %>" label="output-format" name="fileSystemAuditMessageProcessorOutputFormat">
+	<aui:option label="NDJSON" selected='<%= "NDJSON".equals(auditConfigurationDisplayContext.getFileSystemAuditMessageProcessorOutputFormat()) %>' value="NDJSON" />
+	<aui:option label="CSV" selected='<%= "CSV".equals(auditConfigurationDisplayContext.getFileSystemAuditMessageProcessorOutputFormat()) %>' value="CSV" />
+</aui:select>
+
+<aui:script>
+	(function () {
+		const form = document.getElementById('<portlet:namespace />fm');
+
+		const pseudonymizationEnabledCheckbox = document.getElementById(
+			'<portlet:namespace />pseudonymizationEnabled'
+		);
+
+		form.addEventListener('submit', (event) => {
+			if (
+				pseudonymizationEnabledCheckbox &&
+				!pseudonymizationEnabledCheckbox.checked &&
+				pseudonymizationEnabledCheckbox.defaultChecked
+			) {
+				event.preventDefault();
+				event.stopImmediatePropagation();
+
+				Liferay.Util.openConfirmModal({
+					message:
+						'<%= UnicodeLanguageUtil.get(request, "disable-pseudonymization-warning") %>',
+					onConfirm: (isConfirmed) => {
+						if (isConfirmed) {
+							submitForm(form);
+						}
+					},
+				});
+			}
+		});
+	})();
+</aui:script>

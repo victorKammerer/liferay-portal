@@ -1,6 +1,6 @@
 import Constants, {DataSourceTypes, EntityTypes} from '../util/constants';
 import {compile} from 'shared/util/path-to-regexp';
-import {invert, isEmpty, isString, memoize} from 'lodash';
+import {invert, isString, memoize} from 'lodash';
 import {matchPath} from 'react-router-dom';
 
 function createURL(href: string): URL {
@@ -75,86 +75,42 @@ export const Routes = buildRoutes({
 			WORKSPACE_ADD_WITH_CORP_PROJECT_UUID: '/:corpProjectUuid/add',
 			WORKSPACE_SELECT_ACCOUNT: '/select-account',
 			WORKSPACE_WITH_ID: {
-				path: '/:groupId([\\w._-]+)',
+				path: '/:groupId',
 				routes: {
 					CHANNEL: {
-						path: '/:channelId(\\d+)?',
+						path: '/:channelId?',
 						routes: {
+
+							/**
+							 * Every asset type renders the same dashboard, so
+							 * one route serves them all. `:assetType` is the
+							 * slug each type used to have its own branch for
+							 * (`blogs`, `web-content`, ...), which keeps every
+							 * URL byte for byte what it was.
+							 */
+
 							ASSETS: {
 								path: '/assets',
 								routes: {
-									ASSETS_BLOGS: {
-										path: '/blogs',
+									ASSETS_DASHBOARD: {
+										path: '/:assetType',
 										routes: {
-											ASSETS_BLOGS_ACCOUNTS:
+											ASSETS_DASHBOARD_ACCOUNTS:
 												'/:assetId/accounts/:touchpoint/:title?/:type?',
-											ASSETS_BLOGS_KNOWN_INDIVIDUALS:
+											ASSETS_DASHBOARD_KNOWN_INDIVIDUALS:
 												'/:assetId/known-individuals/:touchpoint/:title?/:type?',
-											ASSETS_BLOGS_OVERVIEW:
+											ASSETS_DASHBOARD_OVERVIEW:
 												'/:assetId/page/:touchpoint/:title?/:type?',
-											ASSETS_BLOGS_ROUTES:
-												'/:assetId/:tabId(accounts|page|known-individuals)/:touchpoint/:title?/:type?',
+											ASSETS_DASHBOARD_ROUTES:
+												'/:assetId/:tabId/:touchpoint/:title?/:type?',
 										},
 									},
-									ASSETS_CUSTOM: {
-										path: '/custom',
-										routes: {
-											ASSETS_CUSTOM_DASHBOARD:
-												'/:id/page/:touchpoint/:title?/:type?',
-										},
-									},
-									ASSETS_DOCUMENTS_AND_MEDIA: {
-										path: '/documents-and-media',
-										routes: {
-											ASSETS_DOCUMENTS_AND_MEDIA_ACCOUNTS:
-												'/:assetId/accounts/:touchpoint/:title?/:type?',
-											ASSETS_DOCUMENTS_AND_MEDIA_KNOWN_INDIVIDUALS:
-												'/:assetId/known-individuals/:touchpoint/:title?/:type?',
-											ASSETS_DOCUMENTS_AND_MEDIA_OVERVIEW:
-												'/:assetId/page/:touchpoint/:title?/:type?',
-											ASSETS_DOCUMENTS_AND_MEDIA_ROUTES:
-												'/:assetId/:tabId(accounts|page|known-individuals)/:touchpoint/:title?/:type?',
-										},
-									},
-									ASSETS_FORMS: {
-										path: '/forms',
-										routes: {
-											ASSETS_FORMS_ACCOUNTS:
-												'/:assetId/accounts/:touchpoint/:title?/:type?',
-											ASSETS_FORMS_KNOWN_INDIVIDUALS:
-												'/:assetId/known-individuals/:touchpoint/:title?/:type?',
-											ASSETS_FORMS_OVERVIEW:
-												'/:assetId/page/:touchpoint/:title?/:type?',
-											ASSETS_FORMS_ROUTES:
-												'/:assetId/:tabId(accounts|page|known-individuals)/:touchpoint/:title?/:type?',
-										},
-									},
-									ASSETS_OBJECT_ENTRY: {
-										path: '/object-entry',
-										routes: {
-											ASSETS_OBJECT_ENTRY_ACCOUNTS:
-												'/:assetId/accounts/:touchpoint/:title?/:type?',
-											ASSETS_OBJECT_ENTRY_KNOWN_INDIVIDUALS:
-												'/:assetId/known-individuals/:touchpoint/:title?/:type?',
-											ASSETS_OBJECT_ENTRY_OVERVIEW:
-												'/:assetId/page/:touchpoint/:title?/:type?',
-											ASSETS_OBJECT_ENTRY_ROUTES:
-												'/:assetId/:tabId(accounts|page|known-individuals)/:touchpoint/:title?/:type?',
-										},
-									},
-									ASSETS_WEB_CONTENT: {
-										path: '/web-content',
-										routes: {
-											ASSETS_WEB_CONTENT_ACCOUNTS:
-												'/:assetId/accounts/:touchpoint/:title?/:type?',
-											ASSETS_WEB_CONTENT_KNOWN_INDIVIDUALS:
-												'/:assetId/known-individuals/:touchpoint/:title?/:type?',
-											ASSETS_WEB_CONTENT_OVERVIEW:
-												'/:assetId/page/:touchpoint/:title?/:type?',
-											ASSETS_WEB_CONTENT_ROUTES:
-												'/:assetId/:tabId(accounts|page|known-individuals)/:touchpoint/:title?/:type?',
-										},
-									},
+								},
+							},
+							CAMPAIGNS: {
+								path: '/campaigns',
+								routes: {
+									CAMPAIGNS_DETAIL: '/:id',
 								},
 							},
 							CONTACTS: {
@@ -167,7 +123,8 @@ export const Routes = buildRoutes({
 											CONTACTS_ACCOUNT_DETAILS:
 												'/details',
 											CONTACTS_ACCOUNT_INDIVIDUALS: `/${INDIVIDUALS}`,
-											CONTACTS_ACCOUNT_INTEREST_DETAILS: `/interests/:interestId/:tabId(${INDIVIDUALS}|${PAGES})?`,
+											CONTACTS_ACCOUNT_INTEREST_DETAILS:
+												'/interests/:interestId/:tabId?',
 											CONTACTS_ACCOUNT_INTERESTS:
 												'/interests',
 											CONTACTS_ACCOUNT_OVERVIEW:
@@ -177,7 +134,7 @@ export const Routes = buildRoutes({
 											CONTACTS_ACCOUNT_SEGMENTS: `/${SEGMENTS}`,
 										},
 									},
-									CONTACTS_ENTITY: `/:type(${ACCOUNTS}|${INDIVIDUALS}|${SEGMENTS})/:id`,
+									CONTACTS_ENTITY: '/:type/:id',
 									CONTACTS_INDIVIDUALS: {
 										path: `/${INDIVIDUALS}`,
 										routes: {
@@ -210,28 +167,28 @@ export const Routes = buildRoutes({
 
 									// Deprecated - Prefer the more specific routes for the entity type
 
-									CONTACTS_INTEREST_DETAILS: `/:type(${ACCOUNTS}|${INDIVIDUALS}|${SEGMENTS})/:id/interests/:interestId`,
+									CONTACTS_INTEREST_DETAILS:
+										'/:type/:id/interests/:interestId',
 
 									// Deprecated - Prefer the more specific routes for the entity type
 
-									CONTACTS_INTERESTS: `/:type(${ACCOUNTS}|${INDIVIDUALS}|${SEGMENTS})/:id/interests`,
+									CONTACTS_INTERESTS: '/:type/:id/interests',
 
 									/*
-									 * CONTACTS_LIST_ACCOUNT, CONTACTS_LIST_INDIVIDUAL and CONTACTS_LIST_SEGMENT are
-									 * separate for the sake of keeping two separate Routers.
-									 * CONTACTS_LIST_ENTITY should be used as consumable route.
+									 * CONTACTS_LIST_SEGMENT is kept separate to drive
+									 * its own Router; CONTACTS_LIST_ENTITY is the
+									 * consumable route.
 									 */
-									CONTACTS_LIST_ACCOUNT: `/:type(${ACCOUNTS})`,
-									CONTACTS_LIST_ENTITY: `/:type(${ACCOUNTS}|${INDIVIDUALS}|${SEGMENTS})`,
-									CONTACTS_LIST_INDIVIDUAL: `/:type(${INDIVIDUALS})`,
-									CONTACTS_LIST_SEGMENT: `/:type(${SEGMENTS})`,
+									CONTACTS_LIST_ENTITY: '/:type',
+									CONTACTS_LIST_SEGMENT: '/:type',
 									CONTACTS_SEGMENT: {
 										path: `/${SEGMENTS}/:id`,
 										routes: {
 											CONTACTS_SEGMENT_DISTRIBUTION:
 												'/distribution',
 											CONTACTS_SEGMENT_EDIT: '/edit',
-											CONTACTS_SEGMENT_INTEREST_DETAILS: `/interests/:interestId/:tabId(${INDIVIDUALS}|${PAGES})?`,
+											CONTACTS_SEGMENT_INTEREST_DETAILS:
+												'/interests/:interestId/:tabId?',
 											CONTACTS_SEGMENT_INTERESTS:
 												'/interests',
 											CONTACTS_SEGMENT_MEMBERSHIP:
@@ -339,7 +296,7 @@ export const Routes = buildRoutes({
 											SETTINGS_DEFINITIONS_EVENT_ATTRIBUTES_LOCAL:
 												'/local',
 											SETTINGS_DEFINITIONS_EVENT_ATTRIBUTES_VIEW:
-												'/:attributeId(\\d+)',
+												'/:attributeId',
 										},
 									},
 									SETTINGS_DEFINITIONS_EVENTS: {
@@ -352,7 +309,7 @@ export const Routes = buildRoutes({
 											SETTINGS_DEFINITIONS_EVENTS_DEFAULT:
 												'/default',
 											SETTINGS_DEFINITIONS_EVENTS_VIEW:
-												'/:eventId(\\d+)',
+												'/:eventId',
 										},
 									},
 									SETTINGS_DEFINITIONS_INDIVIDUAL_ATTRIBUTES:
@@ -367,7 +324,7 @@ export const Routes = buildRoutes({
 								path: '/recommendations',
 								routes: {
 									SETTINGS_RECOMMENDATION_MODEL_VIEW: {
-										path: '/:jobId([\\d]+)',
+										path: '/:jobId',
 										routes: {
 											SETTINGS_RECOMMENDATION_EDIT:
 												'/edit',
@@ -447,34 +404,6 @@ const TYPE_TO_ROUTE_MAP = {
 	...invert(ROUTE_TO_TYPE_MAP),
 };
 
-export const assetTypePaths = {
-	blog: Routes.ASSETS_BLOGS_OVERVIEW,
-	custom: Routes.ASSETS_CUSTOM_DASHBOARD,
-	document: Routes.ASSETS_DOCUMENTS_AND_MEDIA_OVERVIEW,
-	form: Routes.ASSETS_FORMS_OVERVIEW,
-	journal: Routes.ASSETS_WEB_CONTENT_OVERVIEW,
-};
-
-export const toAssetOverviewRoute = (
-	assetType: keyof typeof assetTypePaths,
-	routeParams: {[key: string]: any},
-	query: {[key: string]: any}
-) => {
-	let route = '';
-
-	if (assetType === 'blog') {
-		route = toRoute(assetTypePaths[assetType], {
-			...routeParams,
-			assetType: 'blogs',
-		});
-	}
-	else {
-		route = toRoute(assetTypePaths[assetType], routeParams);
-	}
-
-	return !isEmpty(query) ? setUriQueryValues(query, route) : route;
-};
-
 export function getType(routeName: keyof typeof ROUTE_TO_TYPE_MAP) {
 	return ROUTE_TO_TYPE_MAP[routeName];
 }
@@ -502,7 +431,7 @@ export function getMatchedRoute(
 	pathname = location.pathname
 ) {
 	const matchedRoute = routes.find(({exact = true, route}) =>
-		matchPath(pathname, {exact, path: route})
+		matchPath({end: exact, path: route}, pathname)
 	);
 
 	return (matchedRoute && matchedRoute.route) || null;

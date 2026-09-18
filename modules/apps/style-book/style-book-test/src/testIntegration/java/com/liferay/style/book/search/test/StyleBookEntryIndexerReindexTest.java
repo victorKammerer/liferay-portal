@@ -83,10 +83,12 @@ public class StyleBookEntryIndexerReindexTest {
 			"defaultStyleBookEntry", Boolean.TRUE.toString(),
 			styleBookEntryKey);
 
+		String frontendTokensValues = "{}";
+
 		_assertReindexAfterUnsafeRunnable(
 			styleBookEntry,
 			() -> _styleBookEntryLocalService.updateFrontendTokensValues(
-				styleBookEntryId, RandomTestUtil.randomString()));
+				styleBookEntryId, frontendTokensValues));
 
 		_assertReindexAfterUnsafeRunnable(
 			styleBookEntry,
@@ -96,8 +98,8 @@ public class StyleBookEntryIndexerReindexTest {
 		newName = RandomTestUtil.randomString();
 
 		_styleBookEntryLocalService.updateStyleBookEntry(
-			styleBookEntryId, RandomTestUtil.randomString(), newName,
-			_serviceContext);
+			styleBookEntryId, styleBookEntry.getFrontendTokenDefinition(),
+			frontendTokensValues, newName, _serviceContext);
 
 		_assertFieldValue(Field.NAME, newName, styleBookEntryKey);
 
@@ -105,8 +107,8 @@ public class StyleBookEntryIndexerReindexTest {
 
 		_styleBookEntryLocalService.updateStyleBookEntry(
 			TestPropsValues.getUserId(), styleBookEntryId, true,
-			RandomTestUtil.randomString(), newName, styleBookEntryKey, 0L,
-			_serviceContext);
+			styleBookEntry.getFrontendTokenDefinition(), frontendTokensValues,
+			newName, styleBookEntryKey, 0L, _serviceContext);
 
 		_assertFieldValue(Field.NAME, newName, styleBookEntryKey);
 
@@ -134,8 +136,9 @@ public class StyleBookEntryIndexerReindexTest {
 	private StyleBookEntry _addStyleBookEntry() throws Exception {
 		return _styleBookEntryLocalService.addStyleBookEntry(
 			RandomTestUtil.randomString(), TestPropsValues.getUserId(),
-			_group.getGroupId(), false, null, RandomTestUtil.randomString(),
+			_group.getGroupId(), false, null, null,
 			RandomTestUtil.randomString(), RandomTestUtil.randomString(),
+			RandomTestUtil.randomString(),
 			ServiceContextTestUtil.getServiceContext(
 				_group.getGroupId(), TestPropsValues.getUserId()));
 	}

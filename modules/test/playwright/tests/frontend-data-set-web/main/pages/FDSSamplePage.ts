@@ -36,7 +36,9 @@ export class FDSSamplePage {
 	readonly emptyStateContainer: Locator;
 	readonly fdsWrapper: Locator;
 	readonly fileDropModal: Locator;
+	readonly filterDeleteButton: Locator;
 	readonly filterDropdownMenu: Locator;
+	readonly filterExcludeToggle: Locator;
 	readonly filterMenu: Locator;
 	readonly filterMenuSearchInput: Locator;
 	readonly filterShowResultsOrAddButton: Locator;
@@ -58,6 +60,13 @@ export class FDSSamplePage {
 		itemsPerPageSelector: Locator;
 	};
 	readonly resubmitButton: Locator;
+	readonly searchSuggestions: {
+		clearAllButton: Locator;
+		menu: Locator;
+		recentSearchEntries: Locator;
+		recentlyVisitedEntries: Locator;
+		sectionHeadings: Locator;
+	};
 	readonly sidePanel: Locator;
 	readonly sidePanelFrame: FrameLocator;
 	readonly selectAllCheckbox: Locator;
@@ -128,7 +137,12 @@ export class FDSSamplePage {
 			name: 'Custom dummy file uploader',
 		});
 		this.filterDropdownMenu = page.locator('.data-set-filter');
+		this.filterExcludeToggle =
+			this.filterDropdownMenu.getByLabel('Exclude');
 		this.filterMenu = page.locator('.dropdown-menu');
+		this.filterDeleteButton = this.filterMenu.getByRole('button', {
+			name: 'Delete Filter',
+		});
 		this.filterMenuSearchInput = this.filterMenu
 			.getByLabel('Search')
 			.first();
@@ -178,6 +192,24 @@ export class FDSSamplePage {
 		};
 
 		this.resubmitButton = page.getByRole('button', {name: 'Resubmit'});
+
+		const searchSuggestionsMenu = page.locator('.fds-search-suggestions');
+
+		this.searchSuggestions = {
+			clearAllButton: searchSuggestionsMenu.getByRole('menuitem', {
+				name: 'Clear All',
+			}),
+			menu: searchSuggestionsMenu,
+			recentSearchEntries: searchSuggestionsMenu.locator(
+				'.fds-search-suggestions-query-item'
+			),
+			recentlyVisitedEntries: searchSuggestionsMenu.locator(
+				'.fds-search-suggestions-visited-item'
+			),
+			sectionHeadings: searchSuggestionsMenu.locator(
+				'.dropdown-subheader'
+			),
+		};
 
 		this.selectAllCheckbox = page.getByText('Select All');
 
@@ -325,6 +357,65 @@ export class FDSSamplePage {
 		await workflowModal.getByRole('button', {name: 'Save'}).click();
 
 		await workflowModal.waitFor({state: 'hidden'});
+	}
+
+	getFilterItemCheckbox(label: string) {
+		return this.filterDropdownMenu.getByRole('checkbox', {name: label});
+	}
+
+	getFilterRemoveButton(label: string) {
+		return this.activeFiltersToolbar.container
+			.getByRole('group')
+			.filter({hasText: `${label}:`})
+			.getByRole('button', {name: 'Remove Filter'});
+	}
+
+	getFilterSummaryButton(label: string) {
+		return this.activeFiltersToolbar.container
+			.getByRole('button')
+			.filter({hasText: new RegExp(`^${label}:`)});
+	}
+
+	recentSearchEntry(query: string) {
+		return this.searchSuggestions.recentSearchEntries.getByRole(
+			'menuitem',
+			{
+				exact: true,
+				name: query,
+			}
+		);
+	}
+
+	recentSearchRemoveButton(query: string) {
+		return this.searchSuggestions.recentSearchEntries
+			.filter({
+				has: this.page.getByRole('menuitem', {
+					exact: true,
+					name: query,
+				}),
+			})
+			.getByRole('menuitem', {name: 'Clear Search'});
+	}
+
+	recentlyVisitedEntry(label: string) {
+		return this.searchSuggestions.recentlyVisitedEntries.getByRole(
+			'menuitem',
+			{
+				exact: true,
+				name: label,
+			}
+		);
+	}
+
+	recentlyVisitedRemoveButton(label: string) {
+		return this.searchSuggestions.recentlyVisitedEntries
+			.filter({
+				has: this.page.getByRole('menuitem', {
+					exact: true,
+					name: label,
+				}),
+			})
+			.getByRole('menuitem', {name: 'Remove'});
 	}
 
 	async search(value: string) {

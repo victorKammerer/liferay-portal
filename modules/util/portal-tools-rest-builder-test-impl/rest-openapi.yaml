@@ -246,6 +246,39 @@ components:
                 testEntity:
                     $ref: "#/components/schemas/TestEntity"
             type: object
+        ObjectArrayPropertyTestEntity:
+            properties:
+                name:
+                    type: string
+                objectArrayProperty:
+                    items:
+                        type: object
+                    type: array
+            title: ObjectArrayPropertyTestEntity
+            type: object
+        OneOfPropertyTestEntity:
+            properties:
+                name:
+                    type: string
+                oneOfProperty:
+                    oneOf:
+                        -   type: array
+                        -   type: boolean
+                        -   type: integer
+                        -   type: number
+                        -   type: object
+                        -   type: string
+            title: OneOfPropertyTestEntity
+            type: object
+        ReferencingTestEntity:
+            properties:
+                externalScopedTestEntity:
+                    $ref: ../portal-tools-rest-builder-test-external-impl/rest-openapi.yaml#ExternalScopedTestEntity
+                externalTestEntity1:
+                    $ref: ../portal-tools-rest-builder-test-external-impl/rest-openapi.yaml#ExternalTestEntity1
+                externalTestEntity2:
+                    $ref: ../portal-tools-rest-builder-test-external-impl/rest-openapi.yaml#ExternalTestEntity2
+            type: object
         Schema:
             properties:
                 property1:
@@ -996,6 +1029,11 @@ paths:
     "/batch-test-entities":
         get:
             operationId: getBatchTestEntitiesPage
+            parameters:
+                -   in: query
+                    name: nestedFieldsDepth
+                    schema:
+                        type: integer
             responses:
                 200:
                     content:
@@ -1602,6 +1640,27 @@ paths:
                     description:
                         "OK"
             tags: ["MultipartTestEntity"]
+    "/referencing-test-entities":
+        post:
+            operationId: postReferencingTestEntity
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            $ref: "#/components/schemas/ReferencingTestEntity"
+                    application/xml:
+                        schema:
+                            $ref: "#/components/schemas/ReferencingTestEntity"
+            responses:
+                200:
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/ReferencingTestEntity"
+                        application/xml:
+                            schema:
+                                $ref: "#/components/schemas/ReferencingTestEntity"
+            tags: ["ReferencingTestEntity"]
     "/reserved-word":
         post:
             operationId: postReservedWord
@@ -2649,6 +2708,12 @@ paths:
             description:
                 Retrieves the count.
             operationId: getTestEntityCount
+            parameters:
+                -   in: query
+                    name: requiredQueryParameter
+                    required: true
+                    schema:
+                        type: string
             responses:
                 200:
                     content:

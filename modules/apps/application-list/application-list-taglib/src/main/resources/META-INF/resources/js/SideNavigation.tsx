@@ -5,18 +5,23 @@
 
 import {SidePanel} from '@clayui/core';
 import ClayEmptyState from '@clayui/empty-state';
-import ClayIcon from '@clayui/icon';
 import {ClayVerticalNav} from '@clayui/nav';
 import ClaySticker from '@clayui/sticker';
 import {SearchResultsMessage} from '@liferay/layout-js-components-web';
+import classNames from 'classnames';
+import {useId} from 'frontend-js-components-web';
+import {sub} from 'frontend-js-web';
 import React, {useCallback, useEffect, useMemo, useRef, useState} from 'react';
 
-import {sub} from '../../../../../../../../frontend-js/frontend-js-web/src/main/resources/META-INF/resources/main';
 import SideNavigationColorSchemeButton from './SideNavigationColorSchemeButton';
+import SideNavigationItemContent from './SideNavigationItemContent';
+import SideNavigationResultsSkeleton from './SideNavigationResultsSkeleton';
+import SideNavigationScopeItem from './SideNavigationScopeItem';
 import SideNavigationSearchInput from './SideNavigationSearchInput';
 import SideNavigationSiteSelector from './SideNavigationSiteSelector';
 import {SideNavigationItem} from './types/SideNavigation';
 import {useSideNavigationFilter} from './useSideNavigationFilter';
+import {useSideNavigationItems} from './useSideNavigationItems';
 
 interface Props {
 	canonicalName: string;
@@ -27,11 +32,26 @@ interface Props {
 	expandedKeysSessionKey: string;
 	items: Array<SideNavigationItem>;
 	label: string;
+	navigationItemsURL: string;
 	selectedPortletId: string;
 	siteAdministrationItemSelectedEventName: string;
 	siteAdministrationItemSelectorUrl: string;
 	visible: boolean;
 	visibleSessionKey: string;
+}
+
+function countNavigableItems(
+	navigationItems: Array<SideNavigationItem>
+): number {
+	return navigationItems.reduce(
+		(count, navigationItem) =>
+			count +
+			(navigationItem.href ? 1 : 0) +
+			(navigationItem.items
+				? countNavigableItems(navigationItem.items)
+				: 0),
+		0
+	);
 }
 
 function SideNavigation({
@@ -43,6 +63,7 @@ function SideNavigation({
 	expandedKeysSessionKey,
 	items: externalItems,
 	label,
+	navigationItemsURL,
 	selectedPortletId,
 	siteAdministrationItemSelectedEventName,
 	siteAdministrationItemSelectorUrl,
@@ -64,12 +85,35 @@ function SideNavigation({
 
 	const [visible, setVisible] = useState(initialVisible);
 
-	const {expandedKeys, isFilterActive, items, setQuery} =
-		useSideNavigationFilter(externalItems);
+	const baseId = useId();
+
+	const {
+		items: navigationItems,
+		loading,
+		prefetchFilterOnlyItems,
+	} = useSideNavigationItems(externalItems, navigationItemsURL);
+
+	const {expandedKeys, isFilterActive, items, numberOfMatches, setQuery} =
+		useSideNavigationFilter(navigationItems);
+
+	const [filterCollapse, setFilterCollapse] = useState<{
+		appliesTo: Set<React.Key>;
+		expandedKeys: Set<React.Key>;
+	}>();
+
+	const effectiveExpandedKeys =
+		filterCollapse && filterCollapse.appliesTo === expandedKeys
+			? filterCollapse.expandedKeys
+			: expandedKeys ?? userExpandedKeys;
 
 	const updateExpandedKeys = useCallback(
 		async (updatedExpandedKeys: Set<React.Key>) => {
-			if (isFilterActive) {
+			if (isFilterActive && expandedKeys) {
+				setFilterCollapse({
+					appliesTo: expandedKeys,
+					expandedKeys: updatedExpandedKeys,
+				});
+
 				return;
 			}
 
@@ -80,7 +124,7 @@ function SideNavigation({
 
 			setUserExpandedKeys(updatedExpandedKeys);
 		},
-		[expandedKeysSessionKey, isFilterActive]
+		[expandedKeys, expandedKeysSessionKey, isFilterActive]
 	);
 
 	const updateVisible = useCallback(
@@ -115,9 +159,14 @@ function SideNavigation({
 	);
 
 	const numberOfResults = useMemo(
-		() => items.reduce((acc, item) => acc + (item.items?.length || 0), 0),
-		[items]
+		() => (isFilterActive ? numberOfMatches : countNavigableItems(items)),
+		[isFilterActive, items, numberOfMatches]
 	);
+
+	// Keep already matched items on screen while the filter-only items are
+	// still loading, so a slow request cannot blank a complete result set.
+
+	const showResultsSkeleton = isFilterActive && loading && !numberOfResults;
 
 	return (
 		<SidePanel
@@ -188,46 +237,70 @@ function SideNavigation({
 			</SidePanel.Header>
 
 			<SidePanel.Body className="c-pt-2 c-px-0">
-				<SideNavigationSearchInput onChange={setQuery} />
+				<SideNavigationSearchInput
+					onChange={setQuery}
+					onFocus={prefetchFilterOnlyItems}
+				/>
 
 				<SearchResultsMessage
-					numberOfResults={numberOfResults}
+					numberOfResults={
+						showResultsSkeleton ? null : numberOfResults
+					}
 					resultType={Liferay.Language.get('navigation-items')}
 				/>
 
-				{numberOfResults ? (
+				{showResultsSkeleton ? (
+					<SideNavigationResultsSkeleton />
+				) : numberOfResults ? (
 					<ClayVerticalNav
 						active={selectedPortletId}
 						defaultExpandedKeys={initialExpandedKeys}
 						displayType="primary"
-						expandedKeys={expandedKeys ?? userExpandedKeys}
+						expandedKeys={effectiveExpandedKeys}
 						itemAriaCurrent={true}
 						items={items}
 						onExpandedChange={updateExpandedKeys}
 						stacked={true}
 					>
-						{(item) => {
-							if (typeof item === 'string') {
-								return <span>{item}</span>;
+						{(collectionItem) => {
+							if (typeof collectionItem === 'string') {
+								return <span>{collectionItem}</span>;
+							}
+
+							const item = collectionItem as SideNavigationItem;
+							const scopeItemId = `${baseId}-${item.scope}`;
+
+							if (item.scopeMarker && item.scope) {
+								return (
+									<SideNavigationScopeItem
+										id={scopeItemId}
+										key={item.id}
+										label={item.label}
+										scope={item.scope}
+									/>
+								);
 							}
 
 							return (
 								<ClayVerticalNav.Item
+									aria-describedby={
+										!isFilterActive && item.scope
+											? scopeItemId
+											: undefined
+									}
+									className={classNames({
+										'side-navigation-section-item':
+											item.parentLabel,
+										[`side-navigation-scope-zone-${item.scope}`]:
+											item.scope,
+									})}
 									data-canonical-name={item.canonicalName}
 									href={item.href}
 									items={item.items}
 									key={item.id}
 									textValue={item.label}
 								>
-									{item.leadingIcon && (
-										<ClayIcon
-											className="c-mr-2"
-											key={item.leadingIcon}
-											symbol={item.leadingIcon}
-										/>
-									)}
-
-									{item.label}
+									<SideNavigationItemContent item={item} />
 								</ClayVerticalNav.Item>
 							);
 						}}

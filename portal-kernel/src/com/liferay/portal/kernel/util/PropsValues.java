@@ -888,6 +888,12 @@ public class PropsValues {
 					PropsKeys.
 						FIELD_ENABLE_COM_LIFERAY_PORTAL_KERNEL_MODEL_ORGANIZATION_STATUS));
 
+	public static final String FIPS_AUDIT_DEPLOYMENT_INSTANCE_ID =
+		PropsUtil.get(PropsKeys.FIPS_AUDIT_DEPLOYMENT_INSTANCE_ID);
+
+	public static final String FIPS_AUDIT_PROVIDER_CMVP_CERTIFICATE_ID =
+		PropsUtil.get(PropsKeys.FIPS_AUDIT_PROVIDER_CMVP_CERTIFICATE_ID);
+
 	public static final boolean FIPS_ENABLED = GetterUtil.getBoolean(
 		PropsUtil.get(PropsKeys.FIPS_ENABLED));
 
@@ -1484,10 +1490,6 @@ public class PropsValues {
 
 	public static final String NETVIBES_SERVLET_MAPPING = PropsUtil.get(
 		PropsKeys.NETVIBES_SERVLET_MAPPING);
-
-	public static final boolean NOTIFICATION_EMAIL_TEMPLATE_ENABLED =
-		GetterUtil.getBoolean(
-			PropsUtil.get(PropsKeys.NOTIFICATION_EMAIL_TEMPLATE_ENABLED));
 
 	public static final int NOTIFICATIONS_MAX_EVENTS = GetterUtil.getInteger(
 		PropsUtil.get(PropsKeys.NOTIFICATIONS_MAX_EVENTS));

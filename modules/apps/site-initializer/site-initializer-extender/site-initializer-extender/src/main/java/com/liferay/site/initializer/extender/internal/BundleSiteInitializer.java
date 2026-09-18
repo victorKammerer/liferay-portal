@@ -217,6 +217,7 @@ import com.liferay.portal.vulcan.multipart.BinaryFile;
 import com.liferay.portal.vulcan.multipart.MultipartBody;
 import com.liferay.portal.vulcan.pagination.Page;
 import com.liferay.portal.vulcan.pagination.Pagination;
+import com.liferay.segments.constants.SegmentsEntryConstants;
 import com.liferay.segments.model.SegmentsEntry;
 import com.liferay.segments.model.SegmentsExperience;
 import com.liferay.segments.service.SegmentsEntryLocalService;
@@ -257,6 +258,7 @@ import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -970,6 +972,17 @@ public class BundleSiteInitializer implements SiteInitializer {
 			_siteBundle, serviceContext.getScopeGroupId(),
 			"/site-initializer/fragments/group", serviceContext,
 			stringUtilReplaceValues);
+
+		Map<String, Group> designLibraryGroups = _getDesignLibraryGroups(
+			"/site-initializer/fragments/design-libraries", serviceContext);
+
+		for (Map.Entry<String, Group> entry : designLibraryGroups.entrySet()) {
+			Group designLibraryGroup = entry.getValue();
+
+			_addFragmentEntries(
+				_siteBundle, designLibraryGroup.getGroupId(), entry.getKey(),
+				serviceContext, stringUtilReplaceValues);
+		}
 
 		if (_dialectThemeDetected) {
 			_addFragmentEntries(
@@ -2144,12 +2157,27 @@ public class BundleSiteInitializer implements SiteInitializer {
 		for (int i = 0; i < jsonArray.length(); i++) {
 			JSONObject jsonObject = jsonArray.getJSONObject(i);
 
+			int depotEntryType = _getDepotEntryType(
+				jsonObject.getString("type"));
+
+			if ((depotEntryType == DepotConstants.TYPE_DESIGN_LIBRARY) &&
+				!FeatureFlagManagerUtil.isEnabled(
+					serviceContext.getCompanyId(), "LPD-57283")) {
+
+				if (_log.isInfoEnabled()) {
+					_log.info(
+						"Skipping design library since LPD-57283 is disabled");
+				}
+
+				continue;
+			}
+
 			Group group = _groupLocalService.fetchGroup(
 				serviceContext.getCompanyId(),
 				SiteInitializerUtil.toMap(
 					jsonObject.getString("name_i18n")
 				).get(
-					LocaleUtil.getSiteDefault()
+					LocaleUtil.getDefault()
 				));
 
 			DepotEntry depotEntry = null;
@@ -2160,8 +2188,7 @@ public class BundleSiteInitializer implements SiteInitializer {
 						jsonObject.getString("name_i18n")),
 					SiteInitializerUtil.toMap(
 						jsonObject.getString("description_i18n")),
-					_getDepotEntryType(jsonObject.getString("type")),
-					serviceContext);
+					depotEntryType, serviceContext);
 			}
 
 			UnicodeProperties unicodeProperties = new UnicodeProperties(true);
@@ -2180,41 +2207,14 @@ public class BundleSiteInitializer implements SiteInitializer {
 				}
 			}
 
-			JSONObject depotAppCustomizationJSONObject =
-				jsonObject.getJSONObject("depotAppCustomization");
-
 			_depotEntryLocalService.updateDepotEntry(
 				(group != null) ? group.getClassPK() :
 					depotEntry.getDepotEntryId(),
 				SiteInitializerUtil.toMap(jsonObject.getString("name_i18n")),
 				SiteInitializerUtil.toMap(
 					jsonObject.getString("description_i18n")),
-				HashMapBuilder.put(
-					PortletKeys.ASSET_LIST,
-					GetterUtil.getBoolean(
-						depotAppCustomizationJSONObject.getBoolean(
-							PortletKeys.ASSET_LIST),
-						true)
-				).put(
-					PortletKeys.DOCUMENT_LIBRARY_ADMIN,
-					GetterUtil.getBoolean(
-						depotAppCustomizationJSONObject.getBoolean(
-							PortletKeys.DOCUMENT_LIBRARY_ADMIN),
-						true)
-				).put(
-					PortletKeys.JOURNAL,
-					GetterUtil.getBoolean(
-						depotAppCustomizationJSONObject.getBoolean(
-							PortletKeys.JOURNAL),
-						true)
-				).put(
-					PortletKeys.TRANSLATION,
-					GetterUtil.getBoolean(
-						depotAppCustomizationJSONObject.getBoolean(
-							PortletKeys.TRANSLATION),
-						true)
-				).build(),
-				null, unicodeProperties, serviceContext);
+				_getDepotAppCustomizationMap(jsonObject), null,
+				unicodeProperties, serviceContext);
 
 			Group scopeGroup = serviceContext.getScopeGroup();
 
@@ -2823,6 +2823,9 @@ public class BundleSiteInitializer implements SiteInitializer {
 					parentResourcePath + "page.json", _servletContext),
 				stringUtilReplaceValues));
 
+		_languageKeyResolver.expand(
+			serviceContext.getCompanyId(), pageJSONObject);
+
 		Map<Locale, String> nameMap = new HashMap<>(
 			SiteInitializerUtil.toMap(pageJSONObject.getString("name_i18n")));
 
@@ -3333,23 +3336,11 @@ public class BundleSiteInitializer implements SiteInitializer {
 				serviceContext.fetchUser()
 			).build();
 
-		NotificationTemplate existingNotificationTemplate =
+		notificationTemplate =
 			notificationTemplateResource.
-				getNotificationTemplateByExternalReferenceCode(
-					notificationTemplate.getExternalReferenceCode());
-
-		if (existingNotificationTemplate == null) {
-			notificationTemplate =
-				notificationTemplateResource.postNotificationTemplate(
+				putNotificationTemplateByExternalReferenceCode(
+					notificationTemplate.getExternalReferenceCode(),
 					notificationTemplate);
-		}
-		else {
-			notificationTemplate =
-				notificationTemplateResource.
-					putNotificationTemplateByExternalReferenceCode(
-						notificationTemplate.getExternalReferenceCode(),
-						notificationTemplate);
-		}
 
 		json = SiteInitializerUtil.read(
 			resourcePath + "notification-template.object-actions.json",
@@ -4067,7 +4058,7 @@ public class BundleSiteInitializer implements SiteInitializer {
 					jsonObject.get(
 						"criteria"
 					).toString(),
-					null, serviceContext);
+					null, SegmentsEntryConstants.TYPE_DEFAULT, serviceContext);
 			}
 			else {
 				segmentsEntry = _segmentsEntryLocalService.updateSegmentsEntry(
@@ -4080,7 +4071,7 @@ public class BundleSiteInitializer implements SiteInitializer {
 					jsonObject.get(
 						"criteria"
 					).toString(),
-					serviceContext);
+					segmentsEntry.getType(), serviceContext);
 			}
 
 			stringUtilReplaceValues.put(
@@ -4470,26 +4461,40 @@ public class BundleSiteInitializer implements SiteInitializer {
 				continue;
 			}
 
-			Page<TaxonomyVocabulary> taxonomyVocabularyPage =
-				taxonomyVocabularyResource.getSiteTaxonomyVocabulariesPage(
-					groupId, "", null,
-					taxonomyVocabularyResource.toFilter(
-						StringBundler.concat(
-							"name eq '", taxonomyVocabulary.getName(), "'")),
-					null, null);
+			if (Validator.isNotNull(
+					taxonomyVocabulary.getExternalReferenceCode())) {
 
-			TaxonomyVocabulary existingTaxonomyVocabulary =
-				taxonomyVocabularyPage.fetchFirstItem();
-
-			if (existingTaxonomyVocabulary == null) {
 				taxonomyVocabulary =
-					taxonomyVocabularyResource.postSiteTaxonomyVocabulary(
-						groupId, taxonomyVocabulary);
+					taxonomyVocabularyResource.
+						putSiteTaxonomyVocabularyByExternalReferenceCode(
+							groupId,
+							taxonomyVocabulary.getExternalReferenceCode(),
+							taxonomyVocabulary);
 			}
 			else {
-				taxonomyVocabulary =
-					taxonomyVocabularyResource.patchTaxonomyVocabulary(
-						existingTaxonomyVocabulary.getId(), taxonomyVocabulary);
+				Page<TaxonomyVocabulary> taxonomyVocabularyPage =
+					taxonomyVocabularyResource.getSiteTaxonomyVocabulariesPage(
+						groupId, "", null,
+						taxonomyVocabularyResource.toFilter(
+							StringBundler.concat(
+								"name eq '", taxonomyVocabulary.getName(),
+								"'")),
+						null, null);
+
+				TaxonomyVocabulary existingTaxonomyVocabulary =
+					taxonomyVocabularyPage.fetchFirstItem();
+
+				if (existingTaxonomyVocabulary == null) {
+					taxonomyVocabulary =
+						taxonomyVocabularyResource.postSiteTaxonomyVocabulary(
+							groupId, taxonomyVocabulary);
+				}
+				else {
+					taxonomyVocabulary =
+						taxonomyVocabularyResource.patchTaxonomyVocabulary(
+							existingTaxonomyVocabulary.getId(),
+							taxonomyVocabulary);
+				}
 			}
 
 			stringUtilReplaceValues.put(
@@ -4537,6 +4542,13 @@ public class BundleSiteInitializer implements SiteInitializer {
 			taxonomyCategoryResourceBuilder.user(
 				serviceContext.fetchUser()
 			).build();
+
+		if (Validator.isNotNull(taxonomyCategory.getExternalReferenceCode())) {
+			return taxonomyCategoryResource.
+				putTaxonomyVocabularyTaxonomyCategoryByExternalReferenceCode(
+					vocabularyId, taxonomyCategory.getExternalReferenceCode(),
+					taxonomyCategory);
+		}
 
 		Page<TaxonomyCategory> taxonomyCategoryPage =
 			taxonomyCategoryResource.
@@ -4887,11 +4899,13 @@ public class BundleSiteInitializer implements SiteInitializer {
 		}
 	}
 
-	private void _addStyleBookEntries(ServiceContext serviceContext)
+	private void _addStyleBookEntries(
+			long groupId, String parentResourcePath,
+			ServiceContext serviceContext)
 		throws Exception {
 
 		Enumeration<URL> enumeration = _siteBundle.findEntries(
-			"/site-initializer/style-books", StringPool.STAR, true);
+			parentResourcePath, StringPool.STAR, true);
 
 		if (enumeration == null) {
 			return;
@@ -4904,20 +4918,41 @@ public class BundleSiteInitializer implements SiteInitializer {
 
 			String fileName = url.getFile();
 
-			if (fileName.endsWith("/")) {
+			if (fileName.endsWith("/") ||
+				(!parentResourcePath.contains("/design-libraries/") &&
+				 fileName.contains("/design-libraries/"))) {
+
 				continue;
 			}
 
 			try (InputStream inputStream = url.openStream()) {
 				zipWriter.addEntry(
-					_removeFirst(fileName, "/site-initializer/style-books/"),
+					_removeFirst(fileName, parentResourcePath + "/"),
 					inputStream);
 			}
 		}
 
 		_styleBookEntryZipProcessor.importStyleBookEntries(
-			serviceContext.getUserId(), serviceContext.getScopeGroupId(),
-			zipWriter.getFile(), true);
+			serviceContext.getUserId(), groupId, zipWriter.getFile(), true);
+	}
+
+	private void _addStyleBookEntries(ServiceContext serviceContext)
+		throws Exception {
+
+		_addStyleBookEntries(
+			serviceContext.getScopeGroupId(), "/site-initializer/style-books",
+			serviceContext);
+
+		Map<String, Group> designLibraryGroups = _getDesignLibraryGroups(
+			"/site-initializer/style-books/design-libraries", serviceContext);
+
+		for (Map.Entry<String, Group> entry : designLibraryGroups.entrySet()) {
+			Group designLibraryGroup = entry.getValue();
+
+			_addStyleBookEntries(
+				designLibraryGroup.getGroupId(), entry.getKey(),
+				serviceContext);
+		}
 	}
 
 	private void _addTaxonomyCategories(
@@ -5566,21 +5601,25 @@ public class BundleSiteInitializer implements SiteInitializer {
 				addOrUpdateSegmentsEntriesR, addOrUpdateUserGroupsR)
 		).put(
 			addFragmentEntriesR,
-			_dependsOn(addOrUpdateDocumentsR, updateLayoutSetsR)
+			_dependsOn(
+				addOrUpdateDepotEntriesR, addOrUpdateDocumentsR,
+				updateLayoutSetsR)
 		).put(
 			addKeywordsR, _dependsOn(addOrUpdateDepotEntriesR)
 		).put(
 			addLayoutPageTemplatesR,
 			_dependsOn(
-				addOrUpdateBlogPostingsR, addCPDefinitionsR,
-				addOrUpdateClientExtensionEntriesR, addFragmentEntriesR,
-				addOrUpdateJournalArticlesR, addOrUpdateSXPBlueprintR)
+				addObjectDefinitionsR, addOrUpdateBlogPostingsR,
+				addCPDefinitionsR, addOrUpdateClientExtensionEntriesR,
+				addFragmentEntriesR, addOrUpdateJournalArticlesR,
+				addOrUpdateSXPBlueprintR)
 		).put(
 			addLayoutUtilityPageEntriesR,
 			_dependsOn(
-				addOrUpdateBlogPostingsR, addCPDefinitionsR,
-				addOrUpdateClientExtensionEntriesR, addFragmentEntriesR,
-				addOrUpdateJournalArticlesR, addOrUpdateSXPBlueprintR)
+				addObjectDefinitionsR, addOrUpdateBlogPostingsR,
+				addCPDefinitionsR, addOrUpdateClientExtensionEntriesR,
+				addFragmentEntriesR, addOrUpdateJournalArticlesR,
+				addOrUpdateSXPBlueprintR)
 		).put(
 			addObjectDefinitionsR,
 			_dependsOn(
@@ -5678,7 +5717,7 @@ public class BundleSiteInitializer implements SiteInitializer {
 		).put(
 			addSiteSettingsR, _dependsOn()
 		).put(
-			addStyleBookEntriesR, _dependsOn()
+			addStyleBookEntriesR, _dependsOn(addOrUpdateDepotEntriesR)
 		).put(
 			addUserAccountsR,
 			_dependsOn(
@@ -5782,6 +5821,42 @@ public class BundleSiteInitializer implements SiteInitializer {
 		return map;
 	}
 
+	private Map<String, Boolean> _getDepotAppCustomizationMap(
+		JSONObject jsonObject) {
+
+		JSONObject depotAppCustomizationJSONObject = jsonObject.getJSONObject(
+			"depotAppCustomization");
+
+		if (depotAppCustomizationJSONObject == null) {
+			return Collections.emptyMap();
+		}
+
+		return HashMapBuilder.put(
+			PortletKeys.ASSET_LIST,
+			GetterUtil.getBoolean(
+				depotAppCustomizationJSONObject.getBoolean(
+					PortletKeys.ASSET_LIST),
+				true)
+		).put(
+			PortletKeys.DOCUMENT_LIBRARY_ADMIN,
+			GetterUtil.getBoolean(
+				depotAppCustomizationJSONObject.getBoolean(
+					PortletKeys.DOCUMENT_LIBRARY_ADMIN),
+				true)
+		).put(
+			PortletKeys.JOURNAL,
+			GetterUtil.getBoolean(
+				depotAppCustomizationJSONObject.getBoolean(PortletKeys.JOURNAL),
+				true)
+		).put(
+			PortletKeys.TRANSLATION,
+			GetterUtil.getBoolean(
+				depotAppCustomizationJSONObject.getBoolean(
+					PortletKeys.TRANSLATION),
+				true)
+		).build();
+	}
+
 	private int _getDepotEntryType(String assetLibraryTypeString) {
 		if (Validator.isNull(assetLibraryTypeString) ||
 			StringUtil.equalsIgnoreCase(
@@ -5789,13 +5864,92 @@ public class BundleSiteInitializer implements SiteInitializer {
 
 			return DepotConstants.TYPE_ASSET_LIBRARY;
 		}
+		else if (StringUtil.equalsIgnoreCase(
+					assetLibraryTypeString, "DesignLibrary")) {
+
+			return DepotConstants.TYPE_DESIGN_LIBRARY;
+		}
 		else if (StringUtil.equalsIgnoreCase(assetLibraryTypeString, "Space")) {
 			return DepotConstants.TYPE_SPACE;
 		}
 
 		throw new IllegalArgumentException(
 			"Asset library type " + assetLibraryTypeString +
-				" must be \"AssetLibrary\" or \"Space\"");
+				" must be \"AssetLibrary\", \"DesignLibrary\", or \"Space\"");
+	}
+
+	private Map<String, Group> _getDesignLibraryGroups(
+			String parentResourcePath, ServiceContext serviceContext)
+		throws Exception {
+
+		if (!FeatureFlagManagerUtil.isEnabled(
+				serviceContext.getCompanyId(), "LPD-57283")) {
+
+			return Collections.emptyMap();
+		}
+
+		String json = SiteInitializerUtil.read(
+			parentResourcePath + "/design-libraries.json", _servletContext);
+
+		if (json == null) {
+			return Collections.emptyMap();
+		}
+
+		Map<String, Group> groups = new LinkedHashMap<>();
+
+		JSONArray jsonArray = _jsonFactory.createJSONArray(json);
+
+		for (int i = 0; i < jsonArray.length(); i++) {
+			JSONObject jsonObject = jsonArray.getJSONObject(i);
+
+			String designLibraryName = jsonObject.getString(
+				"designLibraryName");
+
+			Group group = _groupLocalService.fetchGroup(
+				serviceContext.getCompanyId(), designLibraryName);
+
+			if (group == null) {
+				_log.error("Unable to get design library " + designLibraryName);
+
+				continue;
+			}
+
+			DepotEntry depotEntry = _depotEntryLocalService.fetchDepotEntry(
+				group.getClassPK());
+
+			if ((depotEntry == null) ||
+				(depotEntry.getType() != DepotConstants.TYPE_DESIGN_LIBRARY)) {
+
+				_log.error(
+					"Group " + designLibraryName + " is not a design library");
+
+				continue;
+			}
+
+			String path = jsonObject.getString("path");
+
+			if (Validator.isNull(path)) {
+				_log.error(
+					"Design library " + designLibraryName + " has no path");
+
+				continue;
+			}
+
+			String resourcePath = parentResourcePath + "/" + path;
+
+			Enumeration<URL> enumeration = _siteBundle.findEntries(
+				resourcePath, StringPool.STAR, true);
+
+			if (enumeration == null) {
+				_log.error("Unable to get bundle entries in " + resourcePath);
+
+				continue;
+			}
+
+			groups.put(resourcePath, group);
+		}
+
+		return groups;
 	}
 
 	private Serializable _getExpandoAttributeValue(JSONObject jsonObject)

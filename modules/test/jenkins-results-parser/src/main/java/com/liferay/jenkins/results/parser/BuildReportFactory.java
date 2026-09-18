@@ -57,7 +57,9 @@ public class BuildReportFactory {
 		}
 
 		if (batchName.startsWith("modules-integration") ||
-			batchName.startsWith("modules-unit")) {
+			batchName.startsWith("modules-unit") ||
+			batchName.startsWith("workspaces-integration") ||
+			batchName.startsWith("workspaces-unit")) {
 
 			return new ModulesJUnitDownstreamBuildReport(
 				batchName, buildReportJSONObject, topLevelBuildReport);

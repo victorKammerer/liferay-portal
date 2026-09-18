@@ -545,7 +545,7 @@ public class SitemapManagerTest {
 	}
 
 	@Test
-	public void testSitemapByAssetTypePaginationStoresMultiplePages()
+	public void testSitemapByAssetTypePaginationStoresAndPrunesPages()
 		throws Exception {
 
 		try (CompanyConfigurationTemporarySwapper
@@ -594,6 +594,27 @@ public class SitemapManagerTest {
 					_sitemapStorageHelper.hasSitemapFile(
 						companyId, groupId,
 						SitemapConstants.ASSET_TYPE_KEY_WEB_CONTENT, 4));
+
+				ReflectionTestUtil.setFieldValue(
+					_sitemapManager, "_maximumEntries",
+					SitemapManager.MAXIMUM_ENTRIES);
+
+				_sitemapManager.regenerateSitemap(
+					SitemapConstants.ASSET_TYPE_KEY_WEB_CONTENT, companyId,
+					groupId);
+
+				Assert.assertTrue(
+					_sitemapStorageHelper.hasSitemapFile(
+						companyId, groupId,
+						SitemapConstants.ASSET_TYPE_KEY_WEB_CONTENT, 1));
+				Assert.assertFalse(
+					_sitemapStorageHelper.hasSitemapFile(
+						companyId, groupId,
+						SitemapConstants.ASSET_TYPE_KEY_WEB_CONTENT, 2));
+				Assert.assertFalse(
+					_sitemapStorageHelper.hasSitemapFile(
+						companyId, groupId,
+						SitemapConstants.ASSET_TYPE_KEY_WEB_CONTENT, 3));
 			}
 			finally {
 				ReflectionTestUtil.setFieldValue(
@@ -1736,6 +1757,42 @@ public class SitemapManagerTest {
 				xml, _getLocElement(elements, _buildLayoutSitemapURL(_layout)));
 			Assert.assertNull(
 				xml, _getLocElement(elements, _buildLayoutSitemapURL(layout)));
+		}
+	}
+
+	@Test
+	public void testSitemapIndexExcludesUnpublishedLayout() throws Exception {
+		Layout publishedLayout = LayoutTestUtil.addTypeContentPublishedLayout(
+			_group, RandomTestUtil.randomString(),
+			WorkflowConstants.STATUS_APPROVED);
+		Layout unpublishedLayout = LayoutTestUtil.addTypeContentLayout(_group);
+
+		try (CompanyConfigurationTemporarySwapper
+				companyConfigurationTemporarySwapper =
+					new CompanyConfigurationTemporarySwapper(
+						TestPropsValues.getCompanyId(),
+						_PID_SITEMAP_COMPANY_CONFIGURATION,
+						HashMapDictionaryBuilder.<String, Object>put(
+							"xmlSitemapIndexEnabled", true
+						).build())) {
+
+			String xml = _sitemapManager.getSitemap(
+				_group.getGroupId(), false, _themeDisplay);
+
+			Document document = _saxReader.read(xml);
+
+			Element rootElement = document.getRootElement();
+
+			List<Element> elements = rootElement.elements();
+
+			Assert.assertNotNull(
+				xml,
+				_getLocElement(
+					elements, _buildLayoutSitemapURL(publishedLayout)));
+			Assert.assertNull(
+				xml,
+				_getLocElement(
+					elements, _buildLayoutSitemapURL(unpublishedLayout)));
 		}
 	}
 

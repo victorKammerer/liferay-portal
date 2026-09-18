@@ -10,6 +10,11 @@ import com.liferay.notification.constants.NotificationRecipientConstants;
 import com.liferay.notification.constants.NotificationRecipientSettingConstants;
 import com.liferay.notification.constants.NotificationTemplateConstants;
 import com.liferay.notification.context.NotificationContext;
+import com.liferay.notification.exception.NotificationTemplateDescriptionException;
+import com.liferay.notification.exception.NotificationTemplateEditorTypeException;
+import com.liferay.notification.exception.NotificationTemplateExternalReferenceCodeException;
+import com.liferay.notification.exception.NotificationTemplateNameException;
+import com.liferay.notification.exception.NotificationTemplateSubjectException;
 import com.liferay.notification.internal.template.util.NotificationTemplateUtil;
 import com.liferay.notification.model.NotificationQueueEntry;
 import com.liferay.notification.model.NotificationRecipient;
@@ -30,22 +35,37 @@ import com.liferay.portal.aop.AopService;
 import com.liferay.portal.kernel.dao.orm.ActionableDynamicQuery;
 import com.liferay.portal.kernel.dao.orm.RestrictionsFactoryUtil;
 import com.liferay.portal.kernel.exception.PortalException;
+import com.liferay.portal.kernel.feature.flag.FeatureFlagManagerUtil;
 import com.liferay.portal.kernel.language.Language;
+import com.liferay.portal.kernel.model.Group;
+import com.liferay.portal.kernel.model.GroupConstants;
+import com.liferay.portal.kernel.model.ResourceAction;
 import com.liferay.portal.kernel.model.ResourceConstants;
+import com.liferay.portal.kernel.model.ResourcePermission;
+import com.liferay.portal.kernel.model.Role;
 import com.liferay.portal.kernel.model.SystemEventConstants;
 import com.liferay.portal.kernel.model.User;
 import com.liferay.portal.kernel.search.Indexable;
 import com.liferay.portal.kernel.search.IndexableType;
+import com.liferay.portal.kernel.service.GroupLocalService;
+import com.liferay.portal.kernel.service.PermissionService;
+import com.liferay.portal.kernel.service.ResourceActionLocalService;
 import com.liferay.portal.kernel.service.ResourceLocalService;
+import com.liferay.portal.kernel.service.ResourcePermissionLocalService;
+import com.liferay.portal.kernel.service.RoleLocalService;
 import com.liferay.portal.kernel.service.UserLocalService;
+import com.liferay.portal.kernel.service.permission.ModelPermissions;
 import com.liferay.portal.kernel.systemevent.SystemEvent;
 import com.liferay.portal.kernel.util.ListUtil;
 import com.liferay.portal.kernel.util.LocaleUtil;
 import com.liferay.portal.kernel.util.MapUtil;
 import com.liferay.portal.kernel.util.Portal;
+import com.liferay.portal.kernel.util.StringUtil;
+import com.liferay.portal.kernel.util.Validator;
 import com.liferay.portal.vulcan.util.LocalizedMapUtil;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -117,11 +137,14 @@ public class NotificationTemplateLocalServiceImpl
 			notificationTemplate);
 
 		_resourceLocalService.addResources(
-			notificationTemplate.getCompanyId(), 0,
+			notificationTemplate.getCompanyId(),
+			GroupConstants.DEFAULT_PARENT_GROUP_ID,
 			notificationTemplate.getUserId(),
 			NotificationTemplate.class.getName(),
 			notificationTemplate.getNotificationTemplateId(), false, true,
 			true);
+
+		_updateResourcePermissions(notificationContext, notificationTemplate);
 
 		NotificationRecipient notificationRecipient =
 			notificationContext.getNotificationRecipient();
@@ -456,6 +479,8 @@ public class NotificationTemplateLocalServiceImpl
 					attachmentObjectFieldId);
 		}
 
+		_updateResourcePermissions(notificationContext, notificationTemplate);
+
 		return notificationTemplate;
 	}
 
@@ -507,15 +532,109 @@ public class NotificationTemplateLocalServiceImpl
 		return notificationTemplate;
 	}
 
+	private void _updateResourcePermissions(
+			NotificationContext notificationContext,
+			NotificationTemplate notificationTemplate)
+		throws PortalException {
+
+		ModelPermissions modelPermissions =
+			notificationContext.getModelPermissions();
+
+		if (modelPermissions == null) {
+			return;
+		}
+
+		String permissionName = NotificationTemplate.class.getName();
+		String primKey = String.valueOf(
+			notificationTemplate.getNotificationTemplateId());
+
+		_permissionService.checkPermission(
+			GroupConstants.DEFAULT_PARENT_GROUP_ID, permissionName, primKey);
+
+		List<ResourceAction> resourceActions =
+			_resourceActionLocalService.getResourceActions(permissionName);
+		Collection<String> roleNames = modelPermissions.getRoleNames();
+
+		for (ResourcePermission resourcePermission :
+				_resourcePermissionLocalService.getResourcePermissions(
+					notificationTemplate.getCompanyId(), permissionName,
+					ResourceConstants.SCOPE_INDIVIDUAL, primKey)) {
+
+			Role role = _roleLocalService.fetchRole(
+				resourcePermission.getRoleId());
+
+			if ((role == null) || roleNames.contains(role.getName())) {
+				continue;
+			}
+
+			for (ResourceAction resourceAction : resourceActions) {
+				_resourcePermissionLocalService.removeResourcePermission(
+					notificationTemplate.getCompanyId(), permissionName,
+					ResourceConstants.SCOPE_INDIVIDUAL, primKey,
+					role.getRoleId(), resourceAction.getActionId());
+			}
+		}
+
+		_resourcePermissionLocalService.updateResourcePermissions(
+			notificationTemplate.getCompanyId(),
+			GroupConstants.DEFAULT_PARENT_GROUP_ID, permissionName, primKey,
+			modelPermissions);
+	}
+
 	private void _validate(NotificationContext notificationContext)
 		throws PortalException {
+
+		NotificationTemplate notificationTemplate =
+			notificationContext.getNotificationTemplate();
+
+		if (!FeatureFlagManagerUtil.isEnabled(
+				notificationContext.getCompanyId(), "LPD-62272") &&
+			!notificationTemplate.isSystem() &&
+			StringUtil.startsWith(
+				notificationTemplate.getExternalReferenceCode(),
+				NotificationTemplateConstants.
+					EXTERNAL_REFERENCE_CODE_PREFIX_SYSTEM_NOTIFICATION_TEMPLATE)) {
+
+			Group group = _groupLocalService.fetchGroup(
+				notificationContext.getCompanyId(), GroupConstants.DSR);
+
+			if (group == null) {
+				throw new NotificationTemplateExternalReferenceCodeException.
+					MustNotStartWithPrefix();
+			}
+		}
+
+		String description = notificationTemplate.getDescription();
+
+		if (description.length() > 255) {
+			throw new NotificationTemplateDescriptionException(
+				"The description cannot contain more than 255 characters");
+		}
+
+		if (Validator.isNull(notificationTemplate.getEditorType())) {
+			throw new NotificationTemplateEditorTypeException(
+				"Editor type is null");
+		}
+
+		if (Validator.isNull(notificationTemplate.getName())) {
+			throw new NotificationTemplateNameException("Name is null");
+		}
+
+		if (Validator.isNull(notificationTemplate.getSubject())) {
+			throw new NotificationTemplateSubjectException("Subject is null");
+		}
 
 		NotificationType notificationType =
 			_notificationTypeServiceTracker.getNotificationType(
 				notificationContext.getType());
 
-		notificationType.validateNotificationTemplate(notificationContext);
+		if (notificationType != null) {
+			notificationType.validateNotificationTemplate(notificationContext);
+		}
 	}
+
+	@Reference
+	private GroupLocalService _groupLocalService;
 
 	@Reference
 	private Language _language;
@@ -544,10 +663,22 @@ public class NotificationTemplateLocalServiceImpl
 	private NotificationTypeServiceTracker _notificationTypeServiceTracker;
 
 	@Reference
+	private PermissionService _permissionService;
+
+	@Reference
 	private Portal _portal;
 
 	@Reference
+	private ResourceActionLocalService _resourceActionLocalService;
+
+	@Reference
 	private ResourceLocalService _resourceLocalService;
+
+	@Reference
+	private ResourcePermissionLocalService _resourcePermissionLocalService;
+
+	@Reference
+	private RoleLocalService _roleLocalService;
 
 	@Reference
 	private UserLocalService _userLocalService;

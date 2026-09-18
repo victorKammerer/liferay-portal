@@ -9,8 +9,11 @@ export class CommerceThemeMiniumCatalogPage {
 	readonly accountSelectorAccount: (accountName: string) => Locator;
 	readonly accountSelectorBackButton: Locator;
 	readonly accountSelectorButton: Locator;
+	readonly accountSelectorDropdownMenu: Locator;
+	readonly accountSelectorNoAccountsMessage: Locator;
 	readonly accountSelectorOrdersList: Locator;
 	readonly accountSelectorOrderWorkflowStatus: Locator;
+	readonly accountSelectorSearchAccountInput: Locator;
 	readonly accountSelectorSearchOrderInput: Locator;
 	readonly catalogSearch: Locator;
 	readonly clearSearchButton: Locator;
@@ -19,6 +22,10 @@ export class CommerceThemeMiniumCatalogPage {
 	readonly configurationIFrameDefaultSortingDropdownMenu: Locator;
 	readonly configurationIFrameSaveButton: Locator;
 	readonly configurationMenuItem: Locator;
+	readonly createNewAccountButton: Locator;
+	readonly createNewAccountModal: Locator;
+	readonly createNewAccountModalCancelButton: Locator;
+	readonly createNewAccountModalNameInput: Locator;
 	readonly createNewOrderButton: Locator;
 	readonly firstCardItem: Locator;
 	readonly firstCardItemAddToCartButton: Locator;
@@ -43,6 +50,33 @@ export class CommerceThemeMiniumCatalogPage {
 		productPrice: string
 	) => Locator;
 	readonly productCardAddToCartButton: (productName: string) => Locator;
+	readonly productCardAddToWishListButton: (productName: string) => Locator;
+	readonly productCardFragment: Locator;
+	readonly productCardFragmentAddToCartButton: (
+		targetLocator: Locator
+	) => Locator;
+	readonly productCardFragmentAddToWishListButton: (
+		targetLocator: Locator
+	) => Locator;
+	readonly productCardFragmentAvailabilityLabel: (
+		targetLocator: Locator
+	) => Locator;
+	readonly productCardFragmentCompareCheckbox: (
+		targetLocator: Locator
+	) => Locator;
+	readonly productCardFragmentImage: (targetLocator: Locator) => Locator;
+	readonly productCardFragmentName: (
+		targetLocator: Locator,
+		productName: string
+	) => Locator;
+	readonly productCardFragmentPrice: (
+		targetLocator: Locator,
+		productPrice: string
+	) => Locator;
+	readonly productCardFragmentSku: (
+		targetLocator: Locator,
+		productSku: string
+	) => Locator;
 	readonly productLink: (productName: string) => Locator;
 
 	constructor(page: Page) {
@@ -56,12 +90,23 @@ export class CommerceThemeMiniumCatalogPage {
 		this.accountSelectorButton = page
 			.locator('.account-selector-dropdown')
 			.getByRole('button');
+		this.accountSelectorDropdownMenu = page.locator(
+			'.account-selector-dropdown-menu'
+		);
+		this.accountSelectorNoAccountsMessage =
+			this.accountSelectorDropdownMenu.getByText(
+				'No accounts were found.',
+				{exact: true}
+			);
 		this.accountSelectorOrdersList = page.locator('.orders-list');
 		this.accountSelectorOrderWorkflowStatus =
 			this.accountSelectorButton.locator('.workflow-status');
-		this.accountSelectorSearchOrderInput = page
-			.locator('.account-selector-dropdown-menu')
-			.getByPlaceholder('Search Order');
+		this.accountSelectorSearchAccountInput =
+			this.accountSelectorDropdownMenu.getByPlaceholder('Search', {
+				exact: true,
+			});
+		this.accountSelectorSearchOrderInput =
+			this.accountSelectorDropdownMenu.getByPlaceholder('Search Order');
 		this.catalogSearch = page.getByTestId('searchInput');
 		this.clearSearchButton = page.getByRole('button', {
 			name: 'Clear Search',
@@ -81,6 +126,15 @@ export class CommerceThemeMiniumCatalogPage {
 			exact: true,
 			name: 'Configuration',
 		});
+		this.createNewAccountButton =
+			this.accountSelectorDropdownMenu.getByRole('button', {
+				name: 'Create New Account',
+			});
+		this.createNewAccountModal = page.locator('.modal-content');
+		this.createNewAccountModalCancelButton =
+			this.createNewAccountModal.getByRole('button', {name: 'Cancel'});
+		this.createNewAccountModalNameInput =
+			this.createNewAccountModal.locator('input[name="accountName"]');
 		this.createNewOrderButton = page.getByRole('button', {
 			name: 'Create New Order',
 		});
@@ -130,6 +184,47 @@ export class CommerceThemeMiniumCatalogPage {
 				exact: true,
 				name: 'Add to Cart',
 			});
+		this.productCardAddToWishListButton = (productName: string) =>
+			this.productCard(productName).getByRole('button', {
+				exact: true,
+				name: 'Add to List',
+			});
+		this.productCardFragment = page.locator('.cp-renderer .product-card');
+		this.productCardFragmentAddToCartButton = (targetLocator: Locator) =>
+			targetLocator.getByRole('button', {
+				exact: true,
+				name: 'Add to Cart',
+			});
+		this.productCardFragmentAddToWishListButton = (
+			targetLocator: Locator
+		) => targetLocator.locator('.add-to-wish-list');
+		this.productCardFragmentAvailabilityLabel = (targetLocator: Locator) =>
+			targetLocator.locator('[class*="availability-label"]');
+		this.productCardFragmentCompareCheckbox = (targetLocator: Locator) =>
+			targetLocator.locator('.compare-checkbox');
+		this.productCardFragmentImage = (targetLocator: Locator) =>
+			targetLocator.locator('img.product-card-picture');
+		this.productCardFragmentName = (
+			targetLocator: Locator,
+			productName: string
+		) =>
+			targetLocator
+				.locator('.card-title')
+				.getByText(productName, {exact: true});
+		this.productCardFragmentPrice = (
+			targetLocator: Locator,
+			productPrice: string
+		) =>
+			targetLocator
+				.locator('.card-text')
+				.getByText(productPrice, {exact: true});
+		this.productCardFragmentSku = (
+			targetLocator: Locator,
+			productSku: string
+		) =>
+			targetLocator
+				.locator('.card-subtitle')
+				.getByText(productSku, {exact: true});
 		this.productLink = (productName: string) =>
 			this.page.getByRole('link', {
 				exact: true,

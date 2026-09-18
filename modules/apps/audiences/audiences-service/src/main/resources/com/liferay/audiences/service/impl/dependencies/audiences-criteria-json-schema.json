@@ -90,7 +90,9 @@
 						"properties": {
 							"attribute": {
 								"enum": [
+									"batch_segments",
 									"cookies",
+									"real_time_segments",
 									"request_parameters"
 								]
 							}
@@ -117,10 +119,7 @@
 					"if": {
 						"properties": {
 							"attribute": {
-								"enum": [
-									"language",
-									"segment"
-								]
+								"const": "language"
 							}
 						},
 						"required": [
@@ -215,6 +214,7 @@
 					"anyOf": [
 						{
 							"enum": [
+								"batch_segments",
 								"browser_name",
 								"browser_version",
 								"cookies",
@@ -224,9 +224,9 @@
 								"local_date",
 								"local_hour",
 								"pathname",
+								"real_time_segments",
 								"referrer",
 								"request_parameters",
-								"segment",
 								"timezone",
 								"url",
 								"user_agent"

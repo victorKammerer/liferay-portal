@@ -22,19 +22,8 @@ public class HTTPEndpointMonitor extends BaseMonitor {
 	public HTTPEndpointMonitor(MonitorConfig monitorConfig) {
 		super(monitorConfig);
 
-		_endpointURL = getRequiredParameter(
-			"url", monitorConfig.getParameters());
-
-		if (_hasUserInfo(_endpointURL)) {
-			throw new IllegalArgumentException(
-				getInvalidValueMessage("parameter", "url", "[REDACTED]"));
-		}
-
-		if (!JenkinsResultsParserUtil.isURL(_endpointURL)) {
-			throw new IllegalArgumentException(
-				getInvalidValueMessage("parameter", "url", _endpointURL));
-		}
-
+		_endpointURL = getRequiredURLParameter(
+			"url", monitorConfig.getParameters(), "http://", "https://");
 		_latencyMaximumMillis = getLongValue(
 			"threshold", 0, "latency.maximum.millis",
 			monitorConfig.getThresholds());
@@ -49,7 +38,7 @@ public class HTTPEndpointMonitor extends BaseMonitor {
 
 		try {
 			JenkinsResultsParserUtil.toString(
-				_endpointURL, false, 0, 0, getSingleAttemptTimeoutMillis());
+				_endpointURL, false, 0, 0, getAttemptTimeoutMillis(0));
 		}
 		catch (Exception exception) {
 			return new MonitorResult(
@@ -87,13 +76,7 @@ public class HTTPEndpointMonitor extends BaseMonitor {
 				"Endpoint ", _endpointURL, " was not found");
 		}
 
-		String message = exception.getMessage();
-
-		if (message == null) {
-			Class<?> clazz = exception.getClass();
-
-			message = clazz.getName();
-		}
+		String message = JenkinsResultsParserUtil.getMessage(exception);
 
 		Matcher matcher = _responseCodePattern.matcher(message);
 
@@ -107,16 +90,8 @@ public class HTTPEndpointMonitor extends BaseMonitor {
 			"Unable to read ", _endpointURL, ": ", message);
 	}
 
-	private boolean _hasUserInfo(String url) {
-		Matcher matcher = _userInfoPattern.matcher(url);
-
-		return matcher.matches();
-	}
-
 	private static final Pattern _responseCodePattern = Pattern.compile(
 		"HTTP response code: (?<responseCode>\\d+)");
-	private static final Pattern _userInfoPattern = Pattern.compile(
-		"(//|[^/?#]*://)?[^/?#]*@.*");
 
 	private final String _endpointURL;
 	private final long _latencyMaximumMillis;

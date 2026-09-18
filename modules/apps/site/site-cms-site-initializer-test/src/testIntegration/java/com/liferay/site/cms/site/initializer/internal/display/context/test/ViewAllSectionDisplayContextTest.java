@@ -15,6 +15,8 @@ import com.liferay.petra.string.StringBundler;
 import com.liferay.petra.string.StringPool;
 import com.liferay.portal.kernel.exception.PortalException;
 import com.liferay.portal.kernel.json.JSONUtil;
+import com.liferay.portal.kernel.license.util.App;
+import com.liferay.portal.kernel.license.util.LicenseManagerUtil;
 import com.liferay.portal.kernel.test.ReflectionTestUtil;
 import com.liferay.portal.kernel.test.TestInfo;
 import com.liferay.portal.kernel.test.rule.AggregateTestRule;
@@ -104,8 +106,14 @@ public class ViewAllSectionDisplayContextTest
 		List<FDSActionDropdownItem> bulkActionDropdownItems =
 			getBulkActionDropdownItems();
 
+		if (LicenseManagerUtil.isAppEnabled(App.CMP)) {
+			FrontendDataSetTestUtil.assertFDSActionDropdownItem(
+				"archive", "add-assets-to-project", "Add Assets to Project",
+				"post", bulkActionDropdownItems.remove(9));
+		}
+
 		Assert.assertEquals(
-			bulkActionDropdownItems.toString(), 15,
+			bulkActionDropdownItems.toString(), 17,
 			bulkActionDropdownItems.size());
 
 		FrontendDataSetTestUtil.assertFDSActionDropdownItem(
@@ -136,22 +144,28 @@ public class ViewAllSectionDisplayContextTest
 			"semantic-search", "find-and-replace", "Find and Replace", null,
 			bulkActionDropdownItems.get(9));
 		FrontendDataSetTestUtil.assertFDSActionDropdownItem(
+			"date-time", "update-expiration-date", "Update Expiration Date",
+			null, bulkActionDropdownItems.get(10));
+		FrontendDataSetTestUtil.assertFDSActionDropdownItem(
+			"date-time", "update-review-date", "Update Review Date", null,
+			bulkActionDropdownItems.get(11));
+		FrontendDataSetTestUtil.assertFDSActionDropdownItem(
 			"password-policies", "permissions", "Permissions", null,
-			bulkActionDropdownItems.get(10));
+			bulkActionDropdownItems.get(12));
 		FrontendDataSetTestUtil.assertFDSActionDropdownItem(
 			"password-policies", "default-permissions", "Default Permissions",
-			null, bulkActionDropdownItems.get(11));
+			null, bulkActionDropdownItems.get(13));
 		FrontendDataSetTestUtil.assertFDSActionDropdownItem(
 			"password-policies", "edit-default-permissions-by-role",
 			"Edit Default Permissions by Role", null,
-			bulkActionDropdownItems.get(12));
+			bulkActionDropdownItems.get(14));
 		FrontendDataSetTestUtil.assertFDSActionDropdownItem(
 			"password-policies", "edit-permissions-by-role",
-			"Edit Permissions by Role", null, bulkActionDropdownItems.get(13));
+			"Edit Permissions by Role", null, bulkActionDropdownItems.get(15));
 		FrontendDataSetTestUtil.assertFDSActionDropdownItem(
 			"password-policies", "reset-to-default-permissions",
 			"Reset to Default Permissions", null,
-			bulkActionDropdownItems.get(14));
+			bulkActionDropdownItems.get(16));
 	}
 
 	@Override

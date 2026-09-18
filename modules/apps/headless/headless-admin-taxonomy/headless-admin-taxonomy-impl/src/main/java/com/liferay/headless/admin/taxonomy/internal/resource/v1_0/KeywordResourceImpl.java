@@ -340,14 +340,19 @@ public class KeywordResourceImpl
 	public Keyword putKeyword(Long keywordId, Keyword keyword)
 		throws Exception {
 
+		long[] assetLibraryGroupIds = TaxonomyGroupUtil.getAssetLibraryGroupIds(
+			keyword.getAssetLibraries(), contextCompany.getCompanyId());
+
+		if (ArrayUtil.isNotEmpty(keyword.getAssetLibraries())) {
+			_checkAssetLibraryGroupIdsPermission(assetLibraryGroupIds);
+		}
+
 		AssetTag assetTag = _assetTagService.updateTag(
 			keyword.getExternalReferenceCode(), keywordId, keyword.getName(),
 			null);
 
 		_assetTagGroupRelLocalService.setAssetTagGroupRels(
-			assetTag.getTagId(),
-			TaxonomyGroupUtil.getAssetLibraryGroupIds(
-				keyword.getAssetLibraries(), assetTag.getCompanyId()));
+			assetTag.getTagId(), assetLibraryGroupIds);
 
 		return _toKeyword(assetTag);
 	}
@@ -388,6 +393,11 @@ public class KeywordResourceImpl
 		AssetTag assetTag =
 			_assetTagLocalService.fetchAssetTagByExternalReferenceCode(
 				externalReferenceCode, siteId);
+
+		if (assetTag == null) {
+			assetTag = _assetTagLocalService.fetchTag(
+				siteId, keyword.getName());
+		}
 
 		if (assetTag != null) {
 			return _toKeyword(
@@ -442,11 +452,7 @@ public class KeywordResourceImpl
 		long[] assetLibraryGroupIds = TaxonomyGroupUtil.getAssetLibraryGroupIds(
 			keyword.getAssetLibraries(), group.getCompanyId());
 
-		for (long assetLibraryGroupId : assetLibraryGroupIds) {
-			AssetTagsPermission.check(
-				PermissionThreadLocal.getPermissionChecker(),
-				assetLibraryGroupId, ActionKeys.MANAGE_TAG);
-		}
+		_checkAssetLibraryGroupIdsPermission(assetLibraryGroupIds);
 
 		AssetTag assetTag = _assetTagLocalService.addTag(
 			externalReferenceCode, contextUser.getUserId(), siteId,
@@ -456,6 +462,17 @@ public class KeywordResourceImpl
 			assetTag.getTagId(), assetLibraryGroupIds);
 
 		return assetTag;
+	}
+
+	private void _checkAssetLibraryGroupIdsPermission(
+			long[] assetLibraryGroupIds)
+		throws Exception {
+
+		for (long assetLibraryGroupId : assetLibraryGroupIds) {
+			AssetTagsPermission.check(
+				PermissionThreadLocal.getPermissionChecker(),
+				assetLibraryGroupId, ActionKeys.MANAGE_TAG);
+		}
 	}
 
 	private Page<Keyword> _getKeywordsPage(

@@ -16,8 +16,6 @@ import com.liferay.portal.kernel.test.rule.AggregateTestRule;
 import com.liferay.portal.kernel.test.util.ServiceContextTestUtil;
 import com.liferay.portal.kernel.util.MapUtil;
 import com.liferay.portal.kernel.util.PortalUtil;
-import com.liferay.portal.test.rule.FeatureFlag;
-import com.liferay.portal.test.rule.FeatureFlags;
 import com.liferay.portal.test.rule.Inject;
 import com.liferay.portal.test.rule.LiferayIntegrationTestRule;
 import com.liferay.portal.test.rule.PermissionCheckerMethodTestRule;
@@ -33,7 +31,6 @@ import org.junit.runner.RunWith;
 /**
  * @author Carolina Barbosa
  */
-@FeatureFlags(featureFlags = @FeatureFlag("LPD-58677"))
 @RunWith(Arquillian.class)
 public class EditorToolbarComponentSectionFragmentRendererTest
 	extends BaseComponentSectionFragmentRendererTestCase {
@@ -100,6 +97,14 @@ public class EditorToolbarComponentSectionFragmentRendererTest
 
 		Assert.assertEquals(
 			"/redirect-url", MapUtil.getString(getProps(), "backURL"));
+
+		discardURL = StringBundler.concat(
+			"/o", cmpTaskObjectDefinition.getRESTContextPath(),
+			StringPool.SLASH, cmpTaskObjectEntry.getObjectEntryId());
+
+		Assert.assertEquals(
+			discardURL, MapUtil.getString(getProps(), "discardURL"));
+
 		Assert.assertEquals("", MapUtil.getString(getProps(), "formSubmitURL"));
 		Assert.assertEquals("New Task", MapUtil.getString(getProps(), "title"));
 
@@ -107,7 +112,6 @@ public class EditorToolbarComponentSectionFragmentRendererTest
 
 		Assert.assertEquals(
 			"/redirect-url", MapUtil.getString(getProps(), "backURL"));
-		Assert.assertEquals("", MapUtil.getString(getProps(), "discardURL"));
 		Assert.assertEquals(
 			"/redirect-url", MapUtil.getString(getProps(), "formSubmitURL"));
 		Assert.assertEquals("New Task", MapUtil.getString(getProps(), "title"));
@@ -116,6 +120,7 @@ public class EditorToolbarComponentSectionFragmentRendererTest
 			cmpTaskObjectDefinition,
 			_partialUpdateObjectEntry(cmpTaskObjectEntry));
 
+		Assert.assertEquals("", MapUtil.getString(getProps(), "discardURL"));
 		Assert.assertEquals(
 			"Edit Task", MapUtil.getString(getProps(), "title"));
 	}

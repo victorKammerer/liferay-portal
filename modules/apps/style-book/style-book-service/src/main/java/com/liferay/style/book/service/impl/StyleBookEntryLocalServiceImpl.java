@@ -18,6 +18,9 @@ import com.liferay.portal.json.validator.JSONValidatorException;
 import com.liferay.portal.kernel.dao.orm.ExportActionableDynamicQuery;
 import com.liferay.portal.kernel.dao.orm.WildcardMode;
 import com.liferay.portal.kernel.exception.PortalException;
+import com.liferay.portal.kernel.json.JSONException;
+import com.liferay.portal.kernel.json.JSONFactory;
+import com.liferay.portal.kernel.json.JSONObject;
 import com.liferay.portal.kernel.model.ModelHintsUtil;
 import com.liferay.portal.kernel.model.Repository;
 import com.liferay.portal.kernel.model.User;
@@ -38,6 +41,7 @@ import com.liferay.style.book.exception.DuplicateStyleBookEntryFrontendTokenExce
 import com.liferay.style.book.exception.DuplicateStyleBookEntryKeyException;
 import com.liferay.style.book.exception.DuplicateStyleBookEntryNameException;
 import com.liferay.style.book.exception.StyleBookEntryFrontendTokenDefinitionException;
+import com.liferay.style.book.exception.StyleBookEntryFrontendTokensValuesException;
 import com.liferay.style.book.exception.StyleBookEntryNameException;
 import com.liferay.style.book.exception.StyleBookEntryThemeIdException;
 import com.liferay.style.book.model.StyleBookEntry;
@@ -68,9 +72,9 @@ public class StyleBookEntryLocalServiceImpl
 	@Override
 	public StyleBookEntry addStyleBookEntry(
 			String externalReferenceCode, long userId, long groupId,
-			boolean defaultStyleBookEntry, String frontendTokensValues,
-			String name, String styleBookEntryKey, String themeId,
-			ServiceContext serviceContext)
+			boolean defaultStyleBookEntry, String frontendTokenDefinition,
+			String frontendTokensValues, String name, String styleBookEntryKey,
+			String themeId, ServiceContext serviceContext)
 		throws PortalException {
 
 		User user = _userLocalService.getUser(userId);
@@ -86,6 +90,8 @@ public class StyleBookEntryLocalServiceImpl
 
 		_validate(groupId, name, null);
 
+		_validateFrontendTokenDefinition(frontendTokenDefinition);
+
 		if (Validator.isNull(styleBookEntryKey)) {
 			styleBookEntryKey = generateStyleBookEntryKey(groupId, name);
 		}
@@ -94,6 +100,8 @@ public class StyleBookEntryLocalServiceImpl
 		}
 
 		_validateStyleBookEntryKey(groupId, styleBookEntryKey);
+
+		_validateFrontendTokensValues(frontendTokensValues, null);
 
 		StyleBookEntry styleBookEntry = create();
 
@@ -110,6 +118,7 @@ public class StyleBookEntryLocalServiceImpl
 		styleBookEntry.setUserName(user.getFullName());
 		styleBookEntry.setModifiedDate(
 			serviceContext.getModifiedDate(new Date()));
+		styleBookEntry.setFrontendTokenDefinition(frontendTokenDefinition);
 		styleBookEntry.setFrontendTokensValues(frontendTokensValues);
 		styleBookEntry.setName(name);
 		styleBookEntry.setStyleBookEntryKey(styleBookEntryKey);
@@ -162,6 +171,7 @@ public class StyleBookEntryLocalServiceImpl
 
 		StyleBookEntry targetStyleBookEntry = addStyleBookEntry(
 			null, userId, groupId, false,
+			sourceStyleBookEntry.getFrontendTokenDefinition(),
 			sourceStyleBookEntry.getFrontendTokensValues(), name,
 			StringPool.BLANK, sourceStyleBookEntry.getThemeId(),
 			serviceContext);
@@ -175,6 +185,8 @@ public class StyleBookEntryLocalServiceImpl
 			StyleBookEntry copyDraftStyleBookEntry = getDraft(
 				targetStyleBookEntry);
 
+			copyDraftStyleBookEntry.setFrontendTokenDefinition(
+				draftStyleBookEntry.getFrontendTokenDefinition());
 			copyDraftStyleBookEntry.setFrontendTokensValues(
 				draftStyleBookEntry.getFrontendTokensValues());
 
@@ -489,7 +501,8 @@ public class StyleBookEntryLocalServiceImpl
 	@Indexable(type = IndexableType.REINDEX)
 	@Override
 	public StyleBookEntry updateFrontendTokenDefinition(
-			long styleBookEntryId, String frontendTokenDefinition)
+			long styleBookEntryId, String frontendTokenDefinition,
+			ServiceContext serviceContext)
 		throws PortalException {
 
 		StyleBookEntry styleBookEntry =
@@ -508,7 +521,7 @@ public class StyleBookEntryLocalServiceImpl
 			updateDraft(draftStyleBookEntry);
 		}
 
-		return styleBookEntryPersistence.update(styleBookEntry);
+		return styleBookEntryPersistence.update(styleBookEntry, serviceContext);
 	}
 
 	@Indexable(type = IndexableType.REINDEX)
@@ -519,6 +532,8 @@ public class StyleBookEntryLocalServiceImpl
 
 		StyleBookEntry styleBookEntry =
 			styleBookEntryPersistence.findByPrimaryKey(styleBookEntryId);
+
+		_validateFrontendTokensValues(frontendTokensValues, styleBookEntry);
 
 		styleBookEntry.setModifiedDate(new Date());
 		styleBookEntry.setFrontendTokensValues(frontendTokensValues);
@@ -598,15 +613,19 @@ public class StyleBookEntryLocalServiceImpl
 	@Indexable(type = IndexableType.REINDEX)
 	@Override
 	public StyleBookEntry updateStyleBookEntry(
-			long userId, long styleBookEntryId, boolean defaultStylebookEntry,
-			String frontendTokensValues, String name, String styleBookEntryKey,
-			long previewFileEntryId, ServiceContext serviceContext)
+			long userId, long styleBookEntryId, boolean defaultStyleBookEntry,
+			String frontendTokenDefinition, String frontendTokensValues,
+			String name, String styleBookEntryKey, long previewFileEntryId,
+			ServiceContext serviceContext)
 		throws PortalException {
 
 		StyleBookEntry styleBookEntry =
 			styleBookEntryPersistence.findByPrimaryKey(styleBookEntryId);
 
 		_validate(styleBookEntry.getGroupId(), name, styleBookEntryId);
+		_validateFrontendTokensValues(frontendTokensValues, styleBookEntry);
+
+		_validateFrontendTokenDefinition(frontendTokenDefinition);
 
 		if (Validator.isNull(styleBookEntryKey)) {
 			styleBookEntryKey = generateStyleBookEntryKey(
@@ -625,12 +644,13 @@ public class StyleBookEntryLocalServiceImpl
 		}
 
 		styleBookEntry.setUserId(userId);
+		styleBookEntry.setFrontendTokenDefinition(frontendTokenDefinition);
 		styleBookEntry.setFrontendTokensValues(frontendTokensValues);
 		styleBookEntry.setName(name);
 		styleBookEntry.setPreviewFileEntryId(previewFileEntryId);
 		styleBookEntry.setStyleBookEntryKey(styleBookEntryKey);
 
-		if (defaultStylebookEntry) {
+		if (defaultStyleBookEntry) {
 			StyleBookEntry oldDefaultStyleBookEntry =
 				fetchDefaultStyleBookEntry(
 					styleBookEntry.getGroupId(), styleBookEntry.getThemeId());
@@ -649,7 +669,8 @@ public class StyleBookEntryLocalServiceImpl
 	@Indexable(type = IndexableType.REINDEX)
 	@Override
 	public StyleBookEntry updateStyleBookEntry(
-			long styleBookEntryId, String frontendTokensValues, String name,
+			long styleBookEntryId, String frontendTokenDefinition,
+			String frontendTokensValues, String name,
 			ServiceContext serviceContext)
 		throws PortalException {
 
@@ -657,7 +678,11 @@ public class StyleBookEntryLocalServiceImpl
 			styleBookEntryPersistence.findByPrimaryKey(styleBookEntryId);
 
 		_validate(styleBookEntry.getGroupId(), name, styleBookEntryId);
+		_validateFrontendTokensValues(frontendTokensValues, styleBookEntry);
 
+		_validateFrontendTokenDefinition(frontendTokenDefinition);
+
+		styleBookEntry.setFrontendTokenDefinition(frontendTokenDefinition);
 		styleBookEntry.setFrontendTokensValues(frontendTokensValues);
 		styleBookEntry.setName(name);
 
@@ -665,6 +690,8 @@ public class StyleBookEntryLocalServiceImpl
 
 		if (draftStyleBookEntry != null) {
 			draftStyleBookEntry.setModifiedDate(new Date());
+			draftStyleBookEntry.setFrontendTokenDefinition(
+				frontendTokenDefinition);
 			draftStyleBookEntry.setFrontendTokensValues(frontendTokensValues);
 			draftStyleBookEntry.setName(name);
 
@@ -795,6 +822,51 @@ public class StyleBookEntryLocalServiceImpl
 		}
 	}
 
+	private void _validateFrontendTokensValues(
+			String frontendTokensValues, StyleBookEntry styleBookEntry)
+		throws PortalException {
+
+		if (Validator.isBlank(frontendTokensValues) ||
+			((styleBookEntry != null) &&
+			 StringUtil.equals(
+				 styleBookEntry.getFrontendTokensValues(),
+				 frontendTokensValues))) {
+
+			return;
+		}
+
+		JSONObject frontendTokensValuesJSONObject = null;
+
+		try {
+			frontendTokensValuesJSONObject = _jsonFactory.createJSONObject(
+				frontendTokensValues);
+		}
+		catch (JSONException jsonException) {
+			throw new StyleBookEntryFrontendTokensValuesException.
+				MustBeValidJSON(jsonException);
+		}
+
+		for (String key : frontendTokensValuesJSONObject.keySet()) {
+			JSONObject frontendTokenValueJSONObject =
+				frontendTokensValuesJSONObject.getJSONObject(key);
+
+			if (frontendTokenValueJSONObject == null) {
+				continue;
+			}
+
+			String cssVariableMapping = frontendTokenValueJSONObject.getString(
+				"cssVariableMapping");
+			String value = frontendTokenValueJSONObject.getString("value");
+
+			if (cssVariableMapping.contains(StringPool.LESS_THAN) ||
+				value.contains(StringPool.LESS_THAN)) {
+
+				throw new StyleBookEntryFrontendTokensValuesException.
+					MustNotContainInvalidCharacters(key);
+			}
+		}
+	}
+
 	private void _validateStyleBookEntryKey(
 			long groupId, String styleBookEntryKey)
 		throws PortalException {
@@ -819,6 +891,9 @@ public class StyleBookEntryLocalServiceImpl
 	private final FrontendTokenDefinitionJSONValidator
 		_frontendTokenDefinitionJSONValidator =
 			new FrontendTokenDefinitionJSONValidator();
+
+	@Reference
+	private JSONFactory _jsonFactory;
 
 	@Reference
 	private PortletFileRepository _portletFileRepository;

@@ -5,24 +5,40 @@ const brotliDecompress = promisify(zlib.brotliDecompress);
 const gunzip = promisify(zlib.gunzip);
 const inflate = promisify(zlib.inflate);
 
-// The dev server proxies to a remote Liferay (e.g. analytics-stg) whose
-// `web.server.host` makes it emit absolute URLs back to itself. The handler
-// returned here buffers each response and rewrites those URLs (in Location,
-// Set-Cookie Domain, and the body) so the browser stays on the dev server
-// instead of leaving for the upstream host.
+// Sends an upstream session cookie, copied from a browser already through Okta,
+// so the dev server reaches an SSO-protected backend such as ldp-internal
+// without proxying the redirect flow. A falsy cookie leaves the request alone.
 
-// Injects an authenticated session Cookie (copied from a browser already logged
-// in via Okta against an SSO-protected upstream such as analytics-internal) into
-// every proxied request, so the dev server can reach the upstream without
-// proxying the Okta redirect flow. A falsy cookie leaves the request untouched.
-
-function createOnProxyReq(cookie) {
-	return function onProxyReq(proxyReq) {
+function createOnProxyReq(cookie, target) {
+	return function onProxyReq(proxyReq, req) {
 		if (cookie) {
 			proxyReq.setHeader('cookie', cookie);
 		}
+
+		// `changeOrigin` rewrites Host alone, and endpoints such as
+		// `asset-summary` answer 403 to a foreign Referer.
+
+		const proxyOrigin = req.headers.host && `http://${req.headers.host}`;
+
+		if (!proxyOrigin || !target) {
+			return;
+		}
+
+		for (const name of ['origin', 'referer']) {
+			const value = req.headers[name];
+
+			if (value && value.startsWith(proxyOrigin)) {
+				proxyReq.setHeader(
+					name,
+					target + value.slice(proxyOrigin.length)
+				);
+			}
+		}
 	};
 }
+
+// The upstream's `web.server.host` makes it emit absolute URLs back to itself,
+// so each response is buffered and those URLs rewritten onto the dev server.
 
 function createOnProxyRes(target) {
 	return async function onProxyRes(proxyRes, req, res) {

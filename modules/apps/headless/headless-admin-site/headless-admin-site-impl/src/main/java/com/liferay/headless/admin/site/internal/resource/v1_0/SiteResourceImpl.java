@@ -31,6 +31,7 @@ import com.liferay.portal.kernel.model.Company;
 import com.liferay.portal.kernel.model.Group;
 import com.liferay.portal.kernel.model.GroupConstants;
 import com.liferay.portal.kernel.model.LayoutSetPrototype;
+import com.liferay.portal.kernel.security.auth.PrincipalException;
 import com.liferay.portal.kernel.security.auth.PrincipalThreadLocal;
 import com.liferay.portal.kernel.security.permission.ActionKeys;
 import com.liferay.portal.kernel.security.permission.PermissionChecker;
@@ -292,6 +293,13 @@ public class SiteResourceImpl
 			String externalReferenceCode, MultipartBody multipartBody)
 		throws Exception {
 
+		PermissionChecker permissionChecker =
+			PermissionThreadLocal.getPermissionChecker();
+
+		if (!permissionChecker.isCompanyAdmin()) {
+			throw new PrincipalException.MustBeCompanyAdmin(permissionChecker);
+		}
+
 		Group group = _groupLocalService.fetchGroupByExternalReferenceCode(
 			externalReferenceCode, contextCompany.getCompanyId());
 
@@ -315,8 +323,6 @@ public class SiteResourceImpl
 				group, multipartBody.getValueAsInstance("site", Site.class));
 		}
 
-		PermissionChecker permissionChecker =
-			PermissionThreadLocal.getPermissionChecker();
 		String name = PrincipalThreadLocal.getName();
 
 		File tempFile = FileUtil.createTempFile(
@@ -830,7 +836,16 @@ public class SiteResourceImpl
 	private ServiceContext _getServiceContext() throws PortalException {
 		ServiceContext serviceContext = null;
 
-		if (contextHttpServletRequest != null) {
+		ServiceContext currentServiceContext =
+			ServiceContextThreadLocal.getServiceContext();
+
+		if ((currentServiceContext != null) &&
+			(currentServiceContext.getRequest() != null)) {
+
+			serviceContext = ServiceContextFactory.getInstance(
+				currentServiceContext.getRequest());
+		}
+		else if (contextHttpServletRequest != null) {
 			serviceContext = ServiceContextFactory.getInstance(
 				contextHttpServletRequest);
 		}

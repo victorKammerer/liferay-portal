@@ -75,14 +75,14 @@ public abstract class BaseProductGroupProductResourceImpl
 	 * curl -X 'DELETE' 'http://localhost:8080/o/headless-commerce-admin-catalog/v1.0/product-group-products/{id}'  -u 'test@liferay.com:test'
 	 */
 	@io.swagger.v3.oas.annotations.Operation(
-		description = "Removes the product binding identified by id from its product group. Returns 404 when the record is not found. Side effects -- Removes the product <-> product group association."
+		description = "Removes the product binding identified by ID from its product group. Returns 404 when the record is not found. Side effects -- Removes the product <-> product group association."
 	)
 	@io.swagger.v3.oas.annotations.Parameters(
 		value = {
 			@io.swagger.v3.oas.annotations.Parameter(
 				description = "Internal numeric identifier of the target resource. Counterpart to the `by-externalReferenceCode` path variant; identifiers are server-assigned and stable across the resource's lifetime.",
 				in = io.swagger.v3.oas.annotations.enums.ParameterIn.PATH,
-				name = "id"
+				name = "id", required = true
 			)
 		}
 	)
@@ -166,7 +166,7 @@ public abstract class BaseProductGroupProductResourceImpl
 			@io.swagger.v3.oas.annotations.Parameter(
 				description = "External reference code that addresses the target resource on the `by-externalReferenceCode` paths. The code is the integration-supplied idempotency key, unique within the resource scope; POST against this path is upsert (create when absent, replace when present).",
 				in = io.swagger.v3.oas.annotations.enums.ParameterIn.PATH,
-				name = "externalReferenceCode"
+				name = "externalReferenceCode", required = true
 			),
 			@io.swagger.v3.oas.annotations.Parameter(
 				description = "One-based page index. Combined with pageSize to paginate the result set; defaults to 1 when omitted.",
@@ -211,14 +211,14 @@ public abstract class BaseProductGroupProductResourceImpl
 	 * curl -X 'GET' 'http://localhost:8080/o/headless-commerce-admin-catalog/v1.0/product-groups/{id}/product-group-products'  -u 'test@liferay.com:test'
 	 */
 	@io.swagger.v3.oas.annotations.Operation(
-		description = "Lists the product bindings of the product group identified by id. Validation -- None at this layer (returns empty page on no match)."
+		description = "Lists the product bindings of the product group identified by ID. Validation -- None at this layer (returns empty page on no match)."
 	)
 	@io.swagger.v3.oas.annotations.Parameters(
 		value = {
 			@io.swagger.v3.oas.annotations.Parameter(
 				description = "Internal numeric identifier of the target resource. Counterpart to the `by-externalReferenceCode` path variant; identifiers are server-assigned and stable across the resource's lifetime.",
 				in = io.swagger.v3.oas.annotations.enums.ParameterIn.PATH,
-				name = "id"
+				name = "id", required = true
 			),
 			@io.swagger.v3.oas.annotations.Parameter(
 				description = "One-based page index. Combined with pageSize to paginate the result set; defaults to 1 when omitted.",
@@ -267,7 +267,7 @@ public abstract class BaseProductGroupProductResourceImpl
 			@io.swagger.v3.oas.annotations.Parameter(
 				description = "External reference code that addresses the target resource on the `by-externalReferenceCode` paths. The code is the integration-supplied idempotency key, unique within the resource scope; POST against this path is upsert (create when absent, replace when present).",
 				in = io.swagger.v3.oas.annotations.enums.ParameterIn.PATH,
-				name = "externalReferenceCode"
+				name = "externalReferenceCode", required = true
 			)
 		}
 	)
@@ -303,14 +303,14 @@ public abstract class BaseProductGroupProductResourceImpl
 	 * curl -X 'POST' 'http://localhost:8080/o/headless-commerce-admin-catalog/v1.0/product-groups/{id}/product-group-products' -d $'{"id": ___, "productExternalReferenceCode": ___, "productGroupExternalReferenceCode": ___, "productGroupId": ___, "productId": ___, "sku": ___}' --header 'Content-Type: application/json' -u 'test@liferay.com:test'
 	 */
 	@io.swagger.v3.oas.annotations.Operation(
-		description = "Binds a product to the product group identified by id. Returns 404 when the product group id is not found, and 404 when the product lookup fails. Side effects -- Creates a product group assignment binding the product to the group."
+		description = "Binds a product to the product group identified by ID. Returns 404 when the product group ID is not found, and 404 when the product lookup fails. Side effects -- Creates a product group assignment binding the product to the group."
 	)
 	@io.swagger.v3.oas.annotations.Parameters(
 		value = {
 			@io.swagger.v3.oas.annotations.Parameter(
 				description = "Internal numeric identifier of the target resource. Counterpart to the `by-externalReferenceCode` path variant; identifiers are server-assigned and stable across the resource's lifetime.",
 				in = io.swagger.v3.oas.annotations.enums.ParameterIn.PATH,
-				name = "id"
+				name = "id", required = true
 			)
 		}
 	)
@@ -1105,4 +1105,4 @@ public abstract class BaseProductGroupProductResourceImpl
 		LogFactoryUtil.getLog(BaseProductGroupProductResourceImpl.class);
 
 }
-// LIFERAY-REST-BUILDER-HASH:106487247
+// LIFERAY-REST-BUILDER-HASH:50760685

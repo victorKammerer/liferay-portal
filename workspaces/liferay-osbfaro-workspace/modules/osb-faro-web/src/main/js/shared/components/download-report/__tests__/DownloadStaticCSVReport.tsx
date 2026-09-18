@@ -7,7 +7,7 @@ import {CSVType} from '../utils';
 import {DownloadStaticCSVReport} from '../DownloadStaticCSVReport';
 import {fireEvent, render, screen, waitFor} from '@testing-library/react';
 import {InMemoryCache} from '@apollo/client';
-import {MemoryRouter, Route} from 'react-router-dom';
+import {MemoryRouter, Route, Routes as RouterRoutes} from 'react-router-dom';
 import {MockedProvider} from '@apollo/client/testing';
 import {Provider} from 'react-redux';
 
@@ -56,24 +56,29 @@ const DefaultComponent = ({
 }) => (
 	<Provider store={mockStore()}>
 		<MemoryRouter initialEntries={['/workspace/123/456/individuals']}>
-			<Route path="/workspace/:groupId/:channelId/individuals">
-				<MockedProvider
-					cache={
-						new InMemoryCache({
-							addTypename: false,
-						})
+			<RouterRoutes>
+				<Route
+					element={
+						<MockedProvider
+							cache={
+								new InMemoryCache({
+									addTypename: false,
+								})
+							}
+						>
+							<DownloadStaticCSVReport
+								disabled={false}
+								getFDSQuery={getFDSQuery}
+								objectType={objectType}
+								rangeSelectors={rangeSelectors}
+								type={type}
+								typeLang="Individuals"
+							/>
+						</MockedProvider>
 					}
-				>
-					<DownloadStaticCSVReport
-						disabled={false}
-						getFDSQuery={getFDSQuery}
-						objectType={objectType}
-						rangeSelectors={rangeSelectors}
-						type={type}
-						typeLang="Individuals"
-					/>
-				</MockedProvider>
-			</Route>
+					path="/workspace/:groupId/:channelId/individuals/*"
+				/>
+			</RouterRoutes>
 		</MemoryRouter>
 	</Provider>
 );
@@ -129,6 +134,52 @@ describe('DownloadStaticCSVReport', () => {
 		await waitFor(() => {
 			expect(screen.queryByTestId('submit')).not.toBeInTheDocument();
 		});
+	});
+
+	it('displays the FDS-specific modal text when getFDSQuery is provided', async () => {
+		render(
+			<DefaultComponent getFDSQuery={() => ({filter: '', query: ''})} />
+		);
+
+		fireEvent.click(
+			screen.getByRole('button', {
+				name: /download report/i,
+			})
+		);
+
+		await waitFor(() => {
+			expect(
+				screen.getByText(
+					/The generated CSV file will respect the current filter and search results/
+				)
+			).toBeInTheDocument();
+		});
+
+		expect(
+			screen.queryByText(/The generated CSV file supports up to/)
+		).not.toBeInTheDocument();
+	});
+
+	it('displays the default modal text when getFDSQuery is not provided', async () => {
+		render(<DefaultComponent />);
+
+		fireEvent.click(
+			screen.getByRole('button', {
+				name: /download report/i,
+			})
+		);
+
+		await waitFor(() => {
+			expect(
+				screen.getByText(/The generated CSV file supports up to/)
+			).toBeInTheDocument();
+		});
+
+		expect(
+			screen.queryByText(
+				/The generated CSV file will respect the current filter and search results/
+			)
+		).not.toBeInTheDocument();
 	});
 
 	it('displays info alert about download CSV report', async () => {

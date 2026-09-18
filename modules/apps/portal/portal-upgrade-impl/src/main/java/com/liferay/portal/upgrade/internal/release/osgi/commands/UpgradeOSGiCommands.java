@@ -56,10 +56,10 @@ public class UpgradeOSGiCommands implements OSGiCommands {
 
 	@Descriptor("Execute upgrade for a specific module")
 	public String execute(String bundleSymbolicName) {
-		List<UpgradeInfo> upgradeInfos = _upgradeExecutor.getUpgradeInfos(
-			bundleSymbolicName);
+		Set<String> bundleSymbolicNames =
+			_upgradeExecutor.getBundleSymbolicNames();
 
-		if (upgradeInfos == null) {
+		if (!bundleSymbolicNames.contains(bundleSymbolicName)) {
 			return "No upgrade processes registered for " + bundleSymbolicName;
 		}
 
@@ -69,7 +69,7 @@ public class UpgradeOSGiCommands implements OSGiCommands {
 					_upgradeExecutor.execute(
 						BundleUtil.getBundle(
 							_bundleContext, bundleSymbolicName),
-						upgradeInfos);
+						_upgradeExecutor.getUpgradeInfos(bundleSymbolicName));
 				}
 				catch (Throwable throwable) {
 					_log.error(
@@ -140,10 +140,21 @@ public class UpgradeOSGiCommands implements OSGiCommands {
 		Set<String> bundleSymbolicNames =
 			_upgradeExecutor.getBundleSymbolicNames();
 
-		StringBundler sb = new StringBundler(2 * bundleSymbolicNames.size());
+		StringBundler sb = new StringBundler(4 * bundleSymbolicNames.size());
+
+		Set<String> failedBundleSymbolicNames =
+			_upgradeExecutor.getFailedBundleSymbolicNames();
 
 		for (String bundleSymbolicName : bundleSymbolicNames) {
-			sb.append(list(bundleSymbolicName));
+			if (failedBundleSymbolicNames.contains(bundleSymbolicName)) {
+				sb.append("The upgrade of module ");
+				sb.append(bundleSymbolicName);
+				sb.append(" failed");
+			}
+			else {
+				sb.append(list(bundleSymbolicName));
+			}
+
 			sb.append(StringPool.NEW_LINE);
 		}
 
@@ -187,11 +198,20 @@ public class UpgradeOSGiCommands implements OSGiCommands {
 		Set<String> upgradeThrewExceptionBundleSymbolicNames) {
 
 		while (true) {
+			Set<String> bundleSymbolicNames = new HashSet<>(
+				_upgradeExecutor.getBundleSymbolicNames());
+
+			Set<String> failedBundleSymbolicNames =
+				_upgradeExecutor.getFailedBundleSymbolicNames();
+
+			bundleSymbolicNames.removeAll(failedBundleSymbolicNames);
+
 			Set<String> upgradableBundleSymbolicNames =
 				ReleaseManagerUtil.getUpgradableBundleSymbolicNames(
-					_upgradeExecutor.getBundleSymbolicNames(),
-					_releaseLocalService, _upgradeExecutor);
+					bundleSymbolicNames, _releaseLocalService,
+					_upgradeExecutor);
 
+			upgradableBundleSymbolicNames.addAll(failedBundleSymbolicNames);
 			upgradableBundleSymbolicNames.removeAll(
 				upgradeThrewExceptionBundleSymbolicNames);
 

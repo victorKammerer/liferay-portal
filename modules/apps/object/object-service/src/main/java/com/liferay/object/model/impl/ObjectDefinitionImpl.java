@@ -21,7 +21,6 @@ import com.liferay.object.service.ObjectFieldLocalServiceUtil;
 import com.liferay.object.service.ObjectFolderLocalServiceUtil;
 import com.liferay.petra.string.StringBundler;
 import com.liferay.petra.string.StringPool;
-import com.liferay.portal.kernel.feature.flag.FeatureFlagManagerUtil;
 import com.liferay.portal.kernel.util.ArrayUtil;
 import com.liferay.portal.kernel.util.GetterUtil;
 import com.liferay.portal.kernel.util.LocaleUtil;
@@ -105,6 +104,7 @@ public class ObjectDefinitionImpl extends ObjectDefinitionBaseImpl {
 		if (_objectFieldBag == null) {
 			setObjectFieldBag(
 				new ObjectFieldBag(
+					isModifiableAndSystem(),
 					ObjectFieldLocalServiceUtil.getObjectFields(
 						getObjectDefinitionId())));
 		}
@@ -238,10 +238,6 @@ public class ObjectDefinitionImpl extends ObjectDefinitionBaseImpl {
 	}
 
 	public boolean isCMP() {
-		if (!FeatureFlagManagerUtil.isEnabled(getCompanyId(), "LPD-58677")) {
-			return false;
-		}
-
 		return Objects.equals(
 			getObjectFolderExternalReferenceCode(),
 			ObjectFolderConstants.

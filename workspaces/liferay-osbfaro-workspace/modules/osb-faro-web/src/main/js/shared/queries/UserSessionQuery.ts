@@ -2,14 +2,20 @@ import {gql} from '@apollo/client';
 import {SessionEntityTypes} from 'shared/util/constants';
 
 export interface UserSessionEvent {
+	acquisitionProperties: Array<{name: string; value: string}>;
 	applicationId: string;
 	assetTitle: string;
+	campaignId: string | null;
+	campaignName: string | null;
 	canonicalUrl: string;
 	createDate: string;
 	eventDate: string;
 	eventId: string;
+	experienceId?: string | null;
+	experienceName?: string | null;
 	name: string;
 	pageDescription: string;
+	pageGroupId?: string | null;
 	pageTitle: string;
 	properties: Array<{name: string; value: string}>;
 	referrer: string;
@@ -37,6 +43,7 @@ export interface UserSession {
 export interface UserSessionData {
 	eventsByUserSessions: {
 		totalEvents: number;
+		totalPageGroupsMetric: {value: number} | null;
 		userSessions: UserSession[];
 	};
 }
@@ -87,14 +94,23 @@ export default gql`
 					devicePixelRatio
 					deviceType
 					events {
+						acquisitionProperties {
+							name
+							value
+						}
 						applicationId
 						assetTitle
+						campaignId
+						campaignName
 						canonicalUrl
 						createDate
 						eventDate
 						eventId
+						experienceId
+						experienceName
 						name
 						pageDescription
+						pageGroupId
 						pageKeywords
 						pageTitle
 						properties {
@@ -112,6 +128,9 @@ export default gql`
 				}
 			}
 			totalEvents
+			totalPageGroupsMetric {
+				value
+			}
 		}
 	}
 `;

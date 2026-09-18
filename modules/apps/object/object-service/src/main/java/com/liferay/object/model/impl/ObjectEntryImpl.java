@@ -9,6 +9,7 @@ import com.liferay.exportimport.kernel.lar.StagedModelType;
 import com.liferay.friendly.url.model.FriendlyURLEntry;
 import com.liferay.friendly.url.service.FriendlyURLEntryLocalServiceUtil;
 import com.liferay.object.constants.ObjectEntryFolderConstants;
+import com.liferay.object.entry.util.ObjectEntryThreadLocal;
 import com.liferay.object.entry.util.ObjectEntryValuesUtil;
 import com.liferay.object.model.ObjectDefinition;
 import com.liferay.object.model.ObjectEntry;
@@ -127,6 +128,13 @@ public class ObjectEntryImpl extends ObjectEntryBaseImpl {
 
 	@Override
 	public ObjectDefinition getObjectDefinition() {
+		if (ObjectEntryThreadLocal.isSkipObjectDefinitionCache()) {
+			_objectDefinition = null;
+
+			return ObjectDefinitionLocalServiceUtil.fetchObjectDefinition(
+				getObjectDefinitionId());
+		}
+
 		if (_objectDefinition == null) {
 			_objectDefinition =
 				ObjectDefinitionLocalServiceUtil.fetchObjectDefinition(
@@ -143,6 +151,11 @@ public class ObjectEntryImpl extends ObjectEntryBaseImpl {
 		}
 
 		return getDisplayDate();
+	}
+
+	@Override
+	public ObjectEntry getRelatedObjectEntry(String objectFieldName) {
+		return _relatedObjectEntries.get(objectFieldName);
 	}
 
 	@Override
@@ -327,6 +340,13 @@ public class ObjectEntryImpl extends ObjectEntryBaseImpl {
 	}
 
 	@Override
+	public void setRelatedObjectEntry(
+		String objectFieldName, ObjectEntry relatedObjectEntry) {
+
+		_relatedObjectEntries.put(objectFieldName, relatedObjectEntry);
+	}
+
+	@Override
 	public void setTransientValues(Map<String, Serializable> values) {
 		_transientValues = values;
 	}
@@ -341,6 +361,8 @@ public class ObjectEntryImpl extends ObjectEntryBaseImpl {
 
 	private Map<String, Serializable> _indexedValues;
 	private ObjectDefinition _objectDefinition;
+	private final Map<String, ObjectEntry> _relatedObjectEntries =
+		new HashMap<>();
 	private Map<String, Serializable> _transientValues;
 	private Map<String, Serializable> _values;
 

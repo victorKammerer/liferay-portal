@@ -240,6 +240,7 @@ import com.liferay.sharing.model.SharingEntry;
 import com.liferay.sharing.security.permission.SharingEntryAction;
 import com.liferay.sharing.service.SharingEntryLocalService;
 
+import jakarta.ws.rs.BadRequestException;
 import jakarta.ws.rs.Priorities;
 import jakarta.ws.rs.container.ContainerResponseFilter;
 import jakarta.ws.rs.core.Feature;
@@ -9753,8 +9754,7 @@ public class ObjectEntryResourceTest {
 			_OBJECT_FIELD_NAME_1);
 
 		Date displayDate = new Date();
-		Date expirationDate = new Date(
-			System.currentTimeMillis() + Time.MINUTE);
+		Date expirationDate = new Date(System.currentTimeMillis() + Time.HOUR);
 		Date reviewDate = new Date();
 
 		ObjectEntry objectEntry = ObjectEntryTestUtil.addObjectEntry(
@@ -12293,6 +12293,42 @@ public class ObjectEntryResourceTest {
 					jsonObject.get("id"), StringPool.SLASH,
 					_objectRelationship2.getName()),
 				Http.Method.GET
+			).toString(),
+			JSONCompareMode.LENIENT);
+	}
+
+	@Test
+	@TestInfo("LPD-103450")
+	public void testPutByExternalReferenceCodeRestoreNotInTrash()
+		throws Exception {
+
+		ObjectEntry objectEntry = _objectEntryLocalService.addObjectEntry(
+			0, TestPropsValues.getUserId(),
+			_objectDefinition1.getObjectDefinitionId(),
+			ObjectEntryFolderConstants.PARENT_OBJECT_ENTRY_FOLDER_ID_DEFAULT,
+			null,
+			HashMapBuilder.<String, Serializable>put(
+				_OBJECT_FIELD_NAME_TEXT, RandomTestUtil.randomString()
+			).build(),
+			ServiceContextTestUtil.getServiceContext());
+
+		Assert.assertFalse(objectEntry.isInTrash());
+
+		JSONAssert.assertEquals(
+			JSONUtil.put(
+				"status", "BAD_REQUEST"
+			).put(
+				"title",
+				"Unable to restore this item because it is not in the " +
+					"Recycle Bin."
+			).toString(),
+			HTTPTestUtil.invokeToJSONObject(
+				null,
+				StringBundler.concat(
+					_getEndpoint(_objectDefinition1, 0),
+					"/by-external-reference-code/",
+					objectEntry.getExternalReferenceCode(), "/restore"),
+				Http.Method.PUT
 			).toString(),
 			JSONCompareMode.LENIENT);
 	}
@@ -21258,6 +21294,11 @@ public class ObjectEntryResourceTest {
 
 			_setUpPermissionThreadLocal(TestPropsValues.getUser());
 
+			AssertUtils.assertFailure(
+				BadRequestException.class, "No values found in body",
+				() -> _validate(
+					scopeKey, objectEntryResource, new ValidationRequest()));
+
 			ValidationResponse validationResponse = _validate(
 				scopeKey, objectEntryResource,
 				_getValidationRequest(
@@ -21325,9 +21366,9 @@ public class ObjectEntryResourceTest {
 					StringUtil.randomString(), TestPropsValues.getUserId(), 0,
 					objectDefinition.getObjectDefinitionId(),
 					ObjectFieldConstants.BUSINESS_TYPE_TEXT,
-					ObjectFieldConstants.DB_TYPE_STRING, true, false, null,
-					LocalizedMapUtil.getLocalizedMap("Name Required"), false,
-					"nameRequired", null, null, true, false,
+					ObjectFieldConstants.DB_TYPE_STRING, null, true, false,
+					null, LocalizedMapUtil.getLocalizedMap("Name Required"),
+					false, "nameRequired", null, null, true, false,
 					Arrays.asList(
 						new ObjectFieldSettingBuilder(
 						).name(

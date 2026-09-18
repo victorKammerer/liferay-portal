@@ -501,7 +501,7 @@ public class DataFactory {
 		field.set(_friendlyURLNormalizer, (Normalizer)s -> s);
 	}
 
-	public List<String> generateDynamicSQLs(
+	public String generateDynamicSQL(
 		String dbTableName, long dlFileEntryId, long objectEntryId,
 		List<ObjectFieldModel> objectFieldModels,
 		long relatedTicketObjectEntryId, long relatedUserObjectEntryId) {
@@ -564,11 +564,7 @@ public class DataFactory {
 
 		sb.append(");");
 
-		return ListUtil.fromArray(
-			sb.toString(),
-			StringBundler.concat(
-				"insert into ", dbTableName, "_x values (", objectEntryId,
-				");"));
+		return sb.toString();
 	}
 
 	public RoleModel getAdministratorRoleModel() {
@@ -1260,8 +1256,16 @@ public class DataFactory {
 	public AssetEntryModel newAssetEntryModel(
 		ObjectEntryModel objectEntryModel) {
 
-		return newAssetEntryModel(
-			objectEntryModel.getGroupId(), objectEntryModel.getCreateDate(),
+		long groupId = objectEntryModel.getGroupId();
+
+		if (groupId == 0) {
+			groupId = _globalGroupId;
+		}
+
+		String title = String.valueOf(objectEntryModel.getObjectEntryId());
+
+		AssetEntryModel assetEntryModel = newAssetEntryModel(
+			groupId, objectEntryModel.getCreateDate(),
 			objectEntryModel.getModifiedDate(),
 			getClassNameId(
 				ObjectDefinitionConstants.
@@ -1269,7 +1273,14 @@ public class DataFactory {
 						objectEntryModel.getObjectDefinitionId()),
 			objectEntryModel.getObjectEntryId(), objectEntryModel.getUuid(), 0,
 			true, objectEntryModel.isApproved(), ContentTypes.TEXT_PLAIN,
-			String.valueOf(objectEntryModel.getObjectEntryId()));
+			title);
+
+		assetEntryModel.setStartDate(null);
+		assetEntryModel.setEndDate(null);
+		assetEntryModel.setExpirationDate(null);
+		assetEntryModel.setDescription(title);
+
+		return assetEntryModel;
 	}
 
 	public AssetEntryModel newAssetEntryModel(Tuple tuple) {
@@ -4663,6 +4674,16 @@ public class DataFactory {
 		return friendlyURLEntryModel;
 	}
 
+	public FriendlyURLEntryModel newFriendlyURLEntryModel(
+		ObjectDefinitionModel objectDefinitionModel,
+		ObjectEntryModel objectEntryModel) {
+
+		return newFriendlyURLEntryModel(
+			_globalGroupId,
+			getClassNameId(objectDefinitionModel.getClassName()),
+			objectEntryModel.getObjectEntryId());
+	}
+
 	public GroupModel newGlobalGroupModel() {
 		_globalGroupId = _counter.get();
 
@@ -5753,14 +5774,19 @@ public class DataFactory {
 
 		String uuid = SequentialUUID.generate();
 
-		return newObjectDefinitionModel(
+		ObjectDefinitionModel objectDefinitionModel = newObjectDefinitionModel(
 			objectDefinitionId, objectFolderId, 0, className,
 			StringBundler.concat("O_", _companyId, StringPool.UNDERLINE, name),
 			true, false, true, label, true, name,
-			PanelCategoryKeys.APPLICATIONS_MENU_APPLICATIONS_CUSTOM_APPS,
+			PanelCategoryKeys.CONTROL_PANEL_OBJECT,
 			"c_" + StringUtil.toLowerCase(name) + "_",
 			"c_" + StringUtil.toLowerCase(name), label, true, false, uuid,
 			uuid);
+
+		objectDefinitionModel.setFriendlyURLSeparator(
+			_friendlyURLNormalizer.normalizeWithPeriodsAndSlashes(name));
+
+		return objectDefinitionModel;
 	}
 
 	public List<ObjectDefinitionModel> newObjectDefinitionModels(
@@ -5999,8 +6025,11 @@ public class DataFactory {
 
 			objectFieldSettingModels.add(
 				newObjectFieldSettingModel(
-					objectFieldId, "objectRelationshipERCObjectFieldName",
-					"r_userTicket_userERC"));
+					objectFieldId,
+					ObjectFieldSettingConstants.
+						NAME_OBJECT_RELATIONSHIP_ERC_OBJECT_FIELD_NAME,
+					StringUtil.replaceLast(
+						objectFieldModel.getName(), "Id", "ERC")));
 		}
 
 		return objectFieldSettingModels;
@@ -8519,6 +8548,7 @@ public class DataFactory {
 		objectEntryModel.setHeadObjectEntryId(
 			objectEntryModel.getObjectEntryId());
 		objectEntryModel.setObjectDefinitionId(objectDefinitionId);
+		objectEntryModel.setDefaultLanguageId("en_US");
 		objectEntryModel.setStatus(WorkflowConstants.STATUS_APPROVED);
 		objectEntryModel.setStatusByUserId(_sampleUserId);
 		objectEntryModel.setStatusByUserName(_SAMPLE_USER_NAME);
@@ -8968,6 +8998,7 @@ public class DataFactory {
 		userModel.setScreenName(screenName);
 		userModel.setEmailAddress(emailAddress);
 		userModel.setLanguageId("en_US");
+		userModel.setTimeZoneId("UTC");
 		userModel.setGreeting("Welcome " + screenName + StringPool.EXCLAMATION);
 		userModel.setFirstName(firstName);
 		userModel.setLastName(lastName);

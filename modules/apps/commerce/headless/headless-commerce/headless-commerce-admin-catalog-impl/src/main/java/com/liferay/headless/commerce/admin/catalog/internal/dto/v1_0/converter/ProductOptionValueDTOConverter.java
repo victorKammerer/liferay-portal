@@ -18,7 +18,10 @@ import org.osgi.service.component.annotations.Component;
  * @author Alessio Antonio Rendina
  */
 @Component(
-	property = "dto.class.name=com.liferay.commerce.product.model.CPDefinitionOptionValueRel",
+	property = {
+		"default=true",
+		"dto.class.name=com.liferay.commerce.product.model.CPDefinitionOptionValueRel"
+	},
 	service = DTOConverter.class
 )
 public class ProductOptionValueDTOConverter
@@ -40,6 +43,8 @@ public class ProductOptionValueDTOConverter
 		return new ProductOptionValue() {
 			{
 				setDeltaPrice(cpDefinitionOptionValueRel::getPrice);
+				setExternalReferenceCode(
+					cpDefinitionOptionValueRel::getExternalReferenceCode);
 				setId(
 					cpDefinitionOptionValueRel::
 						getCPDefinitionOptionValueRelId);

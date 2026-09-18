@@ -1,6 +1,12 @@
 load("ext://restart_process", "docker_build_with_restart")
 load("ext://uibutton", "cmd_button", "text_input")
 
+ENVIRONMENTS = {
+    "non-production": {"replica_count": 1},
+    "production": {"replica_count": 3},
+    "uat": {"replica_count": 1},
+}
+
 context = k8s_context()
 
 if not context.startswith("k3d-"):
@@ -25,107 +31,151 @@ docker_build_with_restart(
     target="dev",
 )
 
-environments = {
-    "non-production": {"desired_replicas": 1},
-    "production": {"desired_replicas": 3},
-    "uat": {"desired_replicas": 1},
-}
-
-def environment_yaml(name, desired_replicas):
-	namespace = "liferay-" + name
-	workload = name + "-liferay"
-
-	return "\n".join(
-	    [
-	        "apiVersion: v1",
-	        "kind: Namespace",
-	        "metadata:",
-	        "    labels:",
-	        "        licensing.liferay.com/environment: \"true\"",
-	        "    name: " + namespace,
-	        "---",
-	        "apiVersion: licensing.liferay.com/v1alpha1",
-	        "kind: LiferayEnvironment",
-	        "metadata:",
-	        "    name: " + name,
-	        "    namespace: " + namespace,
-	        "spec:",
-	        "    activationCodeSecretRef:",
-	        "        key: activationCode",
-	        "        name: " + name + "-activation",
-	        "    desiredReplicas: " + str(desired_replicas),
-	        "    dxpVersion: 2026.q3.0",
-	        "    environmentName: \"" + name + "\"",
-	        "    workloadRef:",
-	        "        name: " + workload,
-	        "---",
-	        "apiVersion: apps/v1",
-	        "kind: StatefulSet",
-	        "metadata:",
-	        "    name: " + workload,
-	        "    namespace: " + namespace,
-	        "spec:",
-	        "    replicas: " + str(desired_replicas),
-	        "    selector:",
-	        "        matchLabels:",
-	        "            app: " + workload,
-	        "    serviceName: " + workload,
-	        "    template:",
-	        "        metadata:",
-	        "            labels:",
-	        "                app: " + workload,
-	        "        spec:",
-	        "            containers:",
-	        "                -   image: registry.k8s.io/pause:3.9",
-	        "                    name: liferay",
-	    ]
-	)
-
-for name, values in environments.items():
-	namespace = "liferay-" + name
-	workload = name + "-liferay"
+for environment_name, environment in ENVIRONMENTS.items():
+	namespace = "liferay-" + environment_name
+	release = "liferay-default"
+	workload = environment_name + "-liferay"
 
 	cmd_button(
 	    namespace + ":activate",
 	    argv=[
 	        "sh",
 	        "-c",
-	        "kubectl create secret generic " + name + "-activation" +
-	        " --dry-run=client" +
-	        " --from-literal=activationCode=\"$ACTIVATION_CODE\"" +
-	        " --namespace " + namespace + " -o yaml | kubectl apply -f - && " +
-	        "kubectl annotate --namespace " + namespace +
-	        " --overwrite liferayenvironment " + name +
-	        " tilt.dev/activate-requested=\"$(date +%s)\"",
+	        "argo submit" +
+	        " --from workflowtemplate/online-activation-workflow-template" +
+	        " --namespace " + namespace +
+	        " --parameter activation-code=\"$ACTIVATION_CODE\"" +
+	        " --watch",
 	    ],
 	    icon_name="key",
 	    inputs=[
 	        text_input("ACTIVATION_CODE", label="Activation code"),
 	    ],
 	    resource=namespace,
-	    text="Activate with a new code",
+	    text="Submit online activation",
+	)
+
+	cmd_button(
+	    namespace + ":token",
+	    argv=[
+	        "sh",
+	        "-c",
+	        "printf \"\\nPaste this into the Argo UI login:\\n\\nBearer %s\\n\\n\"" +
+	        " \"$(kubectl get secret online-activation-user-token" +
+	        " --namespace " + namespace +
+	        " --output jsonpath=\"{.data.token}\" | base64 --decode)\"",
+	    ],
+	    icon_name="vpn_key",
+	    resource=namespace,
+	    text="Print the Argo UI login token",
 	)
 
 	k8s_resource(
 	    labels=["environments"],
+	    links=[
+	        link(
+	            "http://localhost:2746/workflow-templates/" + namespace,
+	            "Submit online activation",
+	        ),
+	    ],
 	    new_name=namespace,
 	    objects=[
-	        name + ":liferayenvironment",
 	        namespace + ":namespace",
+	        release + ":configmap:" + namespace,
+	        release + ":liferayenvironment:" + namespace,
+	        release + ":role:" + namespace,
+	        release + ":rolebinding:" + namespace,
+	        release + ":secret:" + namespace,
+	        release + ":serviceaccount:" + namespace,
+	        "liferay-init-scripts-default:configmap:" + namespace,
+	        "online-activation-role-binding:rolebinding:" + namespace,
+	        "online-activation-service-account:serviceaccount:" + namespace,
+	        "online-activation-user-role:role:" + namespace,
+	        "online-activation-user-role-binding:rolebinding:" + namespace,
+	        "online-activation-user-service-account:serviceaccount:" + namespace,
+	        "online-activation-user-token:secret:" + namespace,
+	        "online-activation-workflow-template:workflowtemplate:" + namespace,
 	    ],
 	    resource_deps=[
 	        "liferay-dxp-operator",
+	        "online-activation",
 	        "operator-infra",
 	    ],
 	)
 
 	k8s_resource(
 	    labels=["environments"],
+	    new_name=workload,
 	    resource_deps=[namespace],
-	    workload=workload,
+	    workload=release + ":statefulset:" + namespace,
 	)
 
-	k8s_yaml(blob(environment_yaml(name, values["desired_replicas"])))
+	k8s_yaml(
+	    blob(
+	        "\n".join(
+	            [
+	                "apiVersion: v1",
+	                "kind: Namespace",
+	                "metadata:",
+	                "    labels:",
+	                "        licensing.liferay.com/environment: \"true\"",
+	                "    name: " + namespace,
+	            ]
+	        )
+	    )
+	)
+
+	environment_yaml = helm(
+	    "../helm/default",
+	    name=release,
+	    namespace=namespace,
+	    set=[
+	        "customInitContainers=null",
+	        "image.repository=registry.k8s.io/pause",
+	        "image.tag=3.9",
+	        "licensing.dxpVersion=2026.q3.0",
+	        "licensing.enabled=true",
+	        "licensing.onlineActivationWorkflow.enabled=true",
+	        "livenessProbe=null",
+	        "readinessProbe=null",
+	        "replicaCount=" + str(environment["replica_count"]),
+	        "startupProbe=null",
+	    ],
+	)
+
+	k8s_yaml(
+	    filter_yaml(
+	        environment_yaml, kind="Pod", name=release + "-test-connection"
+	    )[1]
+	)
+
+k8s_resource(
+    labels=["activation"],
+    links=[
+        link(
+            "http://localhost:2746/cluster-workflow-templates",
+            "Submit online activation",
+        ),
+    ],
+    new_name="online-activation",
+    objects=[
+        "online-activation-cluster-role:clusterrole",
+        "online-activation-cluster-workflow-template:clusterworkflowtemplate",
+    ],
+    resource_deps=["argo-workflows"],
+)
+
+k8s_resource(
+    labels=["activation"],
+    new_name="argo-workflows-login",
+    objects=[
+        "argo-workflows-ui:clusterrole",
+        "argo-workflows-ui:clusterrolebinding",
+        "argo-workflows-ui:serviceaccount:argo-workflows-system",
+        "argo-workflows-ui.service-account-token:secret:argo-workflows-system",
+    ],
+    resource_deps=["argo-workflows"],
+)
 
 k8s_resource(
     labels=["operator"],
@@ -203,12 +253,115 @@ k8s_yaml(
             "image.repository=liferay/liferay-dxp-operator",
             "marketplace.claimName=marketplace-dev",
             "marketplace.enabled=true",
+            "onlineActivationWorkflow.enabled=true",
             "podSecurityContext.fsGroup=65532",
             "provisioning.baseURL=https://api.one-uat.liferay.com",
             "retry.maxDelay=1m",
             "securityContext.readOnlyRootFilesystem=false",
         ],
     )
+)
+
+k8s_yaml(
+    blob(
+        "\n".join(
+            [
+                "apiVersion: v1",
+                "kind: ServiceAccount",
+                "metadata:",
+                "    name: argo-workflows-ui",
+                "    namespace: argo-workflows-system",
+                "---",
+                "apiVersion: v1",
+                "kind: Secret",
+                "metadata:",
+                "    annotations:",
+                "        kubernetes.io/service-account.name: argo-workflows-ui",
+                "    name: argo-workflows-ui.service-account-token",
+                "    namespace: argo-workflows-system",
+                "type: kubernetes.io/service-account-token",
+                "---",
+                "apiVersion: rbac.authorization.k8s.io/v1",
+                "kind: ClusterRole",
+                "metadata:",
+                "    name: argo-workflows-ui",
+                "rules:",
+                "    -   apiGroups: [\"\"]",
+                "        resources: [\"namespaces\"]",
+                "        verbs: [\"get\", \"list\", \"watch\"]",
+                "    -   apiGroups: [\"\"]",
+                "        resources: [\"pods\", \"pods/log\"]",
+                "        verbs: [\"get\", \"list\", \"watch\"]",
+                "    -   apiGroups: [\"argoproj.io\"]",
+                "        resources: [\"clusterworkflowtemplates\", \"workflowtemplates\"]",
+                "        verbs: [\"get\", \"list\", \"watch\"]",
+                "    -   apiGroups: [\"argoproj.io\"]",
+                "        resources: [\"workflows\"]",
+                "        verbs: [\"create\", \"delete\", \"get\", \"list\", \"watch\"]",
+                "---",
+                "apiVersion: rbac.authorization.k8s.io/v1",
+                "kind: ClusterRoleBinding",
+                "metadata:",
+                "    name: argo-workflows-ui",
+                "roleRef:",
+                "    apiGroup: rbac.authorization.k8s.io",
+                "    kind: ClusterRole",
+                "    name: argo-workflows-ui",
+                "subjects:",
+                "    -   kind: ServiceAccount",
+                "        name: argo-workflows-ui",
+                "        namespace: argo-workflows-system",
+            ]
+        )
+    )
+)
+
+local_resource(
+    "argo-workflows",
+    cmd=" ".join(
+        [
+            "helm upgrade argo-workflows argo-workflows",
+            "--create-namespace",
+            "--install",
+            "--namespace argo-workflows-system",
+            "--repo https://argoproj.github.io/argo-helm",
+            "--wait",
+        ]
+    ),
+    labels=["activation"],
+)
+
+local_resource(
+    "argo-workflows-token",
+    cmd=" ".join(
+        [
+            "until kubectl get secret argo-workflows-ui.service-account-token",
+            "--namespace argo-workflows-system",
+            "--output jsonpath=\"{.data.token}\" 2> /dev/null | grep --quiet .;",
+            "do sleep 1; done;",
+            "printf \"\\nPaste this into the Argo UI login:\\n\\nBearer %s\\n\\n\"",
+            "\"$(kubectl get secret argo-workflows-ui.service-account-token",
+            "--namespace argo-workflows-system",
+            "--output jsonpath=\"{.data.token}\" | base64 --decode)\"",
+        ]
+    ),
+    labels=["activation"],
+    resource_deps=["argo-workflows-login"],
+)
+
+local_resource(
+    "argo-workflows-ui",
+    labels=["activation"],
+    links=[link("http://localhost:2746", "Argo Workflows UI")],
+    resource_deps=["argo-workflows"],
+    serve_cmd=" ".join(
+        [
+            "kubectl port-forward",
+            "--namespace argo-workflows-system",
+            "service/argo-workflows-server",
+            "2746:2746",
+        ]
+    ),
 )
 
 local_resource(

@@ -121,7 +121,7 @@ exports[`IndividualDetails should render 1`] = `
             class="table-responsive"
           >
             <table
-              class="table table-autofit table-list table-nowrap table-head-bordered table-hover table-striped"
+              class="table table-autofit table-list table-head-bordered table-hover table-striped"
             >
               <thead>
                 <tr>
@@ -230,7 +230,7 @@ exports[`IndividualDetails should render 1`] = `
                     </button>
                   </th>
                   <th
-                    class="table-head-title"
+                    class="table-head-title text-nowrap"
                   >
                     <button
                       class="inline-item text-truncate-inline btn btn-unstyled"
@@ -295,12 +295,15 @@ exports[`IndividualDetails should render 1`] = `
                   >
                     <a
                       class="text-truncate"
+                      data-discover="true"
                       href="/workspace/23/settings/data-source/123"
                     >
                       -
                     </a>
                   </td>
-                  <td>
+                  <td
+                    class="text-nowrap"
+                  >
                     -
                   </td>
                 </tr>
@@ -331,12 +334,15 @@ exports[`IndividualDetails should render 1`] = `
                   >
                     <a
                       class="text-truncate"
+                      data-discover="true"
                       href="/workspace/23/settings/data-source/123"
                     >
                       -
                     </a>
                   </td>
-                  <td>
+                  <td
+                    class="text-nowrap"
+                  >
                     -
                   </td>
                 </tr>
@@ -367,12 +373,15 @@ exports[`IndividualDetails should render 1`] = `
                   >
                     <a
                       class="text-truncate"
+                      data-discover="true"
                       href="/workspace/23/settings/data-source/123"
                     >
                       -
                     </a>
                   </td>
-                  <td>
+                  <td
+                    class="text-nowrap"
+                  >
                     -
                   </td>
                 </tr>
@@ -403,12 +412,15 @@ exports[`IndividualDetails should render 1`] = `
                   >
                     <a
                       class="text-truncate"
+                      data-discover="true"
                       href="/workspace/23/settings/data-source/123"
                     >
                       -
                     </a>
                   </td>
-                  <td>
+                  <td
+                    class="text-nowrap"
+                  >
                     -
                   </td>
                 </tr>
@@ -439,12 +451,15 @@ exports[`IndividualDetails should render 1`] = `
                   >
                     <a
                       class="text-truncate"
+                      data-discover="true"
                       href="/workspace/23/settings/data-source/123"
                     >
                       -
                     </a>
                   </td>
-                  <td>
+                  <td
+                    class="text-nowrap"
+                  >
                     -
                   </td>
                 </tr>

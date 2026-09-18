@@ -82,7 +82,7 @@ public abstract class BaseGroupedProductResourceImpl
 			@io.swagger.v3.oas.annotations.Parameter(
 				description = "Identifier of a grouped-product entry. Addresses a single CPDefinitionGroupedEntry that binds a child product to its parent with a priority and quantity.",
 				in = io.swagger.v3.oas.annotations.enums.ParameterIn.PATH,
-				name = "groupedProductId"
+				name = "groupedProductId", required = true
 			)
 		}
 	)
@@ -162,7 +162,7 @@ public abstract class BaseGroupedProductResourceImpl
 			@io.swagger.v3.oas.annotations.Parameter(
 				description = "External reference code that addresses the target resource on the `by-externalReferenceCode` paths. The code is the integration-supplied idempotency key, unique within the resource scope; POST against this path is upsert (create when absent, replace when present).",
 				in = io.swagger.v3.oas.annotations.enums.ParameterIn.PATH,
-				name = "externalReferenceCode"
+				name = "externalReferenceCode", required = true
 			),
 			@io.swagger.v3.oas.annotations.Parameter(
 				description = "One-based page index. Combined with pageSize to paginate the result set; defaults to 1 when omitted.",
@@ -205,14 +205,14 @@ public abstract class BaseGroupedProductResourceImpl
 	 * curl -X 'GET' 'http://localhost:8080/o/headless-commerce-admin-catalog/v1.0/products/{id}/grouped-products'  -u 'test@liferay.com:test'
 	 */
 	@io.swagger.v3.oas.annotations.Operation(
-		description = "Lists the grouped product entries of the product identified by product id. Returns 404 when the product id is not found."
+		description = "Lists the grouped product entries of the product identified by product ID. Returns 404 when the product ID is not found."
 	)
 	@io.swagger.v3.oas.annotations.Parameters(
 		value = {
 			@io.swagger.v3.oas.annotations.Parameter(
 				description = "Internal numeric identifier of the target resource. Counterpart to the `by-externalReferenceCode` path variant; identifiers are server-assigned and stable across the resource's lifetime.",
 				in = io.swagger.v3.oas.annotations.enums.ParameterIn.PATH,
-				name = "id"
+				name = "id", required = true
 			),
 			@io.swagger.v3.oas.annotations.Parameter(
 				description = "One-based page index. Combined with pageSize to paginate the result set; defaults to 1 when omitted.",
@@ -252,14 +252,14 @@ public abstract class BaseGroupedProductResourceImpl
 	 * curl -X 'PATCH' 'http://localhost:8080/o/headless-commerce-admin-catalog/v1.0/grouped-products/{groupedProductId}' -d $'{"entryProductExternalReferenceCode": ___, "entryProductId": ___, "priority": ___, "quantity": ___}' --header 'Content-Type: application/json' -u 'test@liferay.com:test'
 	 */
 	@io.swagger.v3.oas.annotations.Operation(
-		description = "Partially updates priority and quantity of the grouped product entry identified by groupedProductId. Returns 404 when the id is not found. Side effects -- None (updates priority and quantity)."
+		description = "Partially updates priority and quantity of the grouped product entry identified by groupedProductId. Returns 404 when the ID is not found. Side effects -- None (updates priority and quantity)."
 	)
 	@io.swagger.v3.oas.annotations.Parameters(
 		value = {
 			@io.swagger.v3.oas.annotations.Parameter(
 				description = "Identifier of a grouped-product entry. Addresses a single CPDefinitionGroupedEntry that binds a child product to its parent with a priority and quantity.",
 				in = io.swagger.v3.oas.annotations.enums.ParameterIn.PATH,
-				name = "groupedProductId"
+				name = "groupedProductId", required = true
 			)
 		}
 	)
@@ -297,7 +297,7 @@ public abstract class BaseGroupedProductResourceImpl
 			@io.swagger.v3.oas.annotations.Parameter(
 				description = "External reference code that addresses the target resource on the `by-externalReferenceCode` paths. The code is the integration-supplied idempotency key, unique within the resource scope; POST against this path is upsert (create when absent, replace when present).",
 				in = io.swagger.v3.oas.annotations.enums.ParameterIn.PATH,
-				name = "externalReferenceCode"
+				name = "externalReferenceCode", required = true
 			)
 		}
 	)
@@ -330,14 +330,14 @@ public abstract class BaseGroupedProductResourceImpl
 	 * curl -X 'POST' 'http://localhost:8080/o/headless-commerce-admin-catalog/v1.0/products/{id}/grouped-products' -d $'{"entryProductExternalReferenceCode": ___, "entryProductId": ___, "priority": ___, "quantity": ___}' --header 'Content-Type: application/json' -u 'test@liferay.com:test'
 	 */
 	@io.swagger.v3.oas.annotations.Operation(
-		description = "Adds a grouped product entry to the parent product identified by product id. Returns 404 when the parent product id or entry product is missing. Side effects -- Links the entry product to the parent grouped product."
+		description = "Adds a grouped product entry to the parent product identified by product ID. Returns 404 when the parent product ID or entry product is missing. Side effects -- Links the entry product to the parent grouped product."
 	)
 	@io.swagger.v3.oas.annotations.Parameters(
 		value = {
 			@io.swagger.v3.oas.annotations.Parameter(
 				description = "Internal numeric identifier of the target resource. Counterpart to the `by-externalReferenceCode` path variant; identifiers are server-assigned and stable across the resource's lifetime.",
 				in = io.swagger.v3.oas.annotations.enums.ParameterIn.PATH,
-				name = "id"
+				name = "id", required = true
 			)
 		}
 	)
@@ -1151,4 +1151,4 @@ public abstract class BaseGroupedProductResourceImpl
 		LogFactoryUtil.getLog(BaseGroupedProductResourceImpl.class);
 
 }
-// LIFERAY-REST-BUILDER-HASH:-1116456868
+// LIFERAY-REST-BUILDER-HASH:-1338485626

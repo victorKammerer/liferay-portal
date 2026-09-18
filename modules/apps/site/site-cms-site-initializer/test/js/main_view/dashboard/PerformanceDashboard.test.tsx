@@ -4,20 +4,37 @@
  */
 
 import '@testing-library/jest-dom';
-import {render, screen} from '@testing-library/react';
+import {
+	fireEvent,
+	render,
+	screen,
+	waitFor,
+	within,
+} from '@testing-library/react';
 import React from 'react';
 
 import ApiHelper from '../../../../src/main/resources/META-INF/resources/js/common/services/ApiHelper';
+import ProjectLinkService from '../../../../src/main/resources/META-INF/resources/js/common/services/ProjectLinkService';
 import SpaceService from '../../../../src/main/resources/META-INF/resources/js/common/services/SpaceService';
 import {Space} from '../../../../src/main/resources/META-INF/resources/js/common/types/Space';
 import PerformanceDashboard from '../../../../src/main/resources/META-INF/resources/js/main_view/dashboard/performance/PerformanceDashboard';
 import PerformanceService from '../../../../src/main/resources/META-INF/resources/js/main_view/dashboard/performance/PerformanceService';
+import {
+	DashboardAdditionalProps,
+	OverviewMetrics,
+} from '../../../../src/main/resources/META-INF/resources/js/main_view/dashboard/performance/types';
 import {mockFetch} from '../../__mocks__/frontend-js-web';
 
+jest.mock(
+	'../../../../src/main/resources/META-INF/resources/js/common/services/ProjectLinkService'
+);
 jest.mock(
 	'../../../../src/main/resources/META-INF/resources/js/common/services/SpaceService'
 );
 
+const mockedProjectLinkService = ProjectLinkService as jest.Mocked<
+	typeof ProjectLinkService
+>;
 const mockedSpaceService = SpaceService as jest.Mocked<typeof SpaceService>;
 
 const constants = {
@@ -27,18 +44,29 @@ const constants = {
 };
 
 function renderPerformanceDashboard({
+	additionalProps,
 	analyticsCloudEnabled = true,
+	spaceIds = ['1', '2'],
 }: {
+	additionalProps?: DashboardAdditionalProps;
 	analyticsCloudEnabled?: boolean;
+	spaceIds?: string[];
 } = {}) {
 	return render(
 		<PerformanceDashboard
+			additionalProps={additionalProps}
 			admin={false}
 			analyticsEnabled={analyticsCloudEnabled}
 			constants={constants}
+			spaceIds={spaceIds}
 		/>
 	);
 }
+
+const cmpAdditionalProps = {
+	cmpEnabled: true,
+	cmpProjectObjectDefinitionId: 42,
+} as DashboardAdditionalProps;
 
 describe('PerformanceDashboard', () => {
 	beforeEach(() => {
@@ -46,6 +74,11 @@ describe('PerformanceDashboard', () => {
 
 		jest.spyOn(ApiHelper, 'get').mockResolvedValue({
 			data: {items: []},
+			error: null,
+		});
+
+		mockedProjectLinkService.getProjects.mockResolvedValue({
+			data: [{id: 10, title: 'Spring Campaign'}],
 			error: null,
 		});
 
@@ -151,5 +184,78 @@ describe('PerformanceDashboard', () => {
 		expect(
 			await screen.findByText('performance-overview')
 		).toBeInTheDocument();
+	});
+
+	it('does not show the project filter when CMP is not enabled', async () => {
+		renderPerformanceDashboard();
+
+		await screen.findByText('performance-overview');
+
+		expect(
+			screen.queryByLabelText('filter-by-projects')
+		).not.toBeInTheDocument();
+	});
+
+	it('shows the project filter when CMP is enabled', async () => {
+		renderPerformanceDashboard({additionalProps: cmpAdditionalProps});
+
+		await screen.findByText('performance-overview');
+
+		expect(screen.getByLabelText('filter-by-projects')).toBeInTheDocument();
+	});
+
+	it('requests the metrics of the selected project', async () => {
+		const getOverviewMetrics = jest
+			.spyOn(PerformanceService, 'getOverviewMetrics')
+			.mockResolvedValue({data: {} as OverviewMetrics, error: null});
+
+		renderPerformanceDashboard({additionalProps: cmpAdditionalProps});
+
+		await screen.findByText('performance-overview');
+
+		fireEvent.click(screen.getByLabelText('filter-by-projects'));
+
+		const listbox = await screen.findByRole('listbox');
+
+		fireEvent.click(
+			await within(listbox).findByRole('option', {
+				name: 'Spring Campaign',
+			})
+		);
+
+		await waitFor(() =>
+			expect(getOverviewMetrics).toHaveBeenLastCalledWith(
+				expect.objectContaining({cmpProjectIds: ['10']})
+			)
+		);
+	});
+
+	it('ignores the connection info of the spaces the user does not administer', async () => {
+		mockedSpaceService.getSpaces.mockResolvedValue([
+			{id: 1, name: 'Marketing', siteId: 11},
+			{id: 2, name: 'HR', siteId: 22},
+		] as Space[]);
+
+		const getConnectionInfo = jest
+			.spyOn(PerformanceService, 'getConnectionInfo')
+			.mockResolvedValue({
+				data: {
+					admin: true,
+					connectedToAnalyticsCloud: true,
+					connectedToSpace: true,
+					siteSyncedToAnalyticsCloud: true,
+				},
+				error: null,
+			});
+
+		renderPerformanceDashboard({spaceIds: ['2']});
+
+		await screen.findByText('performance-overview');
+
+		expect(getConnectionInfo).toHaveBeenCalledTimes(1);
+
+		expect(getConnectionInfo).toHaveBeenCalledWith({
+			depotEntryGroupId: 22,
+		});
 	});
 });

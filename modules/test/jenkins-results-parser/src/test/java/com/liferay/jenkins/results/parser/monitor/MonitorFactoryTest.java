@@ -68,11 +68,80 @@ public class MonitorFactoryTest
 	}
 
 	@Test
+	public void testNewMonitorReportFreshness() {
+		Properties monitorProperties = new Properties();
+
+		monitorProperties.setProperty("monitor[a].parameter[cadence]", "3600");
+		monitorProperties.setProperty(
+			"monitor[a].parameter[report.name]", RandomTestUtil.randomString());
+		monitorProperties.setProperty(
+			"monitor[a].parameter[url]",
+			"file:///" + RandomTestUtil.randomString());
+		monitorProperties.setProperty("monitor[a].type", "report-freshness");
+
+		List<MonitorConfig> monitorConfigs =
+			MonitorConfigLoader.getMonitorConfigs(monitorProperties);
+
+		Monitor monitor = MonitorFactory.newMonitor(monitorConfigs.get(0));
+
+		Assert.assertTrue(monitor instanceof ReportFreshnessMonitor);
+	}
+
+	@Test
+	public void testNewMonitorResourceThreshold() {
+		String masterName = RandomTestUtil.randomString();
+
+		JenkinsMasterTestUtil.getJenkinsMaster(
+			masterName, "http://" + masterName);
+
+		Properties monitorProperties = new Properties();
+
+		monitorProperties.setProperty(
+			"monitor[a].parameter[master.name]", masterName);
+		monitorProperties.setProperty("monitor[a].parameter[metric]", "ram");
+		monitorProperties.setProperty("monitor[a].threshold[warn]", "80");
+		monitorProperties.setProperty("monitor[a].type", "resource-threshold");
+
+		List<MonitorConfig> monitorConfigs =
+			MonitorConfigLoader.getMonitorConfigs(monitorProperties);
+
+		Monitor monitor = MonitorFactory.newMonitor(monitorConfigs.get(0));
+
+		Assert.assertTrue(monitor instanceof ResourceThresholdMonitor);
+	}
+
+	@Test
 	public void testNewMonitorUnknownType() {
 		_testNewMonitorExpectedIllegalArgumentException(
 			new MonitorConfig(
 				"a", 0, null, MonitorConfig.Severity.MEDIUM, null, 60,
 				"unknown-type"));
+	}
+
+	@Test
+	public void testNewMonitorUpstreamJobHealth() {
+		String masterName = RandomTestUtil.randomString();
+
+		JenkinsMasterTestUtil.getJenkinsMaster(
+			masterName, "http://" + masterName);
+
+		Properties monitorProperties = new Properties();
+
+		monitorProperties.setProperty(
+			"monitor[a].parameter[branch]", RandomTestUtil.randomString());
+		monitorProperties.setProperty(
+			"monitor[a].parameter[controller.job.name]",
+			RandomTestUtil.randomString());
+		monitorProperties.setProperty(
+			"monitor[a].parameter[master.name]", masterName);
+		monitorProperties.setProperty("monitor[a].type", "upstream-job-health");
+
+		List<MonitorConfig> monitorConfigs =
+			MonitorConfigLoader.getMonitorConfigs(monitorProperties);
+
+		Monitor monitor = MonitorFactory.newMonitor(monitorConfigs.get(0));
+
+		Assert.assertTrue(monitor instanceof UpstreamJobHealthMonitor);
 	}
 
 	private void _testNewMonitorExpectedIllegalArgumentException(

@@ -78,14 +78,14 @@ public abstract class BaseSpecificationResourceImpl
 	 * curl -X 'DELETE' 'http://localhost:8080/o/headless-commerce-admin-catalog/v1.0/specifications/{id}'  -u 'test@liferay.com:test'
 	 */
 	@io.swagger.v3.oas.annotations.Operation(
-		description = "Deletes the specification identified by id. Returns 404 when the record is not found. Side effects -- Cascades through product specification value listeners; reindexes affected products."
+		description = "Deletes the specification identified by ID. Returns 404 when the record is not found. Side effects -- Cascades through product specification value listeners; reindexes affected products."
 	)
 	@io.swagger.v3.oas.annotations.Parameters(
 		value = {
 			@io.swagger.v3.oas.annotations.Parameter(
 				description = "Internal numeric identifier of the target resource. Counterpart to the `by-externalReferenceCode` path variant; identifiers are server-assigned and stable across the resource's lifetime.",
 				in = io.swagger.v3.oas.annotations.enums.ParameterIn.PATH,
-				name = "id"
+				name = "id", required = true
 			)
 		}
 	)
@@ -165,7 +165,7 @@ public abstract class BaseSpecificationResourceImpl
 			@io.swagger.v3.oas.annotations.Parameter(
 				description = "External reference code that addresses the target resource on the `by-externalReferenceCode` paths. The code is the integration-supplied idempotency key, unique within the resource scope; POST against this path is upsert (create when absent, replace when present).",
 				in = io.swagger.v3.oas.annotations.enums.ParameterIn.PATH,
-				name = "externalReferenceCode"
+				name = "externalReferenceCode", required = true
 			)
 		}
 	)
@@ -194,14 +194,14 @@ public abstract class BaseSpecificationResourceImpl
 	 * curl -X 'GET' 'http://localhost:8080/o/headless-commerce-admin-catalog/v1.0/specifications/{id}'  -u 'test@liferay.com:test'
 	 */
 	@io.swagger.v3.oas.annotations.Operation(
-		description = "Fetches the specification identified by id. Returns 404 when the id is not found."
+		description = "Fetches the specification identified by ID. Returns 404 when the ID is not found."
 	)
 	@io.swagger.v3.oas.annotations.Parameters(
 		value = {
 			@io.swagger.v3.oas.annotations.Parameter(
 				description = "Internal numeric identifier of the target resource. Counterpart to the `by-externalReferenceCode` path variant; identifiers are server-assigned and stable across the resource's lifetime.",
 				in = io.swagger.v3.oas.annotations.enums.ParameterIn.PATH,
-				name = "id"
+				name = "id", required = true
 			)
 		}
 	)
@@ -237,7 +237,7 @@ public abstract class BaseSpecificationResourceImpl
 			@io.swagger.v3.oas.annotations.Parameter(
 				description = "External reference code that addresses the target resource on the `by-externalReferenceCode` paths. The code is the integration-supplied idempotency key, unique within the resource scope; POST against this path is upsert (create when absent, replace when present).",
 				in = io.swagger.v3.oas.annotations.enums.ParameterIn.PATH,
-				name = "externalReferenceCode"
+				name = "externalReferenceCode", required = true
 			)
 		}
 	)
@@ -328,14 +328,14 @@ public abstract class BaseSpecificationResourceImpl
 	 * curl -X 'PATCH' 'http://localhost:8080/o/headless-commerce-admin-catalog/v1.0/specifications/{id}' -d $'{"description": ___, "externalReferenceCode": ___, "facetable": ___, "key": ___, "listTypeDefinitionExternalReferenceCodes": ___, "listTypeDefinitionId": ___, "listTypeDefinitionIds": ___, "optionCategory": ___, "priority": ___, "title": ___, "visible": ___}' --header 'Content-Type: application/json' -u 'test@liferay.com:test'
 	 */
 	@io.swagger.v3.oas.annotations.Operation(
-		description = "Partially updates the specification identified by id. Returns 404 when the id is not found. Side effects -- Reindexes the specification and any products that reference it."
+		description = "Partially updates the specification identified by ID. Returns 404 when the ID is not found. Side effects -- Reindexes the specification and any products that reference it."
 	)
 	@io.swagger.v3.oas.annotations.Parameters(
 		value = {
 			@io.swagger.v3.oas.annotations.Parameter(
 				description = "Internal numeric identifier of the target resource. Counterpart to the `by-externalReferenceCode` path variant; identifiers are server-assigned and stable across the resource's lifetime.",
 				in = io.swagger.v3.oas.annotations.enums.ParameterIn.PATH,
-				name = "id"
+				name = "id", required = true
 			)
 		}
 	)
@@ -373,7 +373,7 @@ public abstract class BaseSpecificationResourceImpl
 			@io.swagger.v3.oas.annotations.Parameter(
 				description = "External reference code that addresses the target resource on the `by-externalReferenceCode` paths. The code is the integration-supplied idempotency key, unique within the resource scope; POST against this path is upsert (create when absent, replace when present).",
 				in = io.swagger.v3.oas.annotations.enums.ParameterIn.PATH,
-				name = "externalReferenceCode"
+				name = "externalReferenceCode", required = true
 			)
 		}
 	)
@@ -459,7 +459,7 @@ public abstract class BaseSpecificationResourceImpl
 	 * curl -X 'POST' 'http://localhost:8080/o/headless-commerce-admin-catalog/v1.0/specifications' -d $'{"description": ___, "externalReferenceCode": ___, "facetable": ___, "key": ___, "listTypeDefinitionExternalReferenceCodes": ___, "listTypeDefinitionId": ___, "listTypeDefinitionIds": ___, "optionCategory": ___, "priority": ___, "title": ___, "visible": ___}' --header 'Content-Type: application/json' -u 'test@liferay.com:test'
 	 */
 	@io.swagger.v3.oas.annotations.Operation(
-		description = "Creates or updates a specification by trying id, external reference code, then key for resolution. POST is upsert by external reference code -- creates a new entity when the ERC is unknown, otherwise updates the existing one. Returns 400 when the key is invalid. Side effects -- Reindexes the specification; lookups by id/ERC/key fall through with debug logging."
+		description = "Creates or updates a specification by trying ID, external reference code, then key for resolution. POST is upsert by external reference code -- creates a new entity when the ERC is unknown, otherwise updates the existing one. Returns 400 when the key is invalid. Side effects -- Reindexes the specification; lookups by ID/ERC/key fall through with debug logging."
 	)
 	@io.swagger.v3.oas.annotations.tags.Tags(
 		value = {
@@ -621,7 +621,7 @@ public abstract class BaseSpecificationResourceImpl
 			@io.swagger.v3.oas.annotations.Parameter(
 				description = "External reference code that addresses the target resource on the `by-externalReferenceCode` paths. The code is the integration-supplied idempotency key, unique within the resource scope; POST against this path is upsert (create when absent, replace when present).",
 				in = io.swagger.v3.oas.annotations.enums.ParameterIn.PATH,
-				name = "externalReferenceCode"
+				name = "externalReferenceCode", required = true
 			)
 		}
 	)
@@ -1451,4 +1451,4 @@ public abstract class BaseSpecificationResourceImpl
 		LogFactoryUtil.getLog(BaseSpecificationResourceImpl.class);
 
 }
-// LIFERAY-REST-BUILDER-HASH:-2011058329
+// LIFERAY-REST-BUILDER-HASH:-1887596455

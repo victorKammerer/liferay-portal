@@ -49,6 +49,15 @@ public class CPDefinitionOptionRelServiceUtil {
 
 	public static CPDefinitionOptionRel addCPDefinitionOptionRel(
 			long cpDefinitionId, long cpOptionId,
+			com.liferay.portal.kernel.service.ServiceContext serviceContext)
+		throws PortalException {
+
+		return getService().addCPDefinitionOptionRel(
+			cpDefinitionId, cpOptionId, serviceContext);
+	}
+
+	public static CPDefinitionOptionRel addCPDefinitionOptionRel(
+			String externalReferenceCode, long cpDefinitionId, long cpOptionId,
 			Map<java.util.Locale, String> nameMap,
 			Map<java.util.Locale, String> descriptionMap,
 			String commerceOptionTypeKey, String infoItemServiceKey,
@@ -59,19 +68,10 @@ public class CPDefinitionOptionRelServiceUtil {
 		throws PortalException {
 
 		return getService().addCPDefinitionOptionRel(
-			cpDefinitionId, cpOptionId, nameMap, descriptionMap,
-			commerceOptionTypeKey, infoItemServiceKey, priority,
+			externalReferenceCode, cpDefinitionId, cpOptionId, nameMap,
+			descriptionMap, commerceOptionTypeKey, infoItemServiceKey, priority,
 			definedExternally, facetable, required, skuContributor,
 			importOptionValue, priceType, typeSettings, serviceContext);
-	}
-
-	public static CPDefinitionOptionRel addCPDefinitionOptionRel(
-			long cpDefinitionId, long cpOptionId,
-			com.liferay.portal.kernel.service.ServiceContext serviceContext)
-		throws PortalException {
-
-		return getService().addCPDefinitionOptionRel(
-			cpDefinitionId, cpOptionId, serviceContext);
 	}
 
 	public static void deleteCPDefinitionOptionRel(long cpDefinitionOptionRelId)
@@ -95,11 +95,29 @@ public class CPDefinitionOptionRelServiceUtil {
 			cpDefinitionId, cpOptionId);
 	}
 
+	public static CPDefinitionOptionRel
+			fetchCPDefinitionOptionRelByExternalReferenceCode(
+				String externalReferenceCode, long companyId)
+		throws PortalException {
+
+		return getService().fetchCPDefinitionOptionRelByExternalReferenceCode(
+			externalReferenceCode, companyId);
+	}
+
 	public static CPDefinitionOptionRel getCPDefinitionOptionRel(
 			long cpDefinitionOptionRelId)
 		throws PortalException {
 
 		return getService().getCPDefinitionOptionRel(cpDefinitionOptionRelId);
+	}
+
+	public static CPDefinitionOptionRel
+			getCPDefinitionOptionRelByExternalReferenceCode(
+				String externalReferenceCode, long companyId)
+		throws PortalException {
+
+		return getService().getCPDefinitionOptionRelByExternalReferenceCode(
+			externalReferenceCode, companyId);
 	}
 
 	public static Map<Long, List<Long>>
@@ -159,6 +177,16 @@ public class CPDefinitionOptionRelServiceUtil {
 
 		return getService().getCPDefinitionOptionRelsCount(
 			cpDefinitionId, skuContributor);
+	}
+
+	public static CPDefinitionOptionRel getOrAddEmptyCPDefinitionOptionRel(
+			String externalReferenceCode, long cpDefinitionId, long cpOptionId,
+			String commerceOptionTypeKey)
+		throws PortalException {
+
+		return getService().getOrAddEmptyCPDefinitionOptionRel(
+			externalReferenceCode, cpDefinitionId, cpOptionId,
+			commerceOptionTypeKey);
 	}
 
 	/**
@@ -222,6 +250,14 @@ public class CPDefinitionOptionRelServiceUtil {
 			typeSettings, serviceContext);
 	}
 
+	public static CPDefinitionOptionRel updateExternalReferenceCode(
+			long cpDefinitionOptionRelId, String externalReferenceCode)
+		throws PortalException {
+
+		return getService().updateExternalReferenceCode(
+			cpDefinitionOptionRelId, externalReferenceCode);
+	}
+
 	public static CPDefinitionOptionRelService getService() {
 		return _serviceSnapshot.get();
 	}
@@ -232,4 +268,4 @@ public class CPDefinitionOptionRelServiceUtil {
 			CPDefinitionOptionRelService.class);
 
 }
-// LIFERAY-SERVICE-BUILDER-HASH:-1595031747
+// LIFERAY-SERVICE-BUILDER-HASH:473904827

@@ -113,20 +113,10 @@ public abstract class BaseObjectEntryManager {
 	}
 
 	protected long getGroupId(
-			ObjectDefinition objectDefinition, String scopeKey)
-		throws ObjectEntryScopeException {
-
-		return getGroupId(objectDefinition, scopeKey, false);
-	}
-
-	protected long getGroupId(
-			ObjectDefinition objectDefinition, String scopeKey,
+			ObjectDefinition objectDefinition,
+			ObjectScopeProvider objectScopeProvider, String scopeKey,
 			boolean useCompanyGroup)
 		throws ObjectEntryScopeException {
-
-		ObjectScopeProvider objectScopeProvider =
-			objectScopeProviderRegistry.getObjectScopeProvider(
-				objectDefinition.getScope());
 
 		if (objectScopeProvider.isGroupAware()) {
 			if (scopeKey == null) {
@@ -155,6 +145,25 @@ public abstract class BaseObjectEntryManager {
 		}
 
 		return 0;
+	}
+
+	protected long getGroupId(
+			ObjectDefinition objectDefinition, String scopeKey)
+		throws ObjectEntryScopeException {
+
+		return getGroupId(objectDefinition, scopeKey, false);
+	}
+
+	protected long getGroupId(
+			ObjectDefinition objectDefinition, String scopeKey,
+			boolean useCompanyGroup)
+		throws ObjectEntryScopeException {
+
+		return getGroupId(
+			objectDefinition,
+			objectScopeProviderRegistry.getObjectScopeProvider(
+				objectDefinition.getScope()),
+			scopeKey, useCompanyGroup);
 	}
 
 	protected PortletResourcePermission getPortletResourcePermission(
@@ -313,35 +322,51 @@ public abstract class BaseObjectEntryManager {
 	}
 
 	protected void validateReadOnlyObjectFields(
-			String externalReferenceCode, long groupId,
 			ObjectDefinition objectDefinition,
-			com.liferay.object.rest.dto.v1_0.ObjectEntry objectEntry)
+			com.liferay.object.rest.dto.v1_0.ObjectEntry objectEntry,
+			ObjectEntry serviceBuilderObjectEntry)
 		throws Exception {
 
-		Map<String, Object> values = new HashMap<>();
-
-		if (externalReferenceCode != null) {
-			ObjectEntry serviceBuilderObjectEntry =
-				objectEntryLocalService.fetchObjectEntry(
-					externalReferenceCode, groupId,
-					objectDefinition.getObjectDefinitionId());
-
-			if (serviceBuilderObjectEntry == null) {
-				return;
-			}
-
-			values.putAll(
-				objectEntryLocalService.getSystemValues(
-					serviceBuilderObjectEntry));
-			values.putAll(
-				objectEntryLocalService.getValues(serviceBuilderObjectEntry));
-		}
+		Map<String, Object> values = HashMapBuilder.<String, Object>putAll(
+			objectEntryLocalService.getSystemValues(serviceBuilderObjectEntry)
+		).putAll(
+			objectEntryLocalService.getValues(serviceBuilderObjectEntry)
+		).build();
 
 		ObjectFieldUtil.validateReadOnlyObjectFields(
 			ddmExpressionFactory, values,
 			objectFieldLocalService.getObjectFields(
 				objectDefinition.getObjectDefinitionId()),
 			objectEntry.getProperties());
+	}
+
+	protected void validateReadOnlyObjectFields(
+			String externalReferenceCode, long groupId,
+			ObjectDefinition objectDefinition,
+			com.liferay.object.rest.dto.v1_0.ObjectEntry objectEntry)
+		throws Exception {
+
+		if (externalReferenceCode == null) {
+			ObjectFieldUtil.validateReadOnlyObjectFields(
+				ddmExpressionFactory, new HashMap<>(),
+				objectFieldLocalService.getObjectFields(
+					objectDefinition.getObjectDefinitionId()),
+				objectEntry.getProperties());
+
+			return;
+		}
+
+		ObjectEntry serviceBuilderObjectEntry =
+			objectEntryLocalService.fetchObjectEntry(
+				externalReferenceCode, groupId,
+				objectDefinition.getObjectDefinitionId());
+
+		if (serviceBuilderObjectEntry == null) {
+			return;
+		}
+
+		validateReadOnlyObjectFields(
+			objectDefinition, objectEntry, serviceBuilderObjectEntry);
 	}
 
 	@Reference

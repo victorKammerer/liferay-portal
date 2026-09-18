@@ -15,7 +15,8 @@ export type CategorizationStatus =
 	| 'error'
 	| 'idle'
 	| 'loading'
-	| 'ready';
+	| 'ready'
+	| 'stopped';
 
 export interface CandidateCategory {
 	id: number;
@@ -24,6 +25,8 @@ export interface CandidateCategory {
 }
 
 export interface CategorizationContext {
+	appliedCategoryIds?: number[];
+	appliedTags?: string[];
 	candidateCategories?: CandidateCategory[];
 	content: string;
 	count?: number;
