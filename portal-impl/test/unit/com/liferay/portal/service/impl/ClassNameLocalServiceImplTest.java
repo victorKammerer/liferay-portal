@@ -6,6 +6,7 @@
 package com.liferay.portal.service.impl;
 
 import com.liferay.counter.kernel.service.CounterLocalService;
+import com.liferay.portal.kernel.exception.NoSuchClassNameException;
 import com.liferay.portal.kernel.model.ClassName;
 import com.liferay.portal.kernel.model.ModelHintsUtil;
 import com.liferay.portal.kernel.service.persistence.ClassNamePersistence;
@@ -54,29 +55,35 @@ public class ClassNameLocalServiceImplTest {
 	}
 
 	@Test
-	public void testGetClassNameIdsSupplier() {
-		Supplier<long[]> classNameIdsSupplier1 =
-			_classNameLocalServiceImpl.getClassNameIdsSupplier(
-				new String[] {_CLASS_NAME_VALUE1, _CLASS_NAME_VALUE2});
+	public void testGetClassNameEvictsPooledClassNameWithoutRow()
+		throws Exception {
 
-		Assert.assertArrayEquals(
-			new long[] {_CLASS_NAME_ID_1, _CLASS_NAME_ID_2},
-			classNameIdsSupplier1.get());
+		ClassName className = _mockClassName(
+			_CLASS_NAME_ID_3, RandomTestUtil.randomString());
 
-		_assertSupplier(
-			() -> {
-				Supplier<long[]> classNameIdsSupplier2 =
-					_classNameLocalServiceImpl.getClassNameIdsSupplier(
-						new String[] {RandomTestUtil.randomString()});
+		Mockito.when(
+			_classNamePersistence.fetchByPrimaryKey(_CLASS_NAME_ID_3)
+		).thenReturn(
+			className
+		).thenReturn(
+			null
+		);
 
-				Mockito.verify(
-					_classNamePersistence, Mockito.never()
-				).create(
-					Mockito.anyLong()
-				);
+		Mockito.when(
+			_classNamePersistence.findByPrimaryKey(_CLASS_NAME_ID_3)
+		).thenThrow(
+			new NoSuchClassNameException()
+		);
 
-				classNameIdsSupplier2.get();
-			});
+		Assert.assertNotNull(
+			_classNameLocalServiceImpl.fetchByClassNameId(_CLASS_NAME_ID_3));
+
+		Assert.assertThrows(
+			NoSuchClassNameException.class,
+			() -> _classNameLocalServiceImpl.getClassName(_CLASS_NAME_ID_3));
+
+		Assert.assertNull(
+			_classNameLocalServiceImpl.fetchByClassNameId(_CLASS_NAME_ID_3));
 	}
 
 	@Test
@@ -100,6 +107,32 @@ public class ClassNameLocalServiceImplTest {
 				);
 
 				classNameIdSupplier2.get();
+			});
+	}
+
+	@Test
+	public void testGetClassNameIdsSupplier() {
+		Supplier<long[]> classNameIdsSupplier1 =
+			_classNameLocalServiceImpl.getClassNameIdsSupplier(
+				new String[] {_CLASS_NAME_VALUE1, _CLASS_NAME_VALUE2});
+
+		Assert.assertArrayEquals(
+			new long[] {_CLASS_NAME_ID_1, _CLASS_NAME_ID_2},
+			classNameIdsSupplier1.get());
+
+		_assertSupplier(
+			() -> {
+				Supplier<long[]> classNameIdsSupplier2 =
+					_classNameLocalServiceImpl.getClassNameIdsSupplier(
+						new String[] {RandomTestUtil.randomString()});
+
+				Mockito.verify(
+					_classNamePersistence, Mockito.never()
+				).create(
+					Mockito.anyLong()
+				);
+
+				classNameIdsSupplier2.get();
 			});
 	}
 
@@ -172,6 +205,8 @@ public class ClassNameLocalServiceImplTest {
 	private static final Long _CLASS_NAME_ID_1 = 1L;
 
 	private static final Long _CLASS_NAME_ID_2 = 2L;
+
+	private static final long _CLASS_NAME_ID_3 = 3L;
 
 	private static final String _CLASS_NAME_VALUE1 = "com.liferay.test1";
 

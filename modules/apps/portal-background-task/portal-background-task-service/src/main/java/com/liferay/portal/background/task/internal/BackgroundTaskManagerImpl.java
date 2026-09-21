@@ -117,7 +117,7 @@ public class BackgroundTaskManagerImpl implements BackgroundTaskManager {
 
 		com.liferay.portal.background.task.model.BackgroundTask backgroundTask =
 			_backgroundTaskLocalService.amendBackgroundTask(
-				backgroundTaskId, taskContextMap, status, statusMessage,
+				backgroundTaskId, taskContextMap, null, status, statusMessage,
 				serviceContext);
 
 		if (backgroundTask == null) {
@@ -240,6 +240,12 @@ public class BackgroundTaskManagerImpl implements BackgroundTaskManager {
 
 		return new BackgroundTaskImpl(
 			_backgroundTaskLocalService.getBackgroundTask(backgroundTaskId));
+	}
+
+	@Override
+	public String getBackgroundTaskStatusJSON(long backgroundTaskId) {
+		return _backgroundTaskLocalService.getBackgroundTaskStatusJSON(
+			backgroundTaskId);
 	}
 
 	@Override
@@ -530,12 +536,6 @@ public class BackgroundTaskManagerImpl implements BackgroundTaskManager {
 
 		return _backgroundTaskLocalService.getBackgroundTasksCount(
 			groupIds, name, taskExecutorClassNames);
-	}
-
-	@Override
-	public String getBackgroundTaskStatusJSON(long backgroundTaskId) {
-		return _backgroundTaskLocalService.getBackgroundTaskStatusJSON(
-			backgroundTaskId);
 	}
 
 	@Override

@@ -6,13 +6,10 @@ import {
 	screen,
 	waitFor,
 } from '@testing-library/react';
-import {
-	columns,
-	EConfigInURLBehavior,
-	FrontendDataSet,
-	useSnapshots,
-} from '../FrontendDataSet';
+import {columns, FrontendDataSet, useSnapshots} from '../FrontendDataSet';
+import {EConfigInURLBehavior} from '@liferay/frontend-data-set-web';
 import {Routes} from 'shared/util/router';
+import {warmFrontendDataSet} from 'test/warm-frontend-data-set';
 
 jest.unmock('react-dom');
 
@@ -48,6 +45,8 @@ afterEach(() => {
 
 	lastProps = undefined;
 });
+
+beforeAll(warmFrontendDataSet);
 
 describe('columns.nameAndLinkRenderer', () => {
 	it('should generate an href that includes the channelId path segment', () => {
@@ -109,7 +108,7 @@ describe('useSnapshots', () => {
 		expect(result.current).toBeNull();
 	});
 
-	it('should return saved views as a flat list of snapshots', async () => {
+	it('should return saved views as a single group of snapshots', async () => {
 		mockFetch([
 			{
 				externalReferenceCode: 'erc-1',
@@ -125,9 +124,14 @@ describe('useSnapshots', () => {
 		await waitFor(() =>
 			expect(result.current).toEqual([
 				{
-					configuration: '{"filters":[]}',
-					erc: 'erc-1',
-					label: 'My View',
+					headerVisible: false,
+					items: [
+						{
+							configuration: '{"filters":[]}',
+							erc: 'erc-1',
+							label: 'My View',
+						},
+					],
 				},
 			])
 		);

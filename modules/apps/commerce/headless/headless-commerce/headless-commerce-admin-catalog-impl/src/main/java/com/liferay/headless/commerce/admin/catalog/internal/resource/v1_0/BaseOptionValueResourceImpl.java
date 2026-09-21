@@ -77,14 +77,14 @@ public abstract class BaseOptionValueResourceImpl
 	 * curl -X 'DELETE' 'http://localhost:8080/o/headless-commerce-admin-catalog/v1.0/optionValues/{id}'  -u 'test@liferay.com:test'
 	 */
 	@io.swagger.v3.oas.annotations.Operation(
-		description = "Deletes the option value identified by id. Returns 404 when the record is not found. Side effects -- Cascades through product option value listeners."
+		description = "Deletes the option value identified by ID. Returns 404 when the record is not found. Side effects -- Cascades through product option value listeners."
 	)
 	@io.swagger.v3.oas.annotations.Parameters(
 		value = {
 			@io.swagger.v3.oas.annotations.Parameter(
 				description = "Internal numeric identifier of the target resource. Counterpart to the `by-externalReferenceCode` path variant; identifiers are server-assigned and stable across the resource's lifetime.",
 				in = io.swagger.v3.oas.annotations.enums.ParameterIn.PATH,
-				name = "id"
+				name = "id", required = true
 			)
 		}
 	)
@@ -164,7 +164,7 @@ public abstract class BaseOptionValueResourceImpl
 			@io.swagger.v3.oas.annotations.Parameter(
 				description = "External reference code that addresses the target resource on the `by-externalReferenceCode` paths. The code is the integration-supplied idempotency key, unique within the resource scope; POST against this path is upsert (create when absent, replace when present).",
 				in = io.swagger.v3.oas.annotations.enums.ParameterIn.PATH,
-				name = "externalReferenceCode"
+				name = "externalReferenceCode", required = true
 			)
 		}
 	)
@@ -202,7 +202,7 @@ public abstract class BaseOptionValueResourceImpl
 			@io.swagger.v3.oas.annotations.Parameter(
 				description = "External reference code that addresses the target resource on the `by-externalReferenceCode` paths. The code is the integration-supplied idempotency key, unique within the resource scope; POST against this path is upsert (create when absent, replace when present).",
 				in = io.swagger.v3.oas.annotations.enums.ParameterIn.PATH,
-				name = "externalReferenceCode"
+				name = "externalReferenceCode", required = true
 			),
 			@io.swagger.v3.oas.annotations.Parameter(
 				description = "One-based page index. Combined with pageSize to paginate the result set; defaults to 1 when omitted.",
@@ -257,14 +257,14 @@ public abstract class BaseOptionValueResourceImpl
 	 * curl -X 'GET' 'http://localhost:8080/o/headless-commerce-admin-catalog/v1.0/options/{id}/optionValues'  -u 'test@liferay.com:test'
 	 */
 	@io.swagger.v3.oas.annotations.Operation(
-		description = "Lists option values for the option identified by option id. Returns 404 when the parent option id is not found."
+		description = "Lists option values for the option identified by option ID. Returns 404 when the parent option ID is not found."
 	)
 	@io.swagger.v3.oas.annotations.Parameters(
 		value = {
 			@io.swagger.v3.oas.annotations.Parameter(
 				description = "Internal numeric identifier of the target resource. Counterpart to the `by-externalReferenceCode` path variant; identifiers are server-assigned and stable across the resource's lifetime.",
 				in = io.swagger.v3.oas.annotations.enums.ParameterIn.PATH,
-				name = "id"
+				name = "id", required = true
 			),
 			@io.swagger.v3.oas.annotations.Parameter(
 				description = "One-based page index. Combined with pageSize to paginate the result set; defaults to 1 when omitted.",
@@ -317,14 +317,14 @@ public abstract class BaseOptionValueResourceImpl
 	 * curl -X 'GET' 'http://localhost:8080/o/headless-commerce-admin-catalog/v1.0/optionValues/{id}'  -u 'test@liferay.com:test'
 	 */
 	@io.swagger.v3.oas.annotations.Operation(
-		description = "Fetches the option value identified by id. Returns 404 when the id is not found."
+		description = "Fetches the option value identified by ID. Returns 404 when the ID is not found."
 	)
 	@io.swagger.v3.oas.annotations.Parameters(
 		value = {
 			@io.swagger.v3.oas.annotations.Parameter(
 				description = "Internal numeric identifier of the target resource. Counterpart to the `by-externalReferenceCode` path variant; identifiers are server-assigned and stable across the resource's lifetime.",
 				in = io.swagger.v3.oas.annotations.enums.ParameterIn.PATH,
-				name = "id"
+				name = "id", required = true
 			)
 		}
 	)
@@ -358,7 +358,7 @@ public abstract class BaseOptionValueResourceImpl
 			@io.swagger.v3.oas.annotations.Parameter(
 				description = "External reference code that addresses the target resource on the `by-externalReferenceCode` paths. The code is the integration-supplied idempotency key, unique within the resource scope; POST against this path is upsert (create when absent, replace when present).",
 				in = io.swagger.v3.oas.annotations.enums.ParameterIn.PATH,
-				name = "externalReferenceCode"
+				name = "externalReferenceCode", required = true
 			)
 		}
 	)
@@ -387,14 +387,14 @@ public abstract class BaseOptionValueResourceImpl
 	 * curl -X 'PATCH' 'http://localhost:8080/o/headless-commerce-admin-catalog/v1.0/optionValues/{id}' -d $'{"customFields": ___, "externalReferenceCode": ___, "key": ___, "name": ___, "priority": ___}' --header 'Content-Type: application/json' -u 'test@liferay.com:test'
 	 */
 	@io.swagger.v3.oas.annotations.Operation(
-		description = "Partially updates the option value identified by id. Returns 404 when the id is not found. Side effects -- Reindexes the option value."
+		description = "Partially updates the option value identified by ID. Returns 404 when the ID is not found. Side effects -- Reindexes the option value."
 	)
 	@io.swagger.v3.oas.annotations.Parameters(
 		value = {
 			@io.swagger.v3.oas.annotations.Parameter(
 				description = "Internal numeric identifier of the target resource. Counterpart to the `by-externalReferenceCode` path variant; identifiers are server-assigned and stable across the resource's lifetime.",
 				in = io.swagger.v3.oas.annotations.enums.ParameterIn.PATH,
-				name = "id"
+				name = "id", required = true
 			)
 		}
 	)
@@ -432,7 +432,7 @@ public abstract class BaseOptionValueResourceImpl
 			@io.swagger.v3.oas.annotations.Parameter(
 				description = "External reference code that addresses the target resource on the `by-externalReferenceCode` paths. The code is the integration-supplied idempotency key, unique within the resource scope; POST against this path is upsert (create when absent, replace when present).",
 				in = io.swagger.v3.oas.annotations.enums.ParameterIn.PATH,
-				name = "externalReferenceCode"
+				name = "externalReferenceCode", required = true
 			)
 		}
 	)
@@ -472,7 +472,7 @@ public abstract class BaseOptionValueResourceImpl
 			@io.swagger.v3.oas.annotations.Parameter(
 				description = "External reference code that addresses the target resource on the `by-externalReferenceCode` paths. The code is the integration-supplied idempotency key, unique within the resource scope; POST against this path is upsert (create when absent, replace when present).",
 				in = io.swagger.v3.oas.annotations.enums.ParameterIn.PATH,
-				name = "externalReferenceCode"
+				name = "externalReferenceCode", required = true
 			)
 		}
 	)
@@ -503,14 +503,14 @@ public abstract class BaseOptionValueResourceImpl
 	 * curl -X 'POST' 'http://localhost:8080/o/headless-commerce-admin-catalog/v1.0/options/{id}/optionValues' -d $'{"customFields": ___, "externalReferenceCode": ___, "key": ___, "name": ___, "priority": ___}' --header 'Content-Type: application/json' -u 'test@liferay.com:test'
 	 */
 	@io.swagger.v3.oas.annotations.Operation(
-		description = "Creates or updates an option value under the parent option identified by option id. POST is upsert by external reference code -- creates a new entity when the ERC is unknown, otherwise updates the existing one. Returns 404 when the parent option id is not found. Side effects -- Reindexes the option value."
+		description = "Creates or updates an option value under the parent option identified by option ID. POST is upsert by external reference code -- creates a new entity when the ERC is unknown, otherwise updates the existing one. Returns 404 when the parent option ID is not found. Side effects -- Reindexes the option value."
 	)
 	@io.swagger.v3.oas.annotations.Parameters(
 		value = {
 			@io.swagger.v3.oas.annotations.Parameter(
 				description = "Internal numeric identifier of the target resource. Counterpart to the `by-externalReferenceCode` path variant; identifiers are server-assigned and stable across the resource's lifetime.",
 				in = io.swagger.v3.oas.annotations.enums.ParameterIn.PATH,
-				name = "id"
+				name = "id", required = true
 			)
 		}
 	)
@@ -1347,4 +1347,4 @@ public abstract class BaseOptionValueResourceImpl
 		LogFactoryUtil.getLog(BaseOptionValueResourceImpl.class);
 
 }
-// LIFERAY-REST-BUILDER-HASH:-742595007
+// LIFERAY-REST-BUILDER-HASH:229782073

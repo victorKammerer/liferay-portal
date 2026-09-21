@@ -142,9 +142,9 @@ public interface SearchRequestBuilder {
 
 	public SearchRequestBuilder locale(Locale locale);
 
-	public SearchRequestBuilder modelIndexerClasses(Class<?>... classes);
-
 	public SearchRequestBuilder modelIndexerClassNames(String... classNames);
+
+	public SearchRequestBuilder modelIndexerClasses(Class<?>... classes);
 
 	public SearchRequestBuilder ownerUserId(Long userId);
 
@@ -187,6 +187,9 @@ public interface SearchRequestBuilder {
 	public SearchRequestBuilder statsRequests(StatsRequest... statsRequests);
 
 	public SearchRequestBuilder storedFields(String... storedFields);
+
+	public SearchRequestBuilder trackTotalHitsLimit(
+		Integer trackTotalHitsLimit);
 
 	public SearchRequestBuilder withFacetContext(
 		Consumer<FacetContext> facetContextConsumer);

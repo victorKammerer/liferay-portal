@@ -66,7 +66,8 @@ public class CPDefinitionOptionValueRelLocalServiceWrapper
 
 	@Override
 	public CPDefinitionOptionValueRel addCPDefinitionOptionValueRel(
-			long cpDefinitionOptionRelId, long cpInstanceId, String key,
+			String externalReferenceCode, long cpDefinitionOptionRelId,
+			long cpInstanceId, String key,
 			java.util.Map<java.util.Locale, String> nameMap,
 			boolean preselected, java.math.BigDecimal deltaPrice,
 			double priority, java.math.BigDecimal quantity,
@@ -76,22 +77,23 @@ public class CPDefinitionOptionValueRelLocalServiceWrapper
 
 		return _cpDefinitionOptionValueRelLocalService.
 			addCPDefinitionOptionValueRel(
-				cpDefinitionOptionRelId, cpInstanceId, key, nameMap,
-				preselected, deltaPrice, priority, quantity, unitOfMeasureKey,
-				serviceContext);
+				externalReferenceCode, cpDefinitionOptionRelId, cpInstanceId,
+				key, nameMap, preselected, deltaPrice, priority, quantity,
+				unitOfMeasureKey, serviceContext);
 	}
 
 	@Override
 	public CPDefinitionOptionValueRel addCPDefinitionOptionValueRel(
-			long cpDefinitionOptionRelId, String key,
-			java.util.Map<java.util.Locale, String> nameMap, double priority,
+			String externalReferenceCode, long cpDefinitionOptionRelId,
+			String key, java.util.Map<java.util.Locale, String> nameMap,
+			double priority,
 			com.liferay.portal.kernel.service.ServiceContext serviceContext)
 		throws com.liferay.portal.kernel.exception.PortalException {
 
 		return _cpDefinitionOptionValueRelLocalService.
 			addCPDefinitionOptionValueRel(
-				cpDefinitionOptionRelId, key, nameMap, priority,
-				serviceContext);
+				externalReferenceCode, cpDefinitionOptionRelId, key, nameMap,
+				priority, serviceContext);
 	}
 
 	/**
@@ -310,6 +312,16 @@ public class CPDefinitionOptionValueRelLocalServiceWrapper
 			fetchCPDefinitionOptionValueRel(cpDefinitionOptionRelId, key);
 	}
 
+	@Override
+	public CPDefinitionOptionValueRel
+		fetchCPDefinitionOptionValueRelByExternalReferenceCode(
+			String externalReferenceCode, long companyId) {
+
+		return _cpDefinitionOptionValueRelLocalService.
+			fetchCPDefinitionOptionValueRelByExternalReferenceCode(
+				externalReferenceCode, companyId);
+	}
+
 	/**
 	 * Returns the cp definition option value rel matching the UUID and group.
 	 *
@@ -381,6 +393,17 @@ public class CPDefinitionOptionValueRelLocalServiceWrapper
 
 		return _cpDefinitionOptionValueRelLocalService.
 			getCPDefinitionOptionValueRel(CPDefinitionOptionValueRelId);
+	}
+
+	@Override
+	public CPDefinitionOptionValueRel
+			getCPDefinitionOptionValueRelByExternalReferenceCode(
+				String externalReferenceCode, long companyId)
+		throws com.liferay.portal.kernel.exception.PortalException {
+
+		return _cpDefinitionOptionValueRelLocalService.
+			getCPDefinitionOptionValueRelByExternalReferenceCode(
+				externalReferenceCode, companyId);
 	}
 
 	/**
@@ -551,6 +574,18 @@ public class CPDefinitionOptionValueRelLocalServiceWrapper
 			getIndexableActionableDynamicQuery();
 	}
 
+	@Override
+	public CPDefinitionOptionValueRel getOrAddEmptyCPDefinitionOptionValueRel(
+			String externalReferenceCode, long companyId, long userId,
+			long cpDefinitionOptionRelId)
+		throws com.liferay.portal.kernel.exception.PortalException {
+
+		return _cpDefinitionOptionValueRelLocalService.
+			getOrAddEmptyCPDefinitionOptionValueRel(
+				externalReferenceCode, companyId, userId,
+				cpDefinitionOptionRelId);
+	}
+
 	/**
 	 * Returns the OSGi service identifier.
 	 *
@@ -696,6 +731,16 @@ public class CPDefinitionOptionValueRelLocalServiceWrapper
 	}
 
 	@Override
+	public CPDefinitionOptionValueRel updateExternalReferenceCode(
+			long cpDefinitionOptionValueRelId, String externalReferenceCode)
+		throws com.liferay.portal.kernel.exception.PortalException {
+
+		return _cpDefinitionOptionValueRelLocalService.
+			updateExternalReferenceCode(
+				cpDefinitionOptionValueRelId, externalReferenceCode);
+	}
+
+	@Override
 	public BasePersistence<?> getBasePersistence() {
 		return _cpDefinitionOptionValueRelLocalService.getBasePersistence();
 	}
@@ -738,4 +783,4 @@ public class CPDefinitionOptionValueRelLocalServiceWrapper
 		_cpDefinitionOptionValueRelLocalService;
 
 }
-// LIFERAY-SERVICE-BUILDER-HASH:-1095163404
+// LIFERAY-SERVICE-BUILDER-HASH:2048040018

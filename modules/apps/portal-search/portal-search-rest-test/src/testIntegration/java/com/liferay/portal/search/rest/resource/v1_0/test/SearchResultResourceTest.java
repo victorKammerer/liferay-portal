@@ -1517,38 +1517,6 @@ public class SearchResultResourceTest extends BaseSearchResultResourceTestCase {
 			"nested", "test", "test");
 	}
 
-	private void _testPostSearchPageWithoutHighlightConfiguration()
-		throws Exception {
-
-		if (Objects.equals(_searchEngine.getVendor(), "Solr")) {
-			return;
-		}
-
-		SearchPage<SearchResult> searchPage =
-			_postSearchPageWithSXPBlueprintConfiguration(
-				_user.getModelClassName(), _user.getFullName(),
-				_addSXPBlueprint(false));
-
-		List<SearchResult> searchResults = ListUtil.fromCollection(
-			searchPage.getItems());
-
-		Assert.assertFalse(searchResults.isEmpty());
-
-		int count = ListUtil.count(
-			searchResults,
-			searchResult -> Objects.equals(
-				searchResult.getTitle(), _user.getFullName()));
-
-		Assert.assertTrue(count >= 1);
-
-		Assert.assertEquals(
-			0,
-			ListUtil.count(
-				searchResults,
-				searchResult -> Objects.equals(
-					searchResult.getTitle(), _getUserHighlightedFullName())));
-	}
-
 	private void _testPostSearchPageWithSiteFacetConfiguration()
 		throws Exception {
 
@@ -1671,6 +1639,38 @@ public class SearchResultResourceTest extends BaseSearchResultResourceTestCase {
 			String.valueOf(_user.getUserId()));
 	}
 
+	private void _testPostSearchPageWithoutHighlightConfiguration()
+		throws Exception {
+
+		if (Objects.equals(_searchEngine.getVendor(), "Solr")) {
+			return;
+		}
+
+		SearchPage<SearchResult> searchPage =
+			_postSearchPageWithSXPBlueprintConfiguration(
+				_user.getModelClassName(), _user.getFullName(),
+				_addSXPBlueprint(false));
+
+		List<SearchResult> searchResults = ListUtil.fromCollection(
+			searchPage.getItems());
+
+		Assert.assertFalse(searchResults.isEmpty());
+
+		int count = ListUtil.count(
+			searchResults,
+			searchResult -> Objects.equals(
+				searchResult.getTitle(), _user.getFullName()));
+
+		Assert.assertTrue(count >= 1);
+
+		Assert.assertEquals(
+			0,
+			ListUtil.count(
+				searchResults,
+				searchResult -> Objects.equals(
+					searchResult.getTitle(), _getUserHighlightedFullName())));
+	}
+
 	private void _testPostSearchPageZeroResults() throws Exception {
 		SearchPage<SearchResult> searchPage = _postSearchPage(
 			HashMapBuilder.put(
@@ -1702,7 +1702,8 @@ public class SearchResultResourceTest extends BaseSearchResultResourceTestCase {
 		"extension", "dateDisplay", "dateExpiration", "datePublish",
 		"dateReview", "dueDate", "folderId",
 		"objectDefinitionExternalReferenceCode",
-		"objectFolderExternalReferenceCode", "rootDescendantNode"
+		"objectFolderExternalReferenceCode", "rootDescendantNode", "treePath",
+		"type"
 	};
 
 	private AssetCategory _assetCategory;

@@ -17,6 +17,7 @@ import com.liferay.document.library.kernel.model.DLFileEntryType;
 import com.liferay.document.library.kernel.service.DLFileEntryLocalService;
 import com.liferay.document.library.kernel.service.DLFileEntryTypeLocalService;
 import com.liferay.headless.commerce.admin.catalog.dto.v1_0.Attachment;
+import com.liferay.headless.commerce.admin.catalog.internal.util.FileEntryUtil;
 import com.liferay.headless.commerce.core.util.LanguageUtils;
 import com.liferay.petra.function.transform.TransformUtil;
 import com.liferay.petra.string.StringPool;
@@ -46,7 +47,10 @@ import org.osgi.service.component.annotations.Reference;
  * @author Igor Beslic
  */
 @Component(
-	property = "dto.class.name=com.liferay.commerce.product.model.CPAttachmentFileEntry",
+	property = {
+		"default=true",
+		"dto.class.name=com.liferay.commerce.product.model.CPAttachmentFileEntry"
+	},
 	service = DTOConverter.class
 )
 public class AttachmentDTOConverter
@@ -69,6 +73,8 @@ public class AttachmentDTOConverter
 
 		return new Attachment() {
 			{
+				setAttachment(
+					() -> FileEntryUtil.getBase64EncodedContent(fileEntry));
 				setCdnEnabled(cpAttachmentFileEntry::isCDNEnabled);
 				setCdnURL(cpAttachmentFileEntry::getCDNURL);
 				setCustomFields(

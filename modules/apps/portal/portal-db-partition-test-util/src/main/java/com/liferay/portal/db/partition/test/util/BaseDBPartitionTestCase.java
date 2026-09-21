@@ -204,12 +204,6 @@ public abstract class BaseDBPartitionTestCase {
 			" (testColumn bigint primary key, companyId bigint)";
 	}
 
-	protected static String getExportedPartitionName(long companyId) {
-		return ReflectionTestUtil.invoke(
-			DBPartitionUtil.class, "_getExportedPartitionName",
-			new Class<?>[] {long.class}, companyId);
-	}
-
 	protected static String getPartitionName(long companyId) {
 		if (companyId == PortalInstancePool.getDefaultCompanyId()) {
 			return defaultPartitionName;
@@ -220,7 +214,7 @@ public abstract class BaseDBPartitionTestCase {
 
 	protected static void importDBPartitions() throws Exception {
 		for (long companyId : COMPANY_IDS) {
-			DBPartitionUtil.importDBPartition(companyId);
+			DBPartitionUtil.importDBPartition(companyId, null, null);
 		}
 	}
 

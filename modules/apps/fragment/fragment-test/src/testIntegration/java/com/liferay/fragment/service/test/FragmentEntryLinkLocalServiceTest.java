@@ -470,6 +470,32 @@ public class FragmentEntryLinkLocalServiceTest {
 	}
 
 	@Test
+	public void testGetFragmentEntryLinksBySegmentsExperienceIdWithEmptyArray()
+		throws Exception {
+
+		_addFragmentEntryLink(
+			_fragmentEntry, null, _defaultSegmentsExperienceId,
+			_layout.getPlid(), StringPool.BLANK, 0, null);
+
+		List<FragmentEntryLink> fragmentEntryLinks =
+			_fragmentEntryLinkLocalService.
+				getFragmentEntryLinksBySegmentsExperienceId(
+					_group.getGroupId(), new long[0], _layout.getPlid());
+
+		Assert.assertTrue(
+			fragmentEntryLinks.toString(), fragmentEntryLinks.isEmpty());
+
+		List<FragmentEntryLink> notDeletedFragmentEntryLinks =
+			_fragmentEntryLinkLocalService.
+				getFragmentEntryLinksBySegmentsExperienceId(
+					_group.getGroupId(), new long[0], _layout.getPlid(), false);
+
+		Assert.assertTrue(
+			notDeletedFragmentEntryLinks.toString(),
+			notDeletedFragmentEntryLinks.isEmpty());
+	}
+
+	@Test
 	public void testGetLayoutFragmentEntryLinksByFragmentEntry()
 		throws Exception {
 
@@ -621,52 +647,6 @@ public class FragmentEntryLinkLocalServiceTest {
 			fragmentEntryLinks.toString(), 2, fragmentEntryLinks.size());
 		Assert.assertEquals(fragmentEntryLink2, fragmentEntryLinks.get(0));
 		Assert.assertEquals(fragmentEntryLink1, fragmentEntryLinks.get(1));
-	}
-
-	@Test
-	public void testUpdateFragmentEntryLinkWithoutPropagation()
-		throws Exception {
-
-		_configurationProvider.saveCompanyConfiguration(
-			FragmentServiceConfiguration.class, _group.getCompanyId(),
-			HashMapDictionaryBuilder.<String, Object>put(
-				"propagateChanges", false
-			).build());
-
-		String configuration = _read("configuration-light.json");
-
-		FragmentEntry fragmentEntry = _addFragmentEntry(
-			_group.getGroupId(), _fragmentCollection.getFragmentCollectionId(),
-			"Fragment Name", "<div>test</div>", configuration,
-			FragmentConstants.TYPE_COMPONENT, _serviceContext);
-
-		FragmentEntryLink fragmentEntryLink = _addFragmentEntryLink(
-			fragmentEntry, null, _defaultSegmentsExperienceId,
-			_layout.getPlid(), _read("editable-values-light-modified.json"), 0,
-			null);
-
-		_updateFragmentEntry(
-			fragmentEntry, StringPool.BLANK, StringUtil.randomString(),
-			StringUtil.randomString(), _read("configuration-dark.json"));
-
-		fragmentEntryLink = _fragmentEntryLinkLocalService.getFragmentEntryLink(
-			fragmentEntryLink.getFragmentEntryLinkId());
-
-		Assert.assertEquals(
-			fragmentEntry.getHtml(), fragmentEntryLink.getHtml());
-		Assert.assertEquals(fragmentEntry.getCss(), fragmentEntryLink.getCss());
-		Assert.assertEquals(fragmentEntry.getJs(), fragmentEntryLink.getJs());
-		Assert.assertEquals(
-			fragmentEntry.getConfiguration(),
-			fragmentEntryLink.getConfiguration());
-
-		Assert.assertEquals(
-			configuration, fragmentEntryLink.getConfiguration());
-
-		Assert.assertEquals(
-			_objectMapper.readTree(
-				_read("expected-editable-values-light-modified.json")),
-			_objectMapper.readTree(fragmentEntryLink.getEditableValues()));
 	}
 
 	@Test
@@ -888,6 +868,52 @@ public class FragmentEntryLinkLocalServiceTest {
 				_read(
 					"expected-updated-editable-values-update-latest-changes." +
 						"json")),
+			_objectMapper.readTree(fragmentEntryLink.getEditableValues()));
+	}
+
+	@Test
+	public void testUpdateFragmentEntryLinkWithoutPropagation()
+		throws Exception {
+
+		_configurationProvider.saveCompanyConfiguration(
+			FragmentServiceConfiguration.class, _group.getCompanyId(),
+			HashMapDictionaryBuilder.<String, Object>put(
+				"propagateChanges", false
+			).build());
+
+		String configuration = _read("configuration-light.json");
+
+		FragmentEntry fragmentEntry = _addFragmentEntry(
+			_group.getGroupId(), _fragmentCollection.getFragmentCollectionId(),
+			"Fragment Name", "<div>test</div>", configuration,
+			FragmentConstants.TYPE_COMPONENT, _serviceContext);
+
+		FragmentEntryLink fragmentEntryLink = _addFragmentEntryLink(
+			fragmentEntry, null, _defaultSegmentsExperienceId,
+			_layout.getPlid(), _read("editable-values-light-modified.json"), 0,
+			null);
+
+		_updateFragmentEntry(
+			fragmentEntry, StringPool.BLANK, StringUtil.randomString(),
+			StringUtil.randomString(), _read("configuration-dark.json"));
+
+		fragmentEntryLink = _fragmentEntryLinkLocalService.getFragmentEntryLink(
+			fragmentEntryLink.getFragmentEntryLinkId());
+
+		Assert.assertEquals(
+			fragmentEntry.getHtml(), fragmentEntryLink.getHtml());
+		Assert.assertEquals(fragmentEntry.getCss(), fragmentEntryLink.getCss());
+		Assert.assertEquals(fragmentEntry.getJs(), fragmentEntryLink.getJs());
+		Assert.assertEquals(
+			fragmentEntry.getConfiguration(),
+			fragmentEntryLink.getConfiguration());
+
+		Assert.assertEquals(
+			configuration, fragmentEntryLink.getConfiguration());
+
+		Assert.assertEquals(
+			_objectMapper.readTree(
+				_read("expected-editable-values-light-modified.json")),
 			_objectMapper.readTree(fragmentEntryLink.getEditableValues()));
 	}
 

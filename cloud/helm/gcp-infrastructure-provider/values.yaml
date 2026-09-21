@@ -19,6 +19,10 @@ filestore:
     storageClassName: filestore-sc
     tier: standard
 gateway:
+    accessControl:
+        allowedCIDRs: []
+        enabled: false
+        gateways: []
     enabled: true
     internetFacing: true
     namespace: envoy-gateway-system
@@ -37,6 +41,9 @@ liferay-dxp-operator:
         enabled: true
         mountPath: /marketplace
     namespaceOverride: dxp-operator-system
+    podSecurityContext:
+        fsGroup: 1000
+        fsGroupChangePolicy: OnRootMismatch
 liferay-subchart-backup-controller:
     enabled: true
     serviceAccountName: backup-controller

@@ -16,6 +16,7 @@ import com.liferay.change.tracking.spi.history.CTCollectionHistoryProvider;
 import com.liferay.change.tracking.spi.history.CTCollectionHistoryProviderRegistry;
 import com.liferay.petra.function.UnsafeConsumer;
 import com.liferay.petra.string.StringBundler;
+import com.liferay.petra.string.StringPool;
 import com.liferay.portal.events.ServicePreAction;
 import com.liferay.portal.events.ThemeServicePreAction;
 import com.liferay.portal.kernel.change.tracking.CTCollectionThreadLocal;
@@ -23,6 +24,7 @@ import com.liferay.portal.kernel.model.BaseModel;
 import com.liferay.portal.kernel.search.BooleanClause;
 import com.liferay.portal.kernel.search.BooleanClauseOccur;
 import com.liferay.portal.kernel.search.BooleanQuery;
+import com.liferay.portal.kernel.search.Document;
 import com.liferay.portal.kernel.search.Field;
 import com.liferay.portal.kernel.search.Indexer;
 import com.liferay.portal.kernel.search.Sort;
@@ -68,77 +70,6 @@ import org.osgi.service.component.annotations.ServiceScope;
 public class CTEntryResourceImpl extends BaseCTEntryResourceImpl {
 
 	@Override
-	public Page<CTEntry> getCtCollectionCTEntriesPage(
-			Long ctCollectionId, String search, Boolean showHideable,
-			Filter filter, Pagination pagination, Sort[] sorts)
-		throws Exception {
-
-		return SearchUtil.search(
-			Collections.emptyMap(),
-			booleanQuery -> booleanQuery.getPreBooleanFilter(), filter,
-			com.liferay.change.tracking.model.CTEntry.class.getName(), search,
-			pagination,
-			queryConfig -> queryConfig.setSelectedFieldNames(
-				Field.ENTRY_CLASS_PK, Field.UID),
-			searchContext -> {
-				searchContext.setAttribute("ctCollectionId", ctCollectionId);
-				searchContext.setAttribute("showHideable", showHideable);
-				searchContext.setCompanyId(contextCompany.getCompanyId());
-
-				if (Validator.isNotNull(search)) {
-					searchContext.setKeywords(search);
-				}
-			},
-			sorts,
-			document -> {
-				long ctEntryId = GetterUtil.getLong(
-					document.get(Field.ENTRY_CLASS_PK));
-
-				com.liferay.change.tracking.model.CTEntry
-					serviceBuilderCTEntry = _ctEntryLocalService.fetchCTEntry(
-						ctEntryId);
-
-				if (serviceBuilderCTEntry == null) {
-					_indexer.delete(
-						contextCompany.getCompanyId(), document.get(Field.UID));
-
-					return null;
-				}
-
-				return _ctEntryDTOConverter.toDTO(
-					_getDTOConverterContext(serviceBuilderCTEntry),
-					serviceBuilderCTEntry);
-			});
-	}
-
-	@Override
-	public CTEntry
-			getCtCollectionCTEntryByModelClassNameByModelClassPkModelClassPK(
-				Long ctCollectionId, Long modelClassNameId, Long modelClassPK)
-		throws Exception {
-
-		CTCollectionHistoryProvider<?> ctCollectionHistoryProvider =
-			_ctCollectionHistoryProviderRegistry.getCTCollectionHistoryProvider(
-				modelClassNameId);
-
-		com.liferay.change.tracking.model.CTEntry serviceBuilderCTEntry =
-			ctCollectionHistoryProvider.getCTEntry(
-				ctCollectionId, modelClassNameId, modelClassPK);
-
-		if (serviceBuilderCTEntry == null) {
-			throw new NoSuchEntryException(
-				StringBundler.concat(
-					"No change tracking entry exists with change tracking ",
-					"collection ID ", ctCollectionId, ", model class name ID ",
-					modelClassNameId, ", and model class PK ", modelClassPK));
-		}
-
-		return _ctEntryDTOConverter.toDTO(
-			_getDTOConverterContext(serviceBuilderCTEntry),
-			serviceBuilderCTEntry);
-	}
-
-	@Override
 	public Page<CTEntry> getCTEntriesHistoryPage(
 			Long classNameId, Long classPK, String search, Long siteId,
 			Filter filter, Pagination pagination, Sort[] sorts)
@@ -157,8 +88,7 @@ public class CTEntryResourceImpl extends BaseCTEntryResourceImpl {
 			booleanQuery -> booleanQuery.getPreBooleanFilter(), filter,
 			com.liferay.change.tracking.model.CTEntry.class.getName(), search,
 			pagination,
-			queryConfig -> queryConfig.setSelectedFieldNames(
-				Field.ENTRY_CLASS_PK),
+			queryConfig -> queryConfig.setSelectedFieldNames(StringPool.STAR),
 			searchContext -> {
 				CTCollectionHistoryProvider<?> ctCollectionHistoryProvider =
 					_ctCollectionHistoryProviderRegistry.
@@ -213,12 +143,87 @@ public class CTEntryResourceImpl extends BaseCTEntryResourceImpl {
 			},
 			sorts,
 			document -> _toCTEntry(
-				GetterUtil.getLong(document.get(Field.ENTRY_CLASS_PK))));
+				GetterUtil.getLong(document.get(Field.ENTRY_CLASS_PK)),
+				document));
 	}
 
 	@Override
 	public CTEntry getCTEntry(Long ctEntryId) throws Exception {
-		return _toCTEntry(ctEntryId);
+		return _toCTEntry(ctEntryId, null);
+	}
+
+	@Override
+	public Page<CTEntry> getCtCollectionCTEntriesPage(
+			Long ctCollectionId, String search, Boolean showHideable,
+			Filter filter, Pagination pagination, Sort[] sorts)
+		throws Exception {
+
+		return SearchUtil.search(
+			Collections.emptyMap(),
+			booleanQuery -> booleanQuery.getPreBooleanFilter(), filter,
+			com.liferay.change.tracking.model.CTEntry.class.getName(), search,
+			pagination,
+			queryConfig -> queryConfig.setSelectedFieldNames(StringPool.STAR),
+			searchContext -> {
+				searchContext.setAttribute("ctCollectionId", ctCollectionId);
+				searchContext.setAttribute("showHideable", showHideable);
+				searchContext.setCompanyId(contextCompany.getCompanyId());
+
+				if (Validator.isNotNull(search)) {
+					searchContext.setKeywords(search);
+				}
+			},
+			sorts,
+			document -> {
+				long ctEntryId = GetterUtil.getLong(
+					document.get(Field.ENTRY_CLASS_PK));
+
+				com.liferay.change.tracking.model.CTEntry
+					serviceBuilderCTEntry = _ctEntryLocalService.fetchCTEntry(
+						ctEntryId);
+
+				if (serviceBuilderCTEntry == null) {
+					_indexer.delete(
+						contextCompany.getCompanyId(), document.get(Field.UID));
+
+					return null;
+				}
+
+				DefaultDTOConverterContext dtoConverterContext =
+					_getDTOConverterContext(serviceBuilderCTEntry);
+
+				dtoConverterContext.setAttribute("document", document);
+
+				return _ctEntryDTOConverter.toDTO(
+					dtoConverterContext, serviceBuilderCTEntry);
+			});
+	}
+
+	@Override
+	public CTEntry
+			getCtCollectionCTEntryByModelClassNameByModelClassPkModelClassPK(
+				Long ctCollectionId, Long modelClassNameId, Long modelClassPK)
+		throws Exception {
+
+		CTCollectionHistoryProvider<?> ctCollectionHistoryProvider =
+			_ctCollectionHistoryProviderRegistry.getCTCollectionHistoryProvider(
+				modelClassNameId);
+
+		com.liferay.change.tracking.model.CTEntry serviceBuilderCTEntry =
+			ctCollectionHistoryProvider.getCTEntry(
+				ctCollectionId, modelClassNameId, modelClassPK);
+
+		if (serviceBuilderCTEntry == null) {
+			throw new NoSuchEntryException(
+				StringBundler.concat(
+					"No change tracking entry exists with change tracking ",
+					"collection ID ", ctCollectionId, ", model class name ID ",
+					modelClassNameId, ", and model class PK ", modelClassPK));
+		}
+
+		return _ctEntryDTOConverter.toDTO(
+			_getDTOConverterContext(serviceBuilderCTEntry),
+			serviceBuilderCTEntry);
 	}
 
 	@Override
@@ -339,13 +344,19 @@ public class CTEntryResourceImpl extends BaseCTEntryResourceImpl {
 			contextHttpServletRequest, httpServletResponse);
 	}
 
-	private CTEntry _toCTEntry(Long ctEntryId) throws Exception {
+	private CTEntry _toCTEntry(Long ctEntryId, Document document)
+		throws Exception {
+
 		com.liferay.change.tracking.model.CTEntry serviceBuilderCTEntry =
 			_ctEntryLocalService.getCTEntry(ctEntryId);
 
+		DefaultDTOConverterContext dtoConverterContext =
+			_getDTOConverterContext(serviceBuilderCTEntry);
+
+		dtoConverterContext.setAttribute("document", document);
+
 		return _ctEntryDTOConverter.toDTO(
-			_getDTOConverterContext(serviceBuilderCTEntry),
-			serviceBuilderCTEntry);
+			dtoConverterContext, serviceBuilderCTEntry);
 	}
 
 	private static final EntityModel _entityModel = new CTEntryEntityModel();

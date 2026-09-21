@@ -507,7 +507,7 @@ public class PortletPreferencesPostUpgradeDataCleanupProcessTest
 					messages.contains(
 						"PortletPreferencesPostUpgradeDataCleanupProcess " +
 							"cannot be executed because there are modules " +
-								"with unsatisfied references"));
+								"that are inactive"));
 			},
 			() -> {
 				Bundle bundle = bundleAtomicReference.get();
@@ -523,15 +523,15 @@ public class PortletPreferencesPostUpgradeDataCleanupProcessTest
 	}
 
 	@Override
-	protected Object[] getPostUpgradeDataCleanupProcessArguments() {
-		return new Object[] {connection, _deletePortlets, _portletLocalService};
-	}
-
-	@Override
 	protected Class<?>[] getPostUpgradeDataCleanupProcessArgumentTypes() {
 		return new Class<?>[] {
 			Connection.class, boolean.class, PortletLocalService.class
 		};
+	}
+
+	@Override
+	protected Object[] getPostUpgradeDataCleanupProcessArguments() {
+		return new Object[] {connection, _deletePortlets, _portletLocalService};
 	}
 
 	@Override

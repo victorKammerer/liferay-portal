@@ -79,6 +79,7 @@ public class SearchRequestImpl implements SearchRequest, Serializable {
 		_size = searchRequestImpl._size;
 		_sorts.addAll(searchRequestImpl._sorts);
 		_statsRequests.addAll(searchRequestImpl._statsRequests);
+		_trackTotalHitsLimit = searchRequestImpl._trackTotalHitsLimit;
 	}
 
 	public void addAggregation(Aggregation aggregation) {
@@ -222,6 +223,11 @@ public class SearchRequestImpl implements SearchRequest, Serializable {
 			Arrays.asList(queryConfig.getSelectedIndexNames()));
 	}
 
+	@Override
+	public List<String> getModelIndexerClassNames() {
+		return _modelIndexerClassNames;
+	}
+
 	/**
 	 * @deprecated As of Athanasius (7.3.x), replaced by {@link
 	 *             #getModelIndexerClassNames()}
@@ -230,11 +236,6 @@ public class SearchRequestImpl implements SearchRequest, Serializable {
 	@Override
 	public List<Class<?>> getModelIndexerClasses() {
 		return Collections.emptyList();
-	}
-
-	@Override
-	public List<String> getModelIndexerClassNames() {
-		return _modelIndexerClassNames;
 	}
 
 	@Override
@@ -303,6 +304,11 @@ public class SearchRequestImpl implements SearchRequest, Serializable {
 	@Override
 	public String[] getStoredFields() {
 		return _storedFields;
+	}
+
+	@Override
+	public Integer getTrackTotalHitsLimit() {
+		return _trackTotalHitsLimit;
 	}
 
 	@Override
@@ -488,6 +494,10 @@ public class SearchRequestImpl implements SearchRequest, Serializable {
 		_storedFields = storedFields;
 	}
 
+	public void setTrackTotalHitsLimit(Integer trackTotalHitsLimit) {
+		_trackTotalHitsLimit = trackTotalHitsLimit;
+	}
+
 	private final Map<String, Aggregation> _aggregationsMap =
 		new LinkedHashMap<>();
 	private boolean _basicFacetSelection;
@@ -524,5 +534,6 @@ public class SearchRequestImpl implements SearchRequest, Serializable {
 	private final List<Sort> _sorts = new ArrayList<>();
 	private final List<StatsRequest> _statsRequests = new ArrayList<>();
 	private String[] _storedFields;
+	private Integer _trackTotalHitsLimit;
 
 }

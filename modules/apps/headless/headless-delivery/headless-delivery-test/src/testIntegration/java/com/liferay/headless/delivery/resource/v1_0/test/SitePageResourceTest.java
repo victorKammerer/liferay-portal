@@ -295,7 +295,7 @@ public class SitePageResourceTest extends BaseSitePageResourceTestCase {
 
 	@Override
 	@Test
-	@TestInfo({"LPD-56213", "LPD-94135", "LPD-99363"})
+	@TestInfo({"LPD-56213", "LPD-94135", "LPD-99363", "LPD-103697"})
 	public void testGetSiteSitePageRenderedPage() throws Exception {
 		_testGetSiteSitePageRenderedPage();
 		_testGetSiteSitePageRenderedPageInRequestedLocale();
@@ -850,6 +850,7 @@ public class SitePageResourceTest extends BaseSitePageResourceTestCase {
 		Assert.assertTrue(pageHTML, pageHTML.contains("<body"));
 		Assert.assertTrue(pageHTML, pageHTML.contains("</body>"));
 		Assert.assertTrue(pageHTML, pageHTML.contains("</html>"));
+		Assert.assertFalse(pageHTML, pageHTML.contains("http://null:0"));
 	}
 
 	private void _testGetSiteSitePageRenderedPageInRequestedLocale()
@@ -953,34 +954,6 @@ public class SitePageResourceTest extends BaseSitePageResourceTestCase {
 				StringBundler.concat(
 					"getPortalURL: () => 'http://", virtualHostname, ":", port,
 					"'")));
-	}
-
-	private void _testGetSiteSitePagesPagePageSet() throws Exception {
-		LayoutTestUtil.addTypeContentLayout(testGroup);
-
-		ServiceContext serviceContext =
-			ServiceContextTestUtil.getServiceContext(
-				testGroup.getGroupId(), TestPropsValues.getUserId());
-
-		Layout layout = _layoutLocalService.addLayout(
-			null, serviceContext.getUserId(), testGroup.getGroupId(), false,
-			LayoutConstants.DEFAULT_PARENT_LAYOUT_ID,
-			RandomTestUtil.randomString(), StringPool.BLANK, StringPool.BLANK,
-			LayoutConstants.TYPE_NODE, false, StringPool.BLANK, serviceContext);
-
-		_layoutLocalService.addLayout(
-			null, serviceContext.getUserId(), testGroup.getGroupId(), false,
-			layout.getLayoutId(), RandomTestUtil.randomString(),
-			StringPool.BLANK, StringPool.BLANK, LayoutConstants.TYPE_PORTLET,
-			false, StringPool.BLANK, serviceContext);
-
-		Page<SitePage> sitePagePage = sitePageResource.getSiteSitePagesPage(
-			testGroup.getGroupId(), null, null, null, null, null);
-
-		List<String> pageTypes = TransformUtil.transform(
-			sitePagePage.getItems(), SitePage::getPageType);
-
-		Assert.assertTrue(pageTypes.contains("Page Set"));
 	}
 
 	private void _testGetSiteSitePageWithLocalization() throws Exception {
@@ -1144,6 +1117,34 @@ public class SitePageResourceTest extends BaseSitePageResourceTestCase {
 
 			Assert.assertEquals("NOT_FOUND", problem.getStatus());
 		}
+	}
+
+	private void _testGetSiteSitePagesPagePageSet() throws Exception {
+		LayoutTestUtil.addTypeContentLayout(testGroup);
+
+		ServiceContext serviceContext =
+			ServiceContextTestUtil.getServiceContext(
+				testGroup.getGroupId(), TestPropsValues.getUserId());
+
+		Layout layout = _layoutLocalService.addLayout(
+			null, serviceContext.getUserId(), testGroup.getGroupId(), false,
+			LayoutConstants.DEFAULT_PARENT_LAYOUT_ID,
+			RandomTestUtil.randomString(), StringPool.BLANK, StringPool.BLANK,
+			LayoutConstants.TYPE_NODE, false, StringPool.BLANK, serviceContext);
+
+		_layoutLocalService.addLayout(
+			null, serviceContext.getUserId(), testGroup.getGroupId(), false,
+			layout.getLayoutId(), RandomTestUtil.randomString(),
+			StringPool.BLANK, StringPool.BLANK, LayoutConstants.TYPE_PORTLET,
+			false, StringPool.BLANK, serviceContext);
+
+		Page<SitePage> sitePagePage = sitePageResource.getSiteSitePagesPage(
+			testGroup.getGroupId(), null, null, null, null, null);
+
+		List<String> pageTypes = TransformUtil.transform(
+			sitePagePage.getItems(), SitePage::getPageType);
+
+		Assert.assertTrue(pageTypes.contains("Page Set"));
 	}
 
 	private void _testPostSiteSitePageFailureDuplicateFriendlyURL()
@@ -2323,78 +2324,6 @@ public class SitePageResourceTest extends BaseSitePageResourceTestCase {
 			expectedTaxonomyCategoryBriefs, inputTaxonomyCategoryBriefs);
 	}
 
-	private void _testPostSiteSitePageSuccessTaxonomyCategoryBriefs(
-			TaxonomyCategoryBrief[] expectedTaxonomyCategoryBriefs,
-			TaxonomyCategoryBrief[] inputTaxonomyCategoryBriefs)
-		throws Exception {
-
-		SitePage randomSitePage = randomSitePage();
-
-		randomSitePage.setTaxonomyCategoryBriefs(inputTaxonomyCategoryBriefs);
-
-		SitePage postSitePage = testPostSiteSitePage_addSitePage(
-			randomSitePage);
-
-		Layout layout = _layoutLocalService.fetchLayout(postSitePage.getId());
-
-		Assert.assertNotNull(layout);
-
-		AssetEntry assetEntry = _assetEntryLocalService.fetchEntry(
-			Layout.class.getName(), layout.getPlid());
-
-		long[] assetCategoryIds =
-			_assetEntryAssetCategoryRelLocalService.getAssetCategoryPrimaryKeys(
-				assetEntry.getEntryId());
-
-		Assert.assertEquals(
-			Arrays.toString(assetCategoryIds),
-			expectedTaxonomyCategoryBriefs.length, assetCategoryIds.length);
-
-		for (long assetCategoryId : assetCategoryIds) {
-			AssetCategory assetCategory =
-				_assetCategoryLocalService.fetchAssetCategory(assetCategoryId);
-
-			TaxonomyCategoryBrief[] filteredTaxonomyCategoryBriefs =
-				ArrayUtil.filter(
-					expectedTaxonomyCategoryBriefs,
-					taxonomyCategoryBrief -> {
-						TaxonomyCategoryReference taxonomyCategoryReference =
-							taxonomyCategoryBrief.
-								getTaxonomyCategoryReference();
-
-						Group group = _groupLocalService.fetchGroup(
-							assetCategory.getGroupId());
-
-						if (Objects.equals(
-								taxonomyCategoryReference.
-									getExternalReferenceCode(),
-								assetCategory.getExternalReferenceCode()) &&
-							(((taxonomyCategoryReference.getSiteKey() ==
-								null) &&
-							  (layout.getGroupId() ==
-								  assetCategory.getGroupId())) ||
-							 ((taxonomyCategoryReference.getSiteKey() !=
-								 null) &&
-							  Objects.equals(
-								  taxonomyCategoryReference.getSiteKey(),
-								  group.getGroupKey())))) {
-
-							return true;
-						}
-
-						return false;
-					});
-
-			Assert.assertEquals(
-				Arrays.toString(filteredTaxonomyCategoryBriefs), 1,
-				filteredTaxonomyCategoryBriefs.length);
-		}
-
-		_assertEqualsIgnoringOrder(
-			expectedTaxonomyCategoryBriefs,
-			postSitePage.getTaxonomyCategoryBriefs());
-	}
-
 	private void _testPostSiteSitePageSuccessTaxonomyCategoryBriefSitePageSiteSiteKeyNonnull()
 		throws Exception {
 
@@ -2500,6 +2429,78 @@ public class SitePageResourceTest extends BaseSitePageResourceTestCase {
 
 		_testPostSiteSitePageSuccessTaxonomyCategoryBriefs(
 			expectedTaxonomyCategoryBriefs, inputTaxonomyCategoryBriefs);
+	}
+
+	private void _testPostSiteSitePageSuccessTaxonomyCategoryBriefs(
+			TaxonomyCategoryBrief[] expectedTaxonomyCategoryBriefs,
+			TaxonomyCategoryBrief[] inputTaxonomyCategoryBriefs)
+		throws Exception {
+
+		SitePage randomSitePage = randomSitePage();
+
+		randomSitePage.setTaxonomyCategoryBriefs(inputTaxonomyCategoryBriefs);
+
+		SitePage postSitePage = testPostSiteSitePage_addSitePage(
+			randomSitePage);
+
+		Layout layout = _layoutLocalService.fetchLayout(postSitePage.getId());
+
+		Assert.assertNotNull(layout);
+
+		AssetEntry assetEntry = _assetEntryLocalService.fetchEntry(
+			Layout.class.getName(), layout.getPlid());
+
+		long[] assetCategoryIds =
+			_assetEntryAssetCategoryRelLocalService.getAssetCategoryPrimaryKeys(
+				assetEntry.getEntryId());
+
+		Assert.assertEquals(
+			Arrays.toString(assetCategoryIds),
+			expectedTaxonomyCategoryBriefs.length, assetCategoryIds.length);
+
+		for (long assetCategoryId : assetCategoryIds) {
+			AssetCategory assetCategory =
+				_assetCategoryLocalService.fetchAssetCategory(assetCategoryId);
+
+			TaxonomyCategoryBrief[] filteredTaxonomyCategoryBriefs =
+				ArrayUtil.filter(
+					expectedTaxonomyCategoryBriefs,
+					taxonomyCategoryBrief -> {
+						TaxonomyCategoryReference taxonomyCategoryReference =
+							taxonomyCategoryBrief.
+								getTaxonomyCategoryReference();
+
+						Group group = _groupLocalService.fetchGroup(
+							assetCategory.getGroupId());
+
+						if (Objects.equals(
+								taxonomyCategoryReference.
+									getExternalReferenceCode(),
+								assetCategory.getExternalReferenceCode()) &&
+							(((taxonomyCategoryReference.getSiteKey() ==
+								null) &&
+							  (layout.getGroupId() ==
+								  assetCategory.getGroupId())) ||
+							 ((taxonomyCategoryReference.getSiteKey() !=
+								 null) &&
+							  Objects.equals(
+								  taxonomyCategoryReference.getSiteKey(),
+								  group.getGroupKey())))) {
+
+							return true;
+						}
+
+						return false;
+					});
+
+			Assert.assertEquals(
+				Arrays.toString(filteredTaxonomyCategoryBriefs), 1,
+				filteredTaxonomyCategoryBriefs.length);
+		}
+
+		_assertEqualsIgnoringOrder(
+			expectedTaxonomyCategoryBriefs,
+			postSitePage.getTaxonomyCategoryBriefs());
 	}
 
 	private static final String _CLASS_NAME_EXCEPTION_MAPPER =

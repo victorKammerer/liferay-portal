@@ -75,14 +75,14 @@ public abstract class BasePinResourceImpl
 	 * curl -X 'DELETE' 'http://localhost:8080/o/headless-commerce-admin-catalog/v1.0/pins/{pinId}'  -u 'test@liferay.com:test'
 	 */
 	@io.swagger.v3.oas.annotations.Operation(
-		description = "Deletes the pin identified by pinId and removes its orphan diagram entry when no other pin references it. Returns 404 when the id is not found. Side effects -- Cascades the matching diagram entry delete when no other pin shares the sequence."
+		description = "Deletes the pin identified by pinId and removes its orphan diagram entry when no other pin references it. Returns 404 when the ID is not found. Side effects -- Cascades the matching diagram entry delete when no other pin shares the sequence."
 	)
 	@io.swagger.v3.oas.annotations.Parameters(
 		value = {
 			@io.swagger.v3.oas.annotations.Parameter(
 				description = "Identifier of a diagram pin. Addresses a single CSDiagramPin, the clickable hotspot anchored at `positionX`/`positionY` on the parent product's diagram image.",
 				in = io.swagger.v3.oas.annotations.enums.ParameterIn.PATH,
-				name = "pinId"
+				name = "pinId", required = true
 			)
 		}
 	)
@@ -158,7 +158,7 @@ public abstract class BasePinResourceImpl
 			@io.swagger.v3.oas.annotations.Parameter(
 				description = "External reference code that addresses the target resource on the `by-externalReferenceCode` paths. The code is the integration-supplied idempotency key, unique within the resource scope; POST against this path is upsert (create when absent, replace when present).",
 				in = io.swagger.v3.oas.annotations.enums.ParameterIn.PATH,
-				name = "externalReferenceCode"
+				name = "externalReferenceCode", required = true
 			),
 			@io.swagger.v3.oas.annotations.Parameter(
 				description = "One-based page index. Combined with pageSize to paginate the result set; defaults to 1 when omitted.",
@@ -213,14 +213,14 @@ public abstract class BasePinResourceImpl
 	 * curl -X 'GET' 'http://localhost:8080/o/headless-commerce-admin-catalog/v1.0/products/{id}/pins'  -u 'test@liferay.com:test'
 	 */
 	@io.swagger.v3.oas.annotations.Operation(
-		description = "Lists the diagram pins of the product identified by product id. Returns 404 when the product id is not found."
+		description = "Lists the diagram pins of the product identified by product ID. Returns 404 when the product ID is not found."
 	)
 	@io.swagger.v3.oas.annotations.Parameters(
 		value = {
 			@io.swagger.v3.oas.annotations.Parameter(
 				description = "Internal numeric identifier of the target resource. Counterpart to the `by-externalReferenceCode` path variant; identifiers are server-assigned and stable across the resource's lifetime.",
 				in = io.swagger.v3.oas.annotations.enums.ParameterIn.PATH,
-				name = "id"
+				name = "id", required = true
 			),
 			@io.swagger.v3.oas.annotations.Parameter(
 				description = "One-based page index. Combined with pageSize to paginate the result set; defaults to 1 when omitted.",
@@ -273,14 +273,14 @@ public abstract class BasePinResourceImpl
 	 * curl -X 'PATCH' 'http://localhost:8080/o/headless-commerce-admin-catalog/v1.0/pins/{pinId}' -d $'{"id": ___, "mappedProduct": ___, "positionX": ___, "positionY": ___, "sequence": ___}' --header 'Content-Type: application/json' -u 'test@liferay.com:test'
 	 */
 	@io.swagger.v3.oas.annotations.Operation(
-		description = "Partially updates the pin identified by pinId, optionally creating or updating its mapped product. Returns 404 when the id is not found. Side effects -- When mappedProduct is included, may add or update the linked diagram entry (SKU/product mapping)."
+		description = "Partially updates the pin identified by pinId, optionally creating or updating its mapped product. Returns 404 when the ID is not found. Side effects -- When mappedProduct is included, may add or update the linked diagram entry (SKU/product mapping)."
 	)
 	@io.swagger.v3.oas.annotations.Parameters(
 		value = {
 			@io.swagger.v3.oas.annotations.Parameter(
 				description = "Identifier of a diagram pin. Addresses a single CSDiagramPin, the clickable hotspot anchored at `positionX`/`positionY` on the parent product's diagram image.",
 				in = io.swagger.v3.oas.annotations.enums.ParameterIn.PATH,
-				name = "pinId"
+				name = "pinId", required = true
 			)
 		}
 	)
@@ -316,7 +316,7 @@ public abstract class BasePinResourceImpl
 			@io.swagger.v3.oas.annotations.Parameter(
 				description = "External reference code that addresses the target resource on the `by-externalReferenceCode` paths. The code is the integration-supplied idempotency key, unique within the resource scope; POST against this path is upsert (create when absent, replace when present).",
 				in = io.swagger.v3.oas.annotations.enums.ParameterIn.PATH,
-				name = "externalReferenceCode"
+				name = "externalReferenceCode", required = true
 			)
 		}
 	)
@@ -347,14 +347,14 @@ public abstract class BasePinResourceImpl
 	 * curl -X 'POST' 'http://localhost:8080/o/headless-commerce-admin-catalog/v1.0/products/{id}/pins' -d $'{"id": ___, "mappedProduct": ___, "positionX": ___, "positionY": ___, "sequence": ___}' --header 'Content-Type: application/json' -u 'test@liferay.com:test'
 	 */
 	@io.swagger.v3.oas.annotations.Operation(
-		description = "Creates a diagram pin on the product identified by product id. Returns 404 when the product id is not found. Side effects -- Creates the pin and optionally creates/updates a mapped diagram entry."
+		description = "Creates a diagram pin on the product identified by product ID. Returns 404 when the product ID is not found. Side effects -- Creates the pin and optionally creates/updates a mapped diagram entry."
 	)
 	@io.swagger.v3.oas.annotations.Parameters(
 		value = {
 			@io.swagger.v3.oas.annotations.Parameter(
 				description = "Internal numeric identifier of the target resource. Counterpart to the `by-externalReferenceCode` path variant; identifiers are server-assigned and stable across the resource's lifetime.",
 				in = io.swagger.v3.oas.annotations.enums.ParameterIn.PATH,
-				name = "id"
+				name = "id", required = true
 			)
 		}
 	)
@@ -1146,4 +1146,4 @@ public abstract class BasePinResourceImpl
 		LogFactoryUtil.getLog(BasePinResourceImpl.class);
 
 }
-// LIFERAY-REST-BUILDER-HASH:1887928281
+// LIFERAY-REST-BUILDER-HASH:-660022697

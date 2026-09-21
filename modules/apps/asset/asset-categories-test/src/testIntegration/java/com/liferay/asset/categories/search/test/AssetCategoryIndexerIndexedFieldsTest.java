@@ -164,10 +164,10 @@ public class AssetCategoryIndexerIndexedFieldsTest {
 	protected SearchEngineHelper searchEngineHelper;
 
 	@Inject
-	protected Searcher searcher;
+	protected SearchRequestBuilderFactory searchRequestBuilderFactory;
 
 	@Inject
-	protected SearchRequestBuilderFactory searchRequestBuilderFactory;
+	protected Searcher searcher;
 
 	@Inject
 	protected UIDFactory uidFactory;
@@ -210,6 +210,16 @@ public class AssetCategoryIndexerIndexedFieldsTest {
 		).put(
 			"assetCategoryTitle_ja_JP",
 			StringUtil.lowerCase(assetCategory.getName())
+		).put(
+			"childAssetCategoriesCount",
+			String.valueOf(
+				assetCategoryService.getChildCategoriesCount(
+					assetCategory.getCategoryId()))
+		).put(
+			"childAssetCategoriesCount_sortable",
+			String.valueOf(
+				assetCategoryService.getChildCategoriesCount(
+					assetCategory.getCategoryId()))
 		).put(
 			"classNameIds",
 			StringUtil.merge(_getClassNameIds(assetCategory.getVocabularyId()))

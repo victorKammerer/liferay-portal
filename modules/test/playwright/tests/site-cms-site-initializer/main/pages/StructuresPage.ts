@@ -40,7 +40,6 @@ export class StructuresPage {
 			| 'Delete'
 			| 'Edit'
 			| 'Export as JSON'
-			| 'Import and Override'
 			| 'Permissions'
 			| 'View Usages';
 		filter: string;
@@ -107,7 +106,14 @@ export class StructuresPage {
 		}
 	}
 
-	async openMenuItem(action: 'Export' | 'Import' | 'Import from JSON') {
+	async openMenuItem(
+		action:
+			| 'Export'
+			| 'Export Content Structures'
+			| 'Import'
+			| 'Import Content Structures'
+			| 'Import from JSON'
+	) {
 		await this.goto();
 
 		await clickAndExpectToBeVisible({

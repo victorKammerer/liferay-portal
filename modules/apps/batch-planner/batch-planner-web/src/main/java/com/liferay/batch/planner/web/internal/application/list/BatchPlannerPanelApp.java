@@ -7,13 +7,23 @@ package com.liferay.batch.planner.web.internal.application.list;
 
 import com.liferay.application.list.BasePanelApp;
 import com.liferay.application.list.PanelApp;
+import com.liferay.application.list.PanelAppNavigationItem;
 import com.liferay.application.list.constants.PanelCategoryKeys;
 import com.liferay.batch.planner.constants.BatchPlannerPortletKeys;
 import com.liferay.portal.kernel.exception.PortalException;
 import com.liferay.portal.kernel.feature.flag.FeatureFlagManagerUtil;
+import com.liferay.portal.kernel.language.Language;
 import com.liferay.portal.kernel.model.Group;
 import com.liferay.portal.kernel.model.Portlet;
+import com.liferay.portal.kernel.portlet.url.builder.PortletURLBuilder;
 import com.liferay.portal.kernel.security.permission.PermissionChecker;
+import com.liferay.portal.kernel.theme.ThemeDisplay;
+import com.liferay.portal.kernel.util.LocaleUtil;
+import com.liferay.portal.kernel.util.WebKeys;
+
+import jakarta.servlet.http.HttpServletRequest;
+
+import java.util.List;
 
 import org.osgi.service.component.annotations.Component;
 import org.osgi.service.component.annotations.Reference;
@@ -23,8 +33,8 @@ import org.osgi.service.component.annotations.Reference;
  */
 @Component(
 	property = {
-		"panel.app.order:Integer=1000",
-		"panel.category.key=" + PanelCategoryKeys.APPLICATIONS_MENU_APPLICATIONS_BATCH_PLANNER
+		"panel.app.order:Integer=200",
+		"panel.category.key=" + PanelCategoryKeys.APPLICATIONS_MENU_APPLICATIONS_DEVELOPER_INTEGRATION
 	},
 	service = PanelApp.class
 )
@@ -33,6 +43,36 @@ public class BatchPlannerPanelApp extends BasePanelApp {
 	@Override
 	public String getIcon() {
 		return "database";
+	}
+
+	@Override
+	public List<PanelAppNavigationItem> getPanelAppNavigationItems(
+			HttpServletRequest httpServletRequest)
+		throws PortalException {
+
+		ThemeDisplay themeDisplay =
+			(ThemeDisplay)httpServletRequest.getAttribute(
+				WebKeys.THEME_DISPLAY);
+
+		return List.of(
+			new PanelAppNavigationItem(
+				_language.get(LocaleUtil.ENGLISH, "import-and-export"),
+				PortletURLBuilder.create(
+					getPortletURL(httpServletRequest)
+				).setTabs1(
+					"batch-planner-plans"
+				).buildString(),
+				_language.get(themeDisplay.getLocale(), "import-and-export")),
+			new PanelAppNavigationItem(
+				_language.get(LocaleUtil.ENGLISH, "templates"),
+				PortletURLBuilder.create(
+					getPortletURL(httpServletRequest)
+				).setMVCRenderCommandName(
+					"/batch_planner/view_batch_planner_plan_templates"
+				).setTabs1(
+					"batch-planner-plan-templates"
+				).buildString(),
+				_language.get(themeDisplay.getLocale(), "templates")));
 	}
 
 	@Override
@@ -55,6 +95,9 @@ public class BatchPlannerPanelApp extends BasePanelApp {
 
 		return super.isShow(permissionChecker, group);
 	}
+
+	@Reference
+	private Language _language;
 
 	@Reference(
 		target = "(jakarta.portlet.name=" + BatchPlannerPortletKeys.BATCH_PLANNER + ")"

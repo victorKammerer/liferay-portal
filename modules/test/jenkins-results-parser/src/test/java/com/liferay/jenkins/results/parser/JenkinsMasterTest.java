@@ -10,7 +10,9 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.PrintStream;
 
+import java.util.List;
 import java.util.Map;
+import java.util.concurrent.TimeoutException;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -20,6 +22,7 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mockito;
 
 /**
@@ -36,21 +39,13 @@ public class JenkinsMasterTest extends com.liferay.jenkins.results.parser.Test {
 
 		UrlReader urlReader = mockUrlReader();
 
-		setUrlReaderOutput(
-			new JSONObject(
-			).put(
-				"items", new JSONArray()
-			).toString(),
-			"http://test-9-1/queue/api/json", urlReader);
-		setUrlReaderOutput(
-			new JSONObject(
-			).put(
-				"mode", "NORMAL"
-			).toString(),
-			"http://test-9-1/api/json?tree=mode", urlReader);
-		setUrlReaderOutput(
+		_setUpMaster(
+			"test-9-1",
 			read(new File(dependenciesDirs.get(0), "computer-api.json")),
-			"http://test-9-1/computer/api/json", urlReader);
+			urlReader);
+		_setUpMaster(
+			"test-9-2", _getRunningBuildsComputerAPIJSONObject().toString(),
+			urlReader);
 
 		_jenkinsMaster = JenkinsMasterTestUtil.getJenkinsMaster(
 			"test-9-1", "http://test-9-1");
@@ -62,6 +57,150 @@ public class JenkinsMasterTest extends com.liferay.jenkins.results.parser.Test {
 		super.tearDown();
 
 		JenkinsMaster.maxRecentBatchAge = 120 * 1000;
+	}
+
+	@Test
+	public void testExecuteBashCommand() throws Exception {
+		Shell shell = mockShell();
+
+		String command = "cat " + RandomTestUtil.randomString();
+
+		setShellCommandOutput(command, shell, RandomTestUtil.randomString());
+
+		_jenkinsMaster.executeBashCommand(command);
+
+		Shell.ExecutionRequest executionRequest = _getExecutionRequest(shell);
+
+		Assert.assertEquals(1000 * 60 * 5, executionRequest.getTimeout());
+
+		String sshCommand = _getSSHCommand(executionRequest);
+
+		Assert.assertTrue(
+			sshCommand, sshCommand.contains("-o ConnectTimeout=60 "));
+	}
+
+	@Test
+	public void testExecuteBashCommandNonzeroExitValue() throws Exception {
+		Shell shell = mockShell();
+
+		String command = "cat " + RandomTestUtil.randomString();
+
+		setShellCommandExitValue(command, shell, 255);
+
+		try {
+			_jenkinsMaster.executeBashCommand(command, _MILLIS_TIMEOUT);
+
+			Assert.fail();
+		}
+		catch (RuntimeException runtimeException) {
+			String message = runtimeException.getMessage();
+
+			Assert.assertTrue(message, message.contains("test-9-1"));
+		}
+	}
+
+	@Test
+	public void testExecuteBashCommandTimedOut() throws Exception {
+		Shell shell = mockShell();
+
+		String command = "cat " + RandomTestUtil.randomString();
+
+		Mockito.doThrow(
+			new TimeoutException()
+		).when(
+			shell
+		).doExecute(
+			Mockito.argThat(
+				executionRequest -> hasCommand(executionRequest, command))
+		);
+
+		try {
+			_jenkinsMaster.executeBashCommand(command, _MILLIS_TIMEOUT);
+
+			Assert.fail();
+		}
+		catch (RuntimeException runtimeException) {
+			Throwable throwable = runtimeException.getCause();
+
+			Assert.assertTrue(
+				String.valueOf(throwable),
+				throwable instanceof TimeoutException);
+		}
+	}
+
+	@Test
+	public void testExecuteBashCommandTimeout() throws Exception {
+		Shell shell = mockShell();
+
+		String command = "cat " + RandomTestUtil.randomString();
+
+		setShellCommandOutput(command, shell, RandomTestUtil.randomString());
+
+		_jenkinsMaster.executeBashCommand(command, _MILLIS_TIMEOUT);
+
+		Shell.ExecutionRequest executionRequest = _getExecutionRequest(shell);
+
+		Assert.assertEquals(_MILLIS_TIMEOUT, executionRequest.getTimeout());
+
+		String sshCommand = _getSSHCommand(executionRequest);
+
+		Assert.assertTrue(
+			sshCommand, sshCommand.contains("-o ConnectTimeout=10 "));
+	}
+
+	@Test
+	public void testExecuteBashCommandTimeoutBelowTwoSeconds()
+		throws Exception {
+
+		Shell shell = mockShell();
+
+		String command = "cat " + RandomTestUtil.randomString();
+
+		setShellCommandOutput(command, shell, RandomTestUtil.randomString());
+
+		_jenkinsMaster.executeBashCommand(
+			command, _MILLIS_TIMEOUT_BELOW_TWO_SECONDS);
+
+		Shell.ExecutionRequest executionRequest = _getExecutionRequest(shell);
+
+		Assert.assertEquals(
+			_MILLIS_TIMEOUT_BELOW_TWO_SECONDS, executionRequest.getTimeout());
+
+		String sshCommand = _getSSHCommand(executionRequest);
+
+		Assert.assertFalse(sshCommand, sshCommand.contains("ConnectTimeout"));
+
+		Assert.assertTrue(
+			sshCommand, sshCommand.contains("-o NumberOfPasswordPrompts=0"));
+	}
+
+	@Test
+	public void testExecuteBashCommandTimeoutNotPositive() throws Exception {
+		Shell shell = mockShell();
+
+		String command = "cat " + RandomTestUtil.randomString();
+
+		setShellCommandOutput(command, shell, RandomTestUtil.randomString());
+
+		for (long timeout : new long[] {0, -1, Long.MIN_VALUE}) {
+			try {
+				_jenkinsMaster.executeBashCommand(command, timeout);
+
+				Assert.fail(String.valueOf(timeout));
+			}
+			catch (IllegalArgumentException illegalArgumentException) {
+				String message = illegalArgumentException.getMessage();
+
+				Assert.assertTrue(
+					message, message.contains("Invalid timeout: " + timeout));
+			}
+		}
+
+		Mockito.verify(
+			shell, Mockito.never()
+		).doExecute(
+			Mockito.any(Shell.ExecutionRequest.class)
+		);
 	}
 
 	@Test
@@ -134,6 +273,54 @@ public class JenkinsMasterTest extends com.liferay.jenkins.results.parser.Test {
 	}
 
 	@Test
+	public void testGetRunningBuilds() {
+		JenkinsMaster jenkinsMaster = JenkinsMasterTestUtil.getJenkinsMaster(
+			"test-9-2", "http://test-9-2");
+
+		jenkinsMaster.update(false);
+
+		List<JenkinsMaster.RunningBuild> runningBuilds =
+			jenkinsMaster.getRunningBuilds();
+
+		Assert.assertEquals(runningBuilds.toString(), 3, runningBuilds.size());
+
+		Assert.assertEquals(7, jenkinsMaster.getMaxRunningBuildsCount());
+
+		List<String> buildURLs = jenkinsMaster.getBuildURLs();
+
+		Assert.assertEquals(buildURLs.toString(), 2, buildURLs.size());
+
+		Assert.assertFalse(
+			buildURLs.toString(), buildURLs.contains(_BUILD_URL_FLYWEIGHT));
+
+		JenkinsMaster.RunningBuild flyweightRunningBuild = _getRunningBuild(
+			_BUILD_URL_FLYWEIGHT, runningBuilds);
+
+		Assert.assertEquals(
+			"Built-In Node", flyweightRunningBuild.getJenkinsSlaveName());
+		Assert.assertFalse(flyweightRunningBuild.isLikelyStuck());
+		Assert.assertFalse(
+			flyweightRunningBuild.isJenkinsSlaveOfflineUnexpectedly());
+
+		JenkinsMaster.RunningBuild likelyStuckRunningBuild = _getRunningBuild(
+			_BUILD_URL_LIKELY_STUCK, runningBuilds);
+
+		Assert.assertTrue(likelyStuckRunningBuild.isLikelyStuck());
+		Assert.assertFalse(
+			likelyStuckRunningBuild.isJenkinsSlaveOfflineUnexpectedly());
+		Assert.assertEquals(
+			_LIKELY_STUCK_ESTIMATED_DURATION,
+			likelyStuckRunningBuild.getEstimatedDuration());
+
+		JenkinsMaster.RunningBuild offlineRunningBuild = _getRunningBuild(
+			_BUILD_URL_OFFLINE_NODE, runningBuilds);
+
+		Assert.assertTrue(
+			offlineRunningBuild.isJenkinsSlaveOfflineUnexpectedly());
+		Assert.assertTrue(offlineRunningBuild.isJenkinsSlaveBeingRemoved());
+	}
+
+	@Test
 	public void testUpdate() {
 		_jenkinsMaster.update();
 
@@ -159,6 +346,130 @@ public class JenkinsMasterTest extends com.liferay.jenkins.results.parser.Test {
 
 		Assert.assertFalse(labelBatchSizes.isEmpty());
 	}
+
+	@Test
+	public void testUpdateFullAfterMinimal() {
+		JenkinsMaster jenkinsMaster = JenkinsMasterTestUtil.getJenkinsMaster(
+			"test-9-2", "http://test-9-2");
+
+		jenkinsMaster.update(true);
+
+		List<JenkinsMaster.RunningBuild> runningBuilds =
+			jenkinsMaster.getRunningBuilds();
+
+		Assert.assertTrue(runningBuilds.toString(), runningBuilds.isEmpty());
+
+		jenkinsMaster.update(false);
+
+		runningBuilds = jenkinsMaster.getRunningBuilds();
+
+		Assert.assertEquals(runningBuilds.toString(), 3, runningBuilds.size());
+
+		Assert.assertEquals(7, jenkinsMaster.getMaxRunningBuildsCount());
+
+		jenkinsMaster.update(true);
+
+		runningBuilds = jenkinsMaster.getRunningBuilds();
+
+		Assert.assertEquals(runningBuilds.toString(), 3, runningBuilds.size());
+	}
+
+	private Shell.ExecutionRequest _getExecutionRequest(Shell shell)
+		throws Exception {
+
+		ArgumentCaptor<Shell.ExecutionRequest> argumentCaptor =
+			ArgumentCaptor.forClass(Shell.ExecutionRequest.class);
+
+		Mockito.verify(
+			shell
+		).doExecute(
+			argumentCaptor.capture()
+		);
+
+		return argumentCaptor.getValue();
+	}
+
+	private JenkinsMaster.RunningBuild _getRunningBuild(
+		String buildURL, List<JenkinsMaster.RunningBuild> runningBuilds) {
+
+		for (JenkinsMaster.RunningBuild runningBuild : runningBuilds) {
+			String runningBuildURL = runningBuild.getURL();
+
+			if (runningBuildURL.equals(buildURL)) {
+				return runningBuild;
+			}
+		}
+
+		throw new AssertionError(
+			JenkinsResultsParserUtil.combine(
+				"Unable to find ", buildURL, " in ",
+				String.valueOf(runningBuilds)));
+	}
+
+	private JSONObject _getRunningBuildsComputerAPIJSONObject() {
+		return JenkinsMasterTestUtil.getComputerAPIJSONObject(
+			7,
+			JenkinsMasterTestUtil.getBuiltInComputerJSONObject(
+				JenkinsMasterTestUtil.getExecutorJSONObject(
+					_BUILD_URL_FLYWEIGHT, RandomTestUtil.randomLong(),
+					RandomTestUtil.randomString(), false,
+					RandomTestUtil.randomLong())),
+			JenkinsMasterTestUtil.getComputerJSONObject(
+				"test-9-2-1",
+				JenkinsMasterTestUtil.getExecutorJSONObject(
+					_BUILD_URL_LIKELY_STUCK, _LIKELY_STUCK_ESTIMATED_DURATION,
+					RandomTestUtil.randomString(), true,
+					RandomTestUtil.randomLong())),
+			JenkinsMasterTestUtil.getOfflineComputerJSONObject(
+				"test-9-2-2", "Node is being removed",
+				RandomTestUtil.randomLong(), false,
+				JenkinsMasterTestUtil.getExecutorJSONObject(
+					_BUILD_URL_OFFLINE_NODE, RandomTestUtil.randomLong(),
+					RandomTestUtil.randomString(), false,
+					RandomTestUtil.randomLong())));
+	}
+
+	private String _getSSHCommand(Shell.ExecutionRequest executionRequest) {
+		return executionRequest.getCommands()[0];
+	}
+
+	private void _setUpMaster(
+			String masterName, String computerAPIJSON, UrlReader urlReader)
+		throws Exception {
+
+		String masterURL = "http://" + masterName;
+
+		setUrlReaderOutput(
+			new JSONObject(
+			).put(
+				"items", new JSONArray()
+			).toString(),
+			masterURL + "/queue/api/json", urlReader);
+		setUrlReaderOutput(
+			new JSONObject(
+			).put(
+				"mode", "NORMAL"
+			).toString(),
+			masterURL + "/api/json?tree=mode", urlReader);
+		setUrlReaderOutput(
+			computerAPIJSON, masterURL + "/computer/api/json", urlReader);
+	}
+
+	private static final String _BUILD_URL_FLYWEIGHT =
+		"http://test-9-2/job/publish-testray-report/7/";
+
+	private static final String _BUILD_URL_LIKELY_STUCK =
+		"http://test-9-2/job/test-portal-acceptance-pullrequest(master)/1580/";
+
+	private static final String _BUILD_URL_OFFLINE_NODE =
+		"http://test-9-2/job/test-portal-release-downstream/22649/";
+
+	private static final long _LIKELY_STUCK_ESTIMATED_DURATION =
+		RandomTestUtil.randomLong();
+
+	private static final long _MILLIS_TIMEOUT = 20000;
+
+	private static final long _MILLIS_TIMEOUT_BELOW_TWO_SECONDS = 500;
 
 	private JenkinsMaster _jenkinsMaster;
 

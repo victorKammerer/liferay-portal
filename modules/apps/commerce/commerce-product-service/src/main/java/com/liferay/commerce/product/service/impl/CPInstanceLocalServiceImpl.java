@@ -100,7 +100,6 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 
 import org.osgi.service.component.annotations.Component;
 import org.osgi.service.component.annotations.Reference;
@@ -1247,12 +1246,6 @@ public class CPInstanceLocalServiceImpl extends CPInstanceLocalServiceBaseImpl {
 		CPInstance cpInstance = cpInstancePersistence.findByPrimaryKey(
 			cpInstanceId);
 
-		if (Objects.equals(
-				cpInstance.getExternalReferenceCode(), externalReferenceCode)) {
-
-			return cpInstance;
-		}
-
 		cpInstance.setExternalReferenceCode(externalReferenceCode);
 
 		return cpInstancePersistence.update(cpInstance);
@@ -2162,6 +2155,9 @@ public class CPInstanceLocalServiceImpl extends CPInstanceLocalServiceBaseImpl {
 			CPDefinitionOptionValueRelLocalService.class);
 
 	@Reference
+	private CProductPersistence _cProductPersistence;
+
+	@Reference
 	private CPDefinitionOptionValueRelPersistence
 		_cpDefinitionOptionValueRelPersistence;
 
@@ -2179,9 +2175,6 @@ public class CPInstanceLocalServiceImpl extends CPInstanceLocalServiceBaseImpl {
 	@Reference
 	private CPInstanceUnitOfMeasurePersistence
 		_cpInstanceUnitOfMeasurePersistence;
-
-	@Reference
-	private CProductPersistence _cProductPersistence;
 
 	@Reference
 	private CPSubscriptionTypeRegistry _cpSubscriptionTypeRegistry;

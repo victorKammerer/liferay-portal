@@ -8,8 +8,12 @@ package com.liferay.jenkins.results.parser.monitor;
 import com.liferay.jenkins.results.parser.JenkinsResultsParserUtil;
 import com.liferay.jenkins.results.parser.RandomTestUtil;
 
+import java.io.ByteArrayOutputStream;
+import java.io.PrintStream;
+
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
@@ -179,6 +183,51 @@ public class MonitorEngineTest extends com.liferay.jenkins.results.parser.Test {
 	}
 
 	@Test(timeout = 10000)
+	public void testRunCycleContinuesWhenPrepareCycleFails() {
+		TestMonitor failingTestMonitor = Mockito.spy(
+			new TestMonitor(_newMonitorConfig("a", 0, 0)));
+
+		Mockito.doThrow(
+			new RuntimeException()
+		).when(
+			failingTestMonitor
+		).prepareCycle();
+
+		TestMonitor testMonitor = Mockito.spy(
+			new TestMonitor(_newMonitorConfig("b", 0, 0)));
+
+		MonitorEngine monitorEngine = new MonitorEngine(
+			new MonitorResultStore(),
+			Arrays.<Monitor>asList(failingTestMonitor, testMonitor));
+
+		PrintStream printStream = System.out;
+
+		ByteArrayOutputStream byteArrayOutputStream =
+			new ByteArrayOutputStream();
+
+		System.setOut(new PrintStream(byteArrayOutputStream, true));
+
+		try {
+			Map<Monitor, MonitorResult> monitorResultsMap =
+				monitorEngine.runCycle();
+
+			testEquals(2, monitorResultsMap.size());
+		}
+		finally {
+			System.setOut(printStream);
+		}
+
+		Mockito.verify(
+			testMonitor
+		).prepareCycle();
+
+		testEquals(
+			"WARNING: Unable to prepare monitor a: " +
+				"java.lang.RuntimeException\n",
+			byteArrayOutputStream.toString());
+	}
+
+	@Test(timeout = 10000)
 	public void testRunCycleIgnoresMonitorsAddedAfterConstruction() {
 		List<Monitor> monitors = new ArrayList<>();
 
@@ -193,6 +242,63 @@ public class MonitorEngineTest extends com.liferay.jenkins.results.parser.Test {
 			monitorEngine.runCycle();
 
 		testEquals(1, monitorResultsMap.size());
+	}
+
+	@Test(timeout = 10000)
+	public void testRunCycleKeepsDurationMillis() {
+		MonitorResultStore monitorResultStore = new MonitorResultStore();
+
+		TestMonitor testMonitor = new TestMonitor(
+			_newMonitorConfig(RandomTestUtil.randomString(), 10, 0)) {
+
+			@Override
+			public MonitorResult execute() {
+				try {
+					Thread.sleep(200);
+				}
+				catch (InterruptedException interruptedException) {
+					throw new RuntimeException(interruptedException);
+				}
+
+				return super.execute();
+			}
+
+		};
+
+		MonitorEngine monitorEngine = new MonitorEngine(
+			monitorResultStore,
+			Collections.<Monitor>singletonList(testMonitor));
+
+		Map<Monitor, MonitorResult> monitorResultsMap =
+			monitorEngine.runCycle();
+
+		MonitorResult monitorResult = monitorResultsMap.get(testMonitor);
+
+		Assert.assertTrue(
+			String.valueOf(monitorResult.getDurationMillis()),
+			monitorResult.getDurationMillis() >= 200);
+
+		monitorResult = monitorResultStore.getLatestMonitorResult(
+			testMonitor.getId());
+
+		Assert.assertTrue(
+			String.valueOf(monitorResult.getDurationMillis()),
+			monitorResult.getDurationMillis() >= 200);
+	}
+
+	@Test
+	public void testRunCyclePreparesMonitors() {
+		TestMonitor testMonitor = Mockito.spy(
+			new TestMonitor(_newMonitorConfig("a")));
+
+		MonitorEngine monitorEngine = new MonitorEngine(
+			new MonitorResultStore(), Arrays.<Monitor>asList(testMonitor));
+
+		monitorEngine.runCycle();
+
+		Mockito.verify(
+			testMonitor
+		).prepareCycle();
 	}
 
 	private MonitorConfig _newMonitorConfig(String id) {

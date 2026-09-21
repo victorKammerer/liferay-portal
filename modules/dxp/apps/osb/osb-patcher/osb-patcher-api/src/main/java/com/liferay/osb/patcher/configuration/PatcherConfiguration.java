@@ -94,12 +94,6 @@ public interface PatcherConfiguration {
 	public String patcherLiferayPortalRepository();
 
 	@Meta.AD(deflt = "", required = false)
-	public String patcherPubsubProjectId();
-
-	@Meta.AD(deflt = "", required = false)
-	public String patcherPubsubSubscriptionId();
-
-	@Meta.AD(deflt = "", required = false)
 	public boolean patcherScanningEnabled();
 
 	@Meta.AD(deflt = "", required = false)
@@ -127,13 +121,13 @@ public interface PatcherConfiguration {
 	public boolean patcherTestsEnabled();
 
 	@Meta.AD(deflt = "", required = false)
-	public String supportLiferayAccountSearchAPIEndpoint();
-
-	@Meta.AD(deflt = "", required = false)
 	public String supportLiferayAPIClientId();
 
 	@Meta.AD(deflt = "", required = false, type = Meta.Type.Password)
 	public String supportLiferayAPIClientSecret();
+
+	@Meta.AD(deflt = "", required = false)
+	public String supportLiferayAccountSearchAPIEndpoint();
 
 	@Meta.AD(deflt = "", required = false)
 	public String supportLiferayURL();

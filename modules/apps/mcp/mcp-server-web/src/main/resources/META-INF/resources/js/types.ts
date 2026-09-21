@@ -64,7 +64,6 @@ export type Profile = {
 	friendlyUrlPath?: string;
 	id?: number;
 	name: string;
-	tools: string;
 };
 
 export type ProfileActionContext = {
@@ -94,13 +93,64 @@ export type ProfileDataMaskRow = {
 export type ProfileFormValues = {
 	description: string;
 	name: string;
-	tools: string;
 };
 
 export type ProfilePayload = {
 	description: string;
 	name: string;
-	tools: string;
+};
+
+export type ProfileTool = {
+	externalReferenceCode: string;
+	id?: number;
+	r_mcpServerProfileToTools_l_mcpServerProfileId?: number;
+	restrictFields?: string;
+	toolName: string;
+	toolSetName: string;
+};
+
+export type ProfileToolActionContext = {
+	itemData: ProfileTool;
+	loadData: () => void;
+};
+
+export type ProfileToolPayload = {
+	r_mcpServerProfileToTools_l_mcpServerProfileERC: string;
+	toolName: string;
+	toolSetName: string;
+};
+
+export type JSONSchema = {
+	additionalProperties?: JSONSchema | boolean;
+	items?: JSONSchema;
+	properties?: Record<string, JSONSchema>;
+	readOnly?: boolean;
+	type?: string;
+	writeOnly?: boolean;
+};
+
+export type Tool = {
+	description?: string;
+	inputSchema?: JSONSchema;
+	name: string;
+	outputSchema?: JSONSchema;
+};
+
+export type ToolSet = {
+	description?: string;
+	name: string;
+};
+
+export type ToolSummary = {
+	description?: string;
+	name: string;
+};
+
+export type ToolTreeItem = {
+	assigned?: boolean;
+	children?: ToolTreeItem[];
+	id: string;
+	name: string;
 };
 
 export type Prompt = {

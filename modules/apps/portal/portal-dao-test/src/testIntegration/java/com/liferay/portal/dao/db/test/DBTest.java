@@ -38,8 +38,10 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.FutureTask;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
 import org.junit.After;
 import org.junit.AfterClass;
@@ -726,14 +728,7 @@ public class DBTest {
 			}
 		}
 		finally {
-			if (futureTask != null) {
-				try {
-					futureTask.get(30, TimeUnit.SECONDS);
-				}
-				catch (Exception exception) {
-					_log.error(exception);
-				}
-			}
+			_wait(futureTask, "Unable to run locked query");
 		}
 	}
 
@@ -758,6 +753,8 @@ public class DBTest {
 						Statement statement =
 							backgroundConnection.createStatement()) {
 
+						statement.setQueryTimeout(_SLOW_QUERY_SECONDS * 2);
+
 						statement.execute(slowQuery);
 					}
 
@@ -775,6 +772,12 @@ public class DBTest {
 			boolean foundLongRunningQuery = false;
 
 			while (System.currentTimeMillis() < endTime) {
+				if (futureTask.isDone()) {
+					futureTask.get();
+
+					break;
+				}
+
 				for (DB.QueryInfo queryInfo :
 						db.getLongRunningQueryInfos(pollingConnection)) {
 
@@ -813,14 +816,7 @@ public class DBTest {
 			Assert.assertTrue(foundLongRunningQuery);
 		}
 		finally {
-			if (futureTask != null) {
-				try {
-					futureTask.get(30, TimeUnit.SECONDS);
-				}
-				catch (Exception exception) {
-					_log.error(exception);
-				}
-			}
+			_wait(futureTask, "Unable to run slow query");
 		}
 	}
 
@@ -918,14 +914,7 @@ public class DBTest {
 			}
 		}
 		finally {
-			if (futureTask != null) {
-				try {
-					futureTask.get(30, TimeUnit.SECONDS);
-				}
-				catch (Exception exception) {
-					_log.error(exception);
-				}
-			}
+			_wait(futureTask, "Unable to run locked query");
 		}
 	}
 
@@ -1278,13 +1267,13 @@ public class DBTest {
 		DBType dbType = db.getDBType();
 
 		if (dbType == DBType.DB2) {
-			return "with t(n)";
+			return "dbms_lock.sleep";
 		}
 		else if ((dbType == DBType.MARIADB) || (dbType == DBType.MYSQL)) {
 			return "sleep";
 		}
 		else if (dbType == DBType.ORACLE) {
-			return "connect by";
+			return "dbms_session.sleep";
 		}
 		else if (dbType == DBType.POSTGRESQL) {
 			return "pg_sleep";
@@ -1300,21 +1289,21 @@ public class DBTest {
 		DBType dbType = db.getDBType();
 
 		if (dbType == DBType.DB2) {
-			return "with t(n) as (values 1 union all select n+1 from t where " +
-				"n < 50000000) select max(n) from t";
+			return "call dbms_lock.sleep(" + _SLOW_QUERY_SECONDS + ")";
 		}
 		else if ((dbType == DBType.MARIADB) || (dbType == DBType.MYSQL)) {
-			return "select sleep(2)";
+			return "select sleep(" + _SLOW_QUERY_SECONDS + ")";
 		}
 		else if (dbType == DBType.ORACLE) {
-			return "select sum(dbms_random.value) from (select level from " +
-				"dual connect by level <= 200000)";
+			return "begin dbms_session.sleep(" + _SLOW_QUERY_SECONDS +
+				"); end;";
 		}
 		else if (dbType == DBType.POSTGRESQL) {
-			return "select pg_sleep(2)";
+			return "select pg_sleep(" + _SLOW_QUERY_SECONDS + ")";
 		}
 		else if (dbType == DBType.SQLSERVER) {
-			return "waitfor delay '00:00:02'";
+			return String.format(
+				"waitfor delay '00:00:%02d'", _SLOW_QUERY_SECONDS);
 		}
 
 		throw new UnsupportedOperationException(String.valueOf(dbType));
@@ -1337,6 +1326,30 @@ public class DBTest {
 			ArrayUtil.sortedUnique(columnNames),
 			ArrayUtil.sortedUnique(indexMetadata.getColumnNames()));
 	}
+
+	private void _wait(FutureTask<Void> futureTask, String message)
+		throws InterruptedException, TimeoutException {
+
+		if (futureTask == null) {
+			return;
+		}
+
+		try {
+			futureTask.get(30, TimeUnit.SECONDS);
+		}
+		catch (ExecutionException executionException) {
+			if (_log.isInfoEnabled()) {
+				_log.info(message, executionException.getCause());
+			}
+		}
+		catch (TimeoutException timeoutException) {
+			futureTask.cancel(true);
+
+			throw timeoutException;
+		}
+	}
+
+	private static final int _SLOW_QUERY_SECONDS = 10;
 
 	private static final String _SQL_CREATE_TABLE_2 =
 		"create table " + DBTest._TABLE_NAME_2 +

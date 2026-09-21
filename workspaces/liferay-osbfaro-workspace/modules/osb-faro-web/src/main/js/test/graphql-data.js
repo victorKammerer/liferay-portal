@@ -174,21 +174,34 @@ export function mockAssetAppearsOnReq(variables, empty) {
 	};
 }
 
-export function mockAssetMetricReq({empty, metricName, queryName, rangeKey}) {
+export function mockAssetMetricReq({
+	empty,
+	metricName,
+	queryName,
+	rangeKey,
+	type,
+}) {
 	return {
 		request: {
 			query: AssetMetricQuery(queryName)(metricName),
+
+			// `useAssetVariables` reads `type` as a switch rather than sending
+			// it: object entries are the one asset type queried without
+			// `channelId` and `title`.
+
 			variables: {
 				assetId: '123',
-				channelId: '456',
 				devices: 'Any',
 				interval: 'D',
 				location: 'Any',
 				rangeEnd: null,
 				rangeKey,
 				rangeStart: null,
-				title: 'My awesome asset',
 				touchpoint: 'https://liferay.com',
+				...(type !== 'objectEntry' && {
+					channelId: '456',
+					title: 'My awesome asset',
+				}),
 			},
 		},
 		result: {
@@ -2263,6 +2276,10 @@ export const mockSessions = (variables) => ({
 			eventsByUserSessions: {
 				__typename: 'EventsByUserSession',
 				totalEvents: 14314,
+				totalPageGroupsMetric: {
+					__typename: 'Metric',
+					value: 42,
+				},
 				userSessions: [
 					{
 						__typename: 'UserSession',
@@ -2281,6 +2298,7 @@ export const mockSessions = (variables) => ({
 								createDate: 'Mon Dec 06 17:28:48 GMT 2021',
 								name: 'tabBlurred',
 								pageDescription: '',
+								pageGroupId: 'http://localhost:8080',
 								pageKeywords: '',
 								pageTitle: 'Home - Liferay DXP',
 								referrer: '',
@@ -2478,6 +2496,7 @@ const DEFAULT_ACCOUNT_USER_SESSIONS = [
 				eventId: 'pageViewed',
 				name: 'pageViewed',
 				pageDescription: '',
+				pageGroupId: 'https://liferay.com/home',
 				pageKeywords: '',
 				pageTitle: 'Home',
 				properties: [],
@@ -2504,7 +2523,7 @@ export const mockAccountUserSessionsReq = ({
 	rangeKey = 30,
 	sessions = DEFAULT_ACCOUNT_USER_SESSIONS,
 	size = 2,
-	totalSessions = 1,
+	totalPageGroups = 1,
 } = {}) => ({
 	request: {
 		query: AccountUserSessionQuery,
@@ -2525,9 +2544,9 @@ export const mockAccountUserSessionsReq = ({
 		data: {
 			eventsByUserSessions: {
 				__typename: 'EventsByUserSession',
-				totalSessionsMetric: {
+				totalPageGroupsMetric: {
 					__typename: 'Metric',
-					value: totalSessions,
+					value: totalPageGroups,
 				},
 				userSessions: sessions,
 			},

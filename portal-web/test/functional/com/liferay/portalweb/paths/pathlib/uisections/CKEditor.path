@@ -16,6 +16,11 @@
 	<td></td>
 </tr>
 <tr>
+	<td>ANY_BODY_FIELD_CONTENTEDITABLE_WEB_CONTENT_ARTICLE</td>
+	<td>xpath=(//label[contains(.,'${key_fieldLabel}')]//following-sibling::div//div[contains(@class,'ck-editor__editable_inline')])[${index}]</td>
+	<td></td>
+</tr>
+<tr>
 	<td>BODY_FIELD</td>
 	<td>//div[contains(@id,'cke')]</td>
 	<td></td>
@@ -41,8 +46,23 @@
 	<td></td>
 </tr>
 <tr>
+	<td>BODY_FIELD_SOURCE_TEXTAREA</td>
+	<td>//div[contains(@class,'ck-source-editing-area')]//textarea</td>
+	<td></td>
+</tr>
+<tr>
+	<td>BODY_FIELD_SOURCE_EITHER_EDITOR</td>
+	<td>//div[contains(@class,'cke_contents')]/div[contains(@class,'CodeMirror cm-s-default')] | //div[contains(@class,'ck-source-editing-area')]//textarea</td>
+	<td></td>
+</tr>
+<tr>
 	<td>BODY_FIELD_IFRAME</td>
 	<td>//*[contains(@id,'cke')]/iframe</td>
+	<td></td>
+</tr>
+<tr>
+	<td>BODY_FIELD_CONTENTEDITABLE</td>
+	<td>//div[contains(@class,'ck-editor__editable_inline')]</td>
 	<td></td>
 </tr>
 <tr>
@@ -56,13 +76,13 @@
 	<td></td>
 </tr>
 <tr>
-	<td>BODY_FIELD_CONTENTEDITABLE_WEB_CONTENT_ARTICLE</td>
-	<td>//label[contains(.,'${key_fieldLabel}')]//following-sibling::div//div[contains(@class,'ck-editor__editable_inline')]</td>
+	<td>BODY_FIELD_EITHER_EDITOR</td>
+	<td>//*[contains(@id,'cke')]/iframe | //div[contains(@class,'ck-editor__editable_inline')]</td>
 	<td></td>
 </tr>
 <tr>
-	<td>BODY_FIELD_CONTENTEDITABLE_LINK_WITHOUT_UUID</td>
-	<td>//label[contains(.,'${key_fieldLabel}')]//following-sibling::div//div[contains(@class,'ck-editor__editable_inline')]//a[contains(@href,'${key_fileName}') and not(contains(@href,'${key_fileName}/'))]</td>
+	<td>BODY_FIELD_CONTENTEDITABLE_WEB_CONTENT_ARTICLE</td>
+	<td>//label[contains(.,'${key_fieldLabel}')]//following-sibling::div//div[contains(@class,'ck-editor__editable_inline')]</td>
 	<td></td>
 </tr>
 <tr>
@@ -135,7 +155,7 @@
 </tr>
 <tr>
 	<td>TOOLBAR_VIDEO_BUTTON</td>
-	<td>//button[contains(@class,'ck-button') and contains(@data-cke-tooltip-text,'Video')]</td>
+	<td>//button[contains(@class,'ck-button')][.//span[contains(@class,'ck-button__label') and normalize-space(text())='Video']] | //a[contains(@class,'cke_button') and contains(@class,'video')]</td>
 	<td></td>
 </tr>
 <tr>
@@ -261,12 +281,12 @@
 </tr>
 <tr>
 	<td>TOOLBAR_IMAGE_BUTTON</td>
-	<td>//button[contains(@class,'ck-button') and contains(@data-cke-tooltip-text,'Image')]</td>
+	<td>//button[contains(@class,'ck-button')][.//span[contains(@class,'ck-button__label') and normalize-space(text())='Image']] | //a[contains(@class,'cke_button') and contains(@class,'image')]</td>
 	<td></td>
 </tr>
 <tr>
 	<td>TOOLBAR_IMAGE_BUTTON_2</td>
-	<td>xpath=(//button[contains(@class,'ck-button') and contains(@data-cke-tooltip-text,'Image')])[2]</td>
+	<td>xpath=(//button[contains(@class,'ck-button')][.//span[contains(@class,'ck-button__label') and normalize-space(text())='Image']] | //a[contains(@class,'cke_button') and contains(@class,'image')])[2]</td>
 	<td></td>
 </tr>
 <tr>
@@ -281,7 +301,7 @@
 </tr>
 <tr>
 	<td>TOOLBAR_SOURCE_BUTTON</td>
-	<td>//a[contains(@class,'cke_button') and contains(@class,'source')]</td>
+	<td>//a[contains(@class,'cke_button') and contains(@class,'source')] | //button[contains(@class,'ck-source-editing-button')]</td>
 	<td></td>
 </tr>
 <tr>

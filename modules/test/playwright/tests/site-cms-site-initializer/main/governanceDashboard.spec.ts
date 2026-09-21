@@ -30,9 +30,10 @@ const DATE_INPUT = '12/31/2099 10:00 AM';
 const DUE_DATE_INPUT = '2099-12-31';
 const DUE_TIME_INPUT = '10:00';
 const PAST_DATE = '2020-01-01T00:00:00Z';
-const TIME_ZONE = 'America/Los_Angeles';
+const TIME_ZONE_BROWSER = 'America/Los_Angeles';
+const TIME_ZONE_USER = 'UTC';
 
-test.use({timezoneId: TIME_ZONE});
+test.use({timezoneId: TIME_ZONE_BROWSER});
 
 async function fillScheduleDateModal(page: Page, date: string) {
 	const dateInput = page.locator('.modal input.form-control').first();
@@ -85,14 +86,14 @@ function getUpcomingDate(hour: number) {
 	return date.toISOString().replace(/\.\d{3}Z$/, 'Z');
 }
 
-function formatInTimeZone(date: string) {
+function formatInTimeZone(date: string, timeZone: string) {
 	return new Date(date).toLocaleString('en-US', {
 		day: '2-digit',
 		hour: '2-digit',
 		hour12: true,
 		minute: '2-digit',
 		month: '2-digit',
-		timeZone: TIME_ZONE,
+		timeZone,
 		year: 'numeric',
 	});
 }
@@ -138,7 +139,7 @@ async function pollDate(
 						String(objectEntryId)
 					);
 
-				return formatInTimeZone(objectEntry[fieldName]);
+				return formatInTimeZone(objectEntry[fieldName], TIME_ZONE_USER);
 			},
 			{timeout: 3000}
 		)
@@ -187,8 +188,8 @@ test.beforeEach(async ({apiHelpers, page}) => {
 
 test.describe('Attention Required section', () => {
 	test(
-		'Stores the review date the user picked in their own time zone',
-		{tag: '@LPD-98462'},
+		'Stores the review date the user picked in their account time zone rather than the browser one',
+		{tag: ['@LPD-98462', '@LPD-104263']},
 		async ({apiHelpers, page}) => {
 			const spaceName = `space ${getRandomString()}`;
 			const title = `overdue ${getRandomString()}`;
@@ -690,7 +691,10 @@ test.describe('Attention Required section', () => {
 							);
 
 						return workflowTask?.dateDue
-							? formatInTimeZone(workflowTask.dateDue)
+							? formatInTimeZone(
+									workflowTask.dateDue,
+									TIME_ZONE_BROWSER
+								)
 							: null;
 					})
 					.toBe(DATE_DISPLAYED);
@@ -1241,6 +1245,125 @@ test.describe('Duplication and Similarity section', () => {
 				await expect(
 					modal.locator('.list-group-item button')
 				).toHaveCount(5);
+			});
+		}
+	);
+});
+
+test.describe('Workflow and Content Progress section', () => {
+	test(
+		'Shows the distribution of contents by status for the selected space',
+		{tag: '@LPD-97421'},
+		async ({apiHelpers, page}) => {
+			const spaceName = `space ${getRandomString()}`;
+
+			let approvedTitle: string;
+			let draftTitle: string;
+
+			await test.step('Create contents in every status', async () => {
+				await apiHelpers.headlessAssetLibrary.createAssetLibrary({
+					name: spaceName,
+					type: 'Space',
+				});
+
+				const postContent = async (body: object = {}) => {
+					const content =
+						await apiHelpers.objectEntry.postObjectEntry(
+							{
+								displayDate: PAST_DATE,
+								objectEntryFolderExternalReferenceCode:
+									'L_CONTENTS',
+								title: getRandomString(),
+								...body,
+							},
+							APPLICATION_NAME,
+							spaceName
+						);
+
+					apiHelpers.data.push({id: content.id, type: 'document'});
+
+					expect(content.id).toBeTruthy();
+
+					return content;
+				};
+
+				const approvedContent = await postContent();
+
+				approvedTitle = approvedContent.title;
+
+				await postContent();
+
+				const draftContent = await postContent({status: {code: 2}});
+
+				draftTitle = draftContent.title;
+
+				await postContent({displayDate: getUpcomingDate(10)});
+
+				const expiredContent = await postContent();
+
+				await apiHelpers.objectEntry.expireObjectEntryByExternalReferenceCode(
+					APPLICATION_NAME,
+					spaceName,
+					expiredContent.externalReferenceCode
+				);
+			});
+
+			const contentProgressCard = page
+				.locator('.cms-dashboard__base-card')
+				.filter({hasText: 'Content Progress'});
+
+			await test.step('Check the distribution in the chart', async () => {
+
+				// Retry with a reload to absorb the search index lag the
+				// status facet reads from
+
+				await expect(async () => {
+					await page.goto('/web/cms/dashboard');
+
+					await selectSpace(page, spaceName);
+
+					await expect(
+						contentProgressCard.getByRole('link', {
+							name: 'Approved: 2',
+						})
+					).toBeVisible();
+				}).toPass();
+
+				await expect(
+					contentProgressCard.getByRole('link', {name: 'Draft: 1'})
+				).toBeVisible();
+
+				await expect(
+					contentProgressCard.getByRole('link', {
+						name: 'Scheduled: 1',
+					})
+				).toBeVisible();
+
+				await expect(
+					contentProgressCard.getByRole('link', {name: 'Others: 1'})
+				).toBeVisible();
+
+				await expect(
+					contentProgressCard.getByLabel(/Pending/)
+				).toBeHidden();
+			});
+
+			await test.step('Open the All section filtered by draft', async () => {
+				await contentProgressCard
+					.getByRole('link', {name: 'Draft: 1'})
+					.click();
+
+				await expect(page).toHaveURL(
+					/allSection_fdsConfig=.*filters.*status/
+				);
+
+				await expect(
+					page.getByText(draftTitle, {exact: true})
+				).toBeVisible();
+
+				await expect(
+					page.getByText(approvedTitle, {exact: true})
+				).toBeHidden();
 			});
 		}
 	);

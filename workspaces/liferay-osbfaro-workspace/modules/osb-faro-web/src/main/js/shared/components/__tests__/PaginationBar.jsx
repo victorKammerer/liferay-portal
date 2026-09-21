@@ -1,12 +1,12 @@
 import PaginationBar from '../PaginationBar';
 import React from 'react';
 import {cleanup, render} from '@testing-library/react';
-import {StaticRouter} from 'react-router';
+import {MemoryRouter} from 'react-router';
 
 jest.unmock('react-dom');
 
 const DefaultComponent = props => (
-	<StaticRouter>
+	<MemoryRouter>
 		<PaginationBar
 			href=''
 			page={3}
@@ -14,11 +14,32 @@ const DefaultComponent = props => (
 			totalItems={100}
 			{...props}
 		/>
-	</StaticRouter>
+	</MemoryRouter>
 );
 
 describe('PaginationBar', () => {
 	afterEach(cleanup);
+
+	it('names what it counts when the caller says so', () => {
+		const {container} = render(
+			<DefaultComponent
+				resultsMessagePlural='Showing {0} to {1} of {2} campaign entries.'
+				resultsMessageSingular='Showing {0} to {1} of {2} campaign entry.'
+			/>
+		);
+
+		expect(
+			container.querySelector('.pagination-results')
+		).toHaveTextContent(/campaign entr/i);
+	});
+
+	it('falls back to the shared message when the caller says nothing', () => {
+		const {container} = render(<DefaultComponent />);
+
+		expect(
+			container.querySelector('.pagination-results')
+		).toHaveTextContent(/of 100 entr/i);
+	});
 
 	it('should render', () => {
 		const {container} = render(<DefaultComponent />);

@@ -265,12 +265,6 @@ public class PatcherBuildUtil {
 		return patcherBuilds.get(0);
 	}
 
-	public static List<PatcherBuild> fetchPatcherBuildsByKey(String key) {
-		return PatcherBuildLocalServiceUtil.getPatcherBuilds(
-			key, QueryUtil.ALL_POS, QueryUtil.ALL_POS,
-			PatcherBuildKeyVersionComparator.getInstance(false));
-	}
-
 	public static PatcherBuild fetchPatcherBuildSupportTicketVersion(
 		PatcherBuild patcherBuild, boolean older) {
 
@@ -284,6 +278,12 @@ public class PatcherBuildUtil {
 		}
 
 		return patcherBuilds.get(0);
+	}
+
+	public static List<PatcherBuild> fetchPatcherBuildsByKey(String key) {
+		return PatcherBuildLocalServiceUtil.getPatcherBuilds(
+			key, QueryUtil.ALL_POS, QueryUtil.ALL_POS,
+			PatcherBuildKeyVersionComparator.getInstance(false));
 	}
 
 	public static long generateHotfixId(
@@ -1366,7 +1366,7 @@ public class PatcherBuildUtil {
 			}
 
 			updatePatcherBuildFixes(
-				user, patcherBuild, entry.getValue(), useExistingHotfix);
+				user, patcherBuild, entry.getValue(), useExistingHotfix, false);
 		}
 
 		List<BaseModel<?>> sendToJenkinsBaseModels =
@@ -1530,12 +1530,12 @@ public class PatcherBuildUtil {
 			User user, PatcherBuild patcherBuild, List<Long> patcherFixIds)
 		throws Exception {
 
-		updatePatcherBuildFixes(user, patcherBuild, patcherFixIds, false);
+		updatePatcherBuildFixes(user, patcherBuild, patcherFixIds, false, true);
 	}
 
 	public static void updatePatcherBuildFixes(
 			User user, PatcherBuild patcherBuild, List<Long> patcherFixIds,
-			boolean useExistingHotfix)
+			boolean useExistingHotfix, boolean sendJenkinsRequest)
 		throws Exception {
 
 		PatcherFixLocalServiceUtil.clearPatcherBuildPatcherFixes(
@@ -1552,7 +1552,8 @@ public class PatcherBuildUtil {
 			patcherBuild.setPatcherFixId(patcherFixIds.get(0));
 
 			if (!useExistingHotfix) {
-				updatePatcherBuildStatusMergeComplete(user, patcherBuild);
+				updatePatcherBuildStatusMergeComplete(
+					user, patcherBuild, sendJenkinsRequest);
 			}
 
 			return;
@@ -1621,7 +1622,8 @@ public class PatcherBuildUtil {
 			if (isPreviousPatcherBuildMainFixEqualsCurrentBuildMainFix(
 					patcherBuild)) {
 
-				updatePatcherBuildStatusMergeComplete(user, patcherBuild);
+				updatePatcherBuildStatusMergeComplete(
+					user, patcherBuild, sendJenkinsRequest);
 			}
 		}
 	}
@@ -1986,57 +1988,6 @@ public class PatcherBuildUtil {
 		return false;
 	}
 
-	protected static void updatePatcherBuildsPatcherFixes(
-		PatcherBuild patcherBuild, List<PatcherFix> childPatcherFixes,
-		List<String> messages) {
-
-		PatcherFix longestTicketPatcherFix =
-			PatcherFixUtil.fetchLongestTicketPatcherFix(childPatcherFixes);
-
-		PatcherBuildLocalServiceUtil.addPatcherFixPatcherBuild(
-			longestTicketPatcherFix.getPatcherFixId(),
-			patcherBuild.getPatcherBuildId());
-
-		PatcherUtil.addMessage(
-			StringBundler.concat(
-				"The fix ", longestTicketPatcherFix.getPatcherFixId(),
-				" was added to the build ", patcherBuild.getPatcherBuildId()),
-			messages);
-
-		List<Long> parentPatcherFixIds =
-			PatcherFixRelUtil.getParentPatcherFixIds(
-				longestTicketPatcherFix.getPatcherFixId());
-
-		for (long parentPatcherFixId : parentPatcherFixIds) {
-			PatcherBuildLocalServiceUtil.deletePatcherFixPatcherBuild(
-				parentPatcherFixId, patcherBuild.getPatcherBuildId());
-		}
-
-		List<String> patcherFixTickets = PatcherUtil.getTickets(
-			longestTicketPatcherFix.getName());
-
-		List<PatcherFix> patcherBuildPatcherFixes =
-			PatcherFixLocalServiceUtil.getPatcherBuildPatcherFixes(
-				patcherBuild.getPatcherBuildId());
-
-		for (PatcherFix patcherBuildPatcherFix : patcherBuildPatcherFixes) {
-			if (patcherBuildPatcherFix.getPatcherFixId() ==
-					longestTicketPatcherFix.getPatcherFixId()) {
-
-				continue;
-			}
-
-			List<String> patcherBuildPatcherFixTickets = PatcherUtil.getTickets(
-				patcherBuildPatcherFix.getName());
-
-			if (patcherFixTickets.containsAll(patcherBuildPatcherFixTickets)) {
-				PatcherBuildLocalServiceUtil.deletePatcherFixPatcherBuild(
-					patcherBuildPatcherFix.getPatcherFixId(),
-					patcherBuild.getPatcherBuildId());
-			}
-		}
-	}
-
 	protected static void updatePatcherBuildStatus(
 			User user, PatcherBuild patcherBuild,
 			int osbPatcherServletOutcomeStatus,
@@ -2051,7 +2002,7 @@ public class PatcherBuildUtil {
 				osbPatcherServletOutcomeResult,
 				WorkflowConstants.STATUS_FIX_COMPLETE);
 
-			updatePatcherBuildStatusMergeComplete(user, patcherBuild);
+			updatePatcherBuildStatusMergeComplete(user, patcherBuild, true);
 
 			PatcherUtil.addMessage(
 				StringBundler.concat(
@@ -2167,7 +2118,7 @@ public class PatcherBuildUtil {
 	}
 
 	protected static void updatePatcherBuildStatusMergeComplete(
-			User user, PatcherBuild patcherBuild)
+			User user, PatcherBuild patcherBuild, boolean sendJenkinsRequest)
 		throws Exception {
 
 		if (isMergeOnly(patcherBuild)) {
@@ -2184,7 +2135,60 @@ public class PatcherBuildUtil {
 
 			workflowParentPatcherBuild(user, patcherBuild);
 
-			JenkinsUtil.sendDistJenkinsRequest(user, patcherBuild);
+			if (sendJenkinsRequest) {
+				JenkinsUtil.sendDistJenkinsRequest(user, patcherBuild);
+			}
+		}
+	}
+
+	protected static void updatePatcherBuildsPatcherFixes(
+		PatcherBuild patcherBuild, List<PatcherFix> childPatcherFixes,
+		List<String> messages) {
+
+		PatcherFix longestTicketPatcherFix =
+			PatcherFixUtil.fetchLongestTicketPatcherFix(childPatcherFixes);
+
+		PatcherBuildLocalServiceUtil.addPatcherFixPatcherBuild(
+			longestTicketPatcherFix.getPatcherFixId(),
+			patcherBuild.getPatcherBuildId());
+
+		PatcherUtil.addMessage(
+			StringBundler.concat(
+				"The fix ", longestTicketPatcherFix.getPatcherFixId(),
+				" was added to the build ", patcherBuild.getPatcherBuildId()),
+			messages);
+
+		List<Long> parentPatcherFixIds =
+			PatcherFixRelUtil.getParentPatcherFixIds(
+				longestTicketPatcherFix.getPatcherFixId());
+
+		for (long parentPatcherFixId : parentPatcherFixIds) {
+			PatcherBuildLocalServiceUtil.deletePatcherFixPatcherBuild(
+				parentPatcherFixId, patcherBuild.getPatcherBuildId());
+		}
+
+		List<String> patcherFixTickets = PatcherUtil.getTickets(
+			longestTicketPatcherFix.getName());
+
+		List<PatcherFix> patcherBuildPatcherFixes =
+			PatcherFixLocalServiceUtil.getPatcherBuildPatcherFixes(
+				patcherBuild.getPatcherBuildId());
+
+		for (PatcherFix patcherBuildPatcherFix : patcherBuildPatcherFixes) {
+			if (patcherBuildPatcherFix.getPatcherFixId() ==
+					longestTicketPatcherFix.getPatcherFixId()) {
+
+				continue;
+			}
+
+			List<String> patcherBuildPatcherFixTickets = PatcherUtil.getTickets(
+				patcherBuildPatcherFix.getName());
+
+			if (patcherFixTickets.containsAll(patcherBuildPatcherFixTickets)) {
+				PatcherBuildLocalServiceUtil.deletePatcherFixPatcherBuild(
+					patcherBuildPatcherFix.getPatcherFixId(),
+					patcherBuild.getPatcherBuildId());
+			}
 		}
 	}
 

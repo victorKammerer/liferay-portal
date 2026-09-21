@@ -7,12 +7,16 @@ package com.liferay.analytics.cms.rest.internal.resource.v1_0;
 
 import com.liferay.analytics.cms.rest.dto.v1_0.PerformanceOverviewMetric;
 import com.liferay.analytics.cms.rest.internal.client.AnalyticsCloudClient;
+import com.liferay.analytics.cms.rest.internal.cmp.project.util.CMPProjectUtil;
 import com.liferay.analytics.cms.rest.internal.depot.entry.util.DepotEntryUtil;
 import com.liferay.analytics.cms.rest.resource.v1_0.PerformanceOverviewMetricResource;
 import com.liferay.analytics.settings.rest.manager.AnalyticsSettingsManager;
 import com.liferay.analytics.settings.rest.util.AnalyticsSettingsManagerUtil;
 import com.liferay.portal.kernel.license.util.LicenseManagerUtil;
+import com.liferay.portal.kernel.security.permission.ActionKeys;
+import com.liferay.portal.kernel.util.ArrayUtil;
 import com.liferay.portal.kernel.util.Http;
+import com.liferay.portal.kernel.util.ListUtil;
 
 import java.util.Arrays;
 
@@ -33,7 +37,7 @@ public class PerformanceOverviewMetricResourceImpl
 
 	@Override
 	public PerformanceOverviewMetric getPerformanceOverviewMetric(
-			Long[] depotEntryIds, Integer rangeKey)
+			Long[] cmpProjectIds, Long[] depotEntryIds, Integer rangeKey)
 		throws Exception {
 
 		LicenseManagerUtil.checkFreeTier();
@@ -43,7 +47,19 @@ public class PerformanceOverviewMetricResourceImpl
 
 		Long[] groupIds = DepotEntryUtil.getGroupIds(
 			DepotEntryUtil.getDepotEntries(
+				ActionKeys.VIEW_SITE_ADMINISTRATION,
 				contextCompany.getCompanyId(), depotEntryIds));
+
+		if (ArrayUtil.isEmpty(groupIds)) {
+			return new PerformanceOverviewMetric();
+		}
+
+		Long[] filteredCMPProjectIds = CMPProjectUtil.getFilteredCMPProjectIds(
+			ActionKeys.VIEW_SITE_ADMINISTRATION, cmpProjectIds);
+
+		if (CMPProjectUtil.hasNoVisibleCMPProjects(filteredCMPProjectIds)) {
+			return new PerformanceOverviewMetric();
+		}
 
 		AnalyticsCloudClient analyticsCloudClient = new AnalyticsCloudClient(
 			_http);
@@ -51,7 +67,8 @@ public class PerformanceOverviewMetricResourceImpl
 		return analyticsCloudClient.getPerformanceOverviewMetric(
 			_analyticsSettingsManager.getAnalyticsConfiguration(
 				contextCompany.getCompanyId()),
-			Arrays.asList(groupIds), rangeKey);
+			ListUtil.fromArray(filteredCMPProjectIds), Arrays.asList(groupIds),
+			rangeKey);
 	}
 
 	@Reference

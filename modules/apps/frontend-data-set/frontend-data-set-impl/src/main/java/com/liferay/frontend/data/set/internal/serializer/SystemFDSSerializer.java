@@ -78,6 +78,28 @@ public class SystemFDSSerializer
 	}
 
 	@Override
+	public String serializeAPIURL(
+		String fdsName, HttpServletRequest httpServletRequest,
+		boolean interpolate, JSONObject tokenResolutionsJSONObject) {
+
+		SystemFDSEntry systemFDSEntry =
+			systemFDSEntryRegistry.getSystemFDSEntry(fdsName);
+
+		if (systemFDSEntry == null) {
+			return null;
+		}
+
+		return createFDSAPIURLBuilder(
+			httpServletRequest, systemFDSEntry.getRESTApplication(),
+			systemFDSEntry.getRESTEndpoint(), systemFDSEntry.getRESTSchema()
+		).setTokenResolutions(
+			tokenResolutionsJSONObject
+		).build(
+			interpolate
+		);
+	}
+
+	@Override
 	public String serializeAdditionalAPIURLParameters(
 		String fdsName, HttpServletRequest httpServletRequest,
 		boolean interpolate, JSONObject tokenResolutionsJSONObject) {
@@ -97,28 +119,6 @@ public class SystemFDSSerializer
 		).setTokenResolutions(
 			tokenResolutionsJSONObject
 		).buildQueryString(
-			interpolate
-		);
-	}
-
-	@Override
-	public String serializeAPIURL(
-		String fdsName, HttpServletRequest httpServletRequest,
-		boolean interpolate, JSONObject tokenResolutionsJSONObject) {
-
-		SystemFDSEntry systemFDSEntry =
-			systemFDSEntryRegistry.getSystemFDSEntry(fdsName);
-
-		if (systemFDSEntry == null) {
-			return null;
-		}
-
-		return createFDSAPIURLBuilder(
-			httpServletRequest, systemFDSEntry.getRESTApplication(),
-			systemFDSEntry.getRESTEndpoint(), systemFDSEntry.getRESTSchema()
-		).setTokenResolutions(
-			tokenResolutionsJSONObject
-		).build(
 			interpolate
 		);
 	}
@@ -295,6 +295,34 @@ public class SystemFDSSerializer
 		}
 
 		return systemFDSEntry.getPropsTransformer();
+	}
+
+	@Override
+	public boolean serializeSearchAsYouType(
+		String fdsName, HttpServletRequest httpServletRequest) {
+
+		SystemFDSEntry systemFDSEntry =
+			systemFDSEntryRegistry.getSystemFDSEntry(fdsName);
+
+		if (systemFDSEntry == null) {
+			return _systemFDSEntry.getSearchAsYouType();
+		}
+
+		return systemFDSEntry.getSearchAsYouType();
+	}
+
+	@Override
+	public boolean serializeSearchSuggestionsEnabled(
+		String fdsName, HttpServletRequest httpServletRequest) {
+
+		SystemFDSEntry systemFDSEntry =
+			systemFDSEntryRegistry.getSystemFDSEntry(fdsName);
+
+		if (systemFDSEntry == null) {
+			return _systemFDSEntry.getSearchSuggestionsEnabled();
+		}
+
+		return systemFDSEntry.getSearchSuggestionsEnabled();
 	}
 
 	@Override

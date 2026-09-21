@@ -4,37 +4,34 @@
  */
 
 import ClayLoadingIndicator from '@clayui/loading-indicator';
+import {openModal} from 'frontend-js-components-web';
 import React, {useCallback, useEffect, useState} from 'react';
 
 import OrderableTable from '../components/OrderableTable';
 import {getDataMasks} from '../services/getDataMasks';
 import {getProfileDataMasks} from '../services/getProfileDataMasks';
 import {patchProfileDataMask} from '../services/patchProfileDataMask';
-import {DataMask, Profile, ProfileDataMaskRow} from '../types';
+import {DataMask, ProfileDataMaskRow} from '../types';
 import {openErrorToast} from '../utils';
 import AddDataMasksModal from './AddDataMasksModal';
 import RemoveDataMaskModal from './RemoveDataMaskModal';
 
 interface ProfileDataMasksProps {
-	profile: Profile;
+	profileERC: string;
 }
 
-export default function ProfileDataMasks({profile}: ProfileDataMasksProps) {
+export default function ProfileDataMasks({profileERC}: ProfileDataMasksProps) {
 	const [dataMasks, setDataMasks] = useState<DataMask[]>([]);
 	const [loading, setLoading] = useState(true);
 	const [rows, setRows] = useState<ProfileDataMaskRow[]>([]);
 	const [rowToRemove, setRowToRemove] = useState<ProfileDataMaskRow | null>(
 		null
 	);
-	const [showAddModal, setShowAddModal] = useState(false);
-
-	const profileExternalReferenceCode = profile.externalReferenceCode ?? '';
 
 	const loadRows = useCallback(async () => {
 		const [associationsResult, dataMasksResult] = await Promise.all([
 			getProfileDataMasks({
-				mcpServerProfileExternalReferenceCode:
-					profileExternalReferenceCode,
+				mcpServerProfileExternalReferenceCode: profileERC,
 			}),
 			getDataMasks(),
 		]);
@@ -88,7 +85,7 @@ export default function ProfileDataMasks({profile}: ProfileDataMasksProps) {
 			)
 		);
 		setLoading(false);
-	}, [profileExternalReferenceCode]);
+	}, [profileERC]);
 
 	useEffect(() => {
 		loadRows();
@@ -138,6 +135,33 @@ export default function ProfileDataMasks({profile}: ProfileDataMasksProps) {
 		setRows(orderedRows);
 	};
 
+	const openAddDataMasksModal = () =>
+		openModal({
+			contentComponent: ({closeModal}: {closeModal: () => void}) => (
+				<AddDataMasksModal
+					dataMasks={dataMasks.filter(
+						(mask) =>
+							!rows.some(
+								(row) =>
+									row.dataMaskExternalReferenceCode ===
+									mask.externalReferenceCode
+							)
+					)}
+					nextExecutionOrder={
+						rows.reduce(
+							(maxExecutionOrder, row) =>
+								Math.max(maxExecutionOrder, row.executionOrder),
+							0
+						) + 1
+					}
+					onAdded={loadRows}
+					onClose={closeModal}
+					profileExternalReferenceCode={profileERC}
+				/>
+			),
+			size: 'lg',
+		});
+
 	if (loading) {
 		return (
 			<div className="align-items-center d-flex justify-content-center mt-4">
@@ -151,7 +175,7 @@ export default function ProfileDataMasks({profile}: ProfileDataMasksProps) {
 			<OrderableTable
 				actions={[
 					{
-						icon: 'trash',
+						icon: 'times-circle',
 						label: Liferay.Language.get('remove'),
 						onClick: ({item}: {item: ProfileDataMaskRow}) =>
 							setRowToRemove(item),
@@ -160,7 +184,7 @@ export default function ProfileDataMasks({profile}: ProfileDataMasksProps) {
 				creationMenuItems={[
 					{
 						label: Liferay.Language.get('add-masks'),
-						onClick: () => setShowAddModal(true),
+						onClick: openAddDataMasksModal,
 					},
 				]}
 				creationMenuLabel={Liferay.Language.get('add-masks')}
@@ -186,29 +210,6 @@ export default function ProfileDataMasks({profile}: ProfileDataMasksProps) {
 					onClose={() => setRowToRemove(null)}
 					onRemoved={loadRows}
 					row={rowToRemove}
-				/>
-			)}
-
-			{showAddModal && (
-				<AddDataMasksModal
-					dataMasks={dataMasks.filter(
-						(mask) =>
-							!rows.some(
-								(row) =>
-									row.dataMaskExternalReferenceCode ===
-									mask.externalReferenceCode
-							)
-					)}
-					nextExecutionOrder={
-						rows.reduce(
-							(maxExecutionOrder, row) =>
-								Math.max(maxExecutionOrder, row.executionOrder),
-							0
-						) + 1
-					}
-					onAdded={loadRows}
-					onClose={() => setShowAddModal(false)}
-					profileExternalReferenceCode={profileExternalReferenceCode}
 				/>
 			)}
 		</div>

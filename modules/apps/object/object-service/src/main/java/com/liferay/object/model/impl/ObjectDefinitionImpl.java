@@ -21,7 +21,6 @@ import com.liferay.object.service.ObjectFieldLocalServiceUtil;
 import com.liferay.object.service.ObjectFolderLocalServiceUtil;
 import com.liferay.petra.string.StringBundler;
 import com.liferay.petra.string.StringPool;
-import com.liferay.portal.kernel.feature.flag.FeatureFlagManagerUtil;
 import com.liferay.portal.kernel.util.ArrayUtil;
 import com.liferay.portal.kernel.util.GetterUtil;
 import com.liferay.portal.kernel.util.LocaleUtil;
@@ -90,6 +89,16 @@ public class ObjectDefinitionImpl extends ObjectDefinitionBaseImpl {
 	}
 
 	@Override
+	public String getOSGiJaxRsName() {
+		return getOSGiJaxRsName(StringPool.BLANK);
+	}
+
+	@Override
+	public String getOSGiJaxRsName(String className) {
+		return StringUtil.toLowerCase(getName()) + className;
+	}
+
+	@Override
 	public List<ObjectDefinitionSetting> getObjectDefinitionSettings() {
 		if (_objectDefinitionSettings == null) {
 			_objectDefinitionSettings =
@@ -105,6 +114,7 @@ public class ObjectDefinitionImpl extends ObjectDefinitionBaseImpl {
 		if (_objectFieldBag == null) {
 			setObjectFieldBag(
 				new ObjectFieldBag(
+					isModifiableAndSystem(),
 					ObjectFieldLocalServiceUtil.getObjectFields(
 						getObjectDefinitionId())));
 		}
@@ -134,27 +144,8 @@ public class ObjectDefinitionImpl extends ObjectDefinitionBaseImpl {
 	}
 
 	@Override
-	public String getOSGiJaxRsName() {
-		return getOSGiJaxRsName(StringPool.BLANK);
-	}
-
-	@Override
-	public String getOSGiJaxRsName(String className) {
-		return StringUtil.toLowerCase(getName()) + className;
-	}
-
-	@Override
 	public String getPortletId() {
 		return ObjectDefinitionUtil.getPortletId(getClassName());
-	}
-
-	@Override
-	public String getResourceName() {
-		if (isUnmodifiableSystemObject()) {
-			throw new UnsupportedOperationException();
-		}
-
-		return "com.liferay.object#" + getObjectDefinitionId();
 	}
 
 	@Override
@@ -170,6 +161,15 @@ public class ObjectDefinitionImpl extends ObjectDefinitionBaseImpl {
 
 		return "/c/" +
 			TextFormatter.formatPlural(StringUtil.toLowerCase(getShortName()));
+	}
+
+	@Override
+	public String getResourceName() {
+		if (isUnmodifiableSystemObject()) {
+			throw new UnsupportedOperationException();
+		}
+
+		return "com.liferay.object#" + getObjectDefinitionId();
 	}
 
 	@Override
@@ -238,10 +238,6 @@ public class ObjectDefinitionImpl extends ObjectDefinitionBaseImpl {
 	}
 
 	public boolean isCMP() {
-		if (!FeatureFlagManagerUtil.isEnabled(getCompanyId(), "LPD-58677")) {
-			return false;
-		}
-
 		return Objects.equals(
 			getObjectFolderExternalReferenceCode(),
 			ObjectFolderConstants.

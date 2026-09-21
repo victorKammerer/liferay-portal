@@ -64,7 +64,9 @@ ComponentAnnotationCheck | [Bug Prevention](bug_prevention_checks.md#bug-prevent
 [ComponentExposureCheck](check/component_exposure_check.md#componentexposurecheck) | [Bug Prevention](bug_prevention_checks.md#bug-prevention-checks) | .java | Avoid exposing static component. |
 ConcatCheck | [Performance](performance_checks.md#performance-checks) | .java, .jsp, .jspf, .jspx, .tag, .tpl, or .vm | Checks for correct use of `StringBundler.concat`. |
 ConfigDefinitionKeysCheck | [Styling](styling_checks.md#styling-checks) | .cfg or .config | Sorts definition keys in `.config` files. |
+ConfigStylingCheck | [Styling](styling_checks.md#styling-checks) | .cfg or .config | Applies rules to enforce consistency in code style. |
 ConfigWhitespaceCheck | [Styling](styling_checks.md#styling-checks) | .cfg or .config | Finds missing and unnecessary whitespace. |
+ConfigurableCreateConfigurableCallCheck | [Bug Prevention](bug_prevention_checks.md#bug-prevention-checks) | .java | Checks illegal call to `Configurable.createConfigurable`. |
 ConstantNameCheck | [Naming Conventions](naming_conventions_checks.md#naming-conventions-checks) | .java, .jsp, .jspf, .jspx, .tag, .tpl, or .vm | Checks that variable names of constants follow correct naming rules. |
 ConstructorGlobalVariableDeclarationCheck | [Performance](performance_checks.md#performance-checks) | .java | Checks that initial values of global variables are not set in the constructor. |
 [ConstructorMissingEmptyLineCheck](check/constructor_missing_empty_line_check.md#constructormissingemptylinecheck) | [Styling](styling_checks.md#styling-checks) | .java | Checks for line breaks when assigning variables in constructor. |
@@ -73,8 +75,10 @@ ContractionsCheck | [Styling](styling_checks.md#styling-checks) | .java, .jsp, .
 [CopyrightCheck](check/copyright_check.md#copyrightcheck) | [Styling](styling_checks.md#styling-checks) | .java, .jsp, .jspf, .jspx, .tag, .tpl, or .vm | Validates `copyright` header. |
 [CreatingThreadsForDBAccessCheck](check/creating_threads_for_db_access_check.md#creatingthreadsfordbaccesscheck) | [Bug Prevention](bug_prevention_checks.md#bug-prevention-checks) | .java | Finds cases where `CompanyInheritableThreadLocalCallable` should be used when creating threads for DB access. |
 [CreationMenuBuilderCheck](check/builder_check.md#buildercheck) | [Miscellaneous](miscellaneous_checks.md#miscellaneous-checks) | .java | Checks that `CreationMenuBuilder` is used when possible. |
+CredentialBufferCheck | [Bug Prevention](bug_prevention_checks.md#bug-prevention-checks) | .java | Finds buffers that are derived from a `String` and passed straight into a credential API, leaving no reference to clear. |
 DTOEnumCreationCheck | [Bug Prevention](bug_prevention_checks.md#bug-prevention-checks) | .java | Checks the creation of DTO enum. |
 DatabaseMetaDataCheck | [Bug Prevention](bug_prevention_checks.md#bug-prevention-checks) | .java | Checks usages of `java.sql.DatabaseMetaData`. |
+DatabaseMetaDataSupportsBatchUpdatesCallCheck | [Bug Prevention](bug_prevention_checks.md#bug-prevention-checks) | .java | Checks illegal call to `DatabaseMetaData.supportsBatchUpdates`. |
 [DefaultComesLastCheck](https://checkstyle.sourceforge.io/checks/coding/defaultcomeslast.html) | [Styling](styling_checks.md#styling-checks) | .java, .jsp, .jspf, .jspx, .tag, .tpl, or .vm | Checks that the `default` is after all the cases in a `switch` statement. |
 DeprecatedAPICheck | [Bug Prevention](bug_prevention_checks.md#bug-prevention-checks) | .java | Finds calls to deprecated classes, constructors, fields or methods. |
 DeprecatedClassesCheck | [Bug Prevention](bug_prevention_checks.md#bug-prevention-checks) | .java, .jsp, .jspf, .jspx, .tag, .tpl, or .vm | Replaces deprecated classes. |
@@ -147,8 +151,8 @@ InnerExceptionClassCheck | [Bug Prevention](bug_prevention_checks.md#bug-prevent
 InstanceofOrderCheck | [Styling](styling_checks.md#styling-checks) | .java, .jsp, .jspf, .jspx, .tag, .tpl, or .vm | Check the order of `instanceof` calls. |
 [ItemBuilderCheck](check/builder_check.md#buildercheck) | [Miscellaneous](miscellaneous_checks.md#miscellaneous-checks) | .java | Checks that `DropdownItemBuilder`, `LabelItemBuilder` or `NavigationItemBuilder` is used when possible. |
 [ItemListBuilderCheck](check/builder_check.md#buildercheck) | [Miscellaneous](miscellaneous_checks.md#miscellaneous-checks) | .java | Checks that `DropdownItemListBuilder`, `LabelItemListBuilder` or `NavigationItemListBuilder` is used when possible. |
-JDKDynamicAgentLoadingCheck | [Bug Prevention](bug_prevention_checks.md#bug-prevention-checks) | .action, .eslintignore, .expect, .function, .jelly, .jrxml, .macro, .pom, .prettierignore, .project, .properties, .qti, .sh, .svg, .testcase, .toggle, .tpl, .wsdl, .xlf, .xml, .xsd, .yaml, or .yml | Checks that dynamic loading of agents is not used. |
-JDKPreviewFeaturesCheck | [Bug Prevention](bug_prevention_checks.md#bug-prevention-checks) | .action, .eslintignore, .expect, .function, .jelly, .jrxml, .macro, .pom, .prettierignore, .project, .properties, .qti, .sh, .svg, .testcase, .toggle, .tpl, .wsdl, .xlf, .xml, .xsd, .yaml, or .yml | Checks that preview features are not used. |
+JDKDynamicAgentLoadingCheck | [Bug Prevention](bug_prevention_checks.md#bug-prevention-checks) | .action, .eslintignore, .expect, .function, .gotmpl, .jelly, .jrxml, .macro, .pom, .prettierignore, .project, .properties, .qti, .sh, .svg, .testcase, .toggle, .tpl, .wsdl, .xlf, .xml, .xsd, .yaml, or .yml | Checks that dynamic loading of agents is not used. |
+JDKPreviewFeaturesCheck | [Bug Prevention](bug_prevention_checks.md#bug-prevention-checks) | .action, .eslintignore, .expect, .function, .gotmpl, .jelly, .jrxml, .macro, .pom, .prettierignore, .project, .properties, .qti, .sh, .svg, .testcase, .toggle, .tpl, .wsdl, .xlf, .xml, .xsd, .yaml, or .yml | Checks that preview features are not used. |
 JSCompatibilityCheck | [Bug Prevention](bug_prevention_checks.md#bug-prevention-checks) | | Checks for JavaScript compatibility. |
 [JSLodashDependencyCheck](check/js_lodash_dependency_check.md#jslodashdependencycheck) | [Bug Prevention](bug_prevention_checks.md#bug-prevention-checks) | .js or .jsx | Finds incorrect use of `AUI._`. |
 JSONBatchEngineDataFileCheck | [Styling](styling_checks.md#styling-checks) | .ipynb, .json, or .npmbridgerc | Remove elements in `*.batch-engine-data.json` files. |
@@ -513,6 +517,7 @@ SemiColonCheck | [Styling](styling_checks.md#styling-checks) | .java, .jsp, .jsp
 ServiceImplAccessModifierCheck | [Bug Prevention](bug_prevention_checks.md#bug-prevention-checks) | .java | Checks for cases where visibility of methods can be decreased. |
 [ServiceProxyFactoryCheck](check/service_proxy_factory_check.md#serviceproxyfactorycheck) | [Bug Prevention](bug_prevention_checks.md#bug-prevention-checks) | .java | Finds incorrect parameter in method call. |
 ServiceUpdateCheck | [Bug Prevention](bug_prevention_checks.md#bug-prevention-checks) | .java | Checks that there are no stale references in service code from service updates. |
+ServletResponseUtilSendFileCallCheck | [Bug Prevention](bug_prevention_checks.md#bug-prevention-checks) | .java | Checks illegal call to `ServletResponseUtil.sendFile`. |
 SessionKeysCheck | [Naming Conventions](naming_conventions_checks.md#naming-conventions-checks) | .java | Checks that messages send to `SessionsErrors` or `SessionMessages` follow naming conventions. |
 SetUtilMethodsCheck | [Performance](performance_checks.md#performance-checks) | .java, .jsp, .jspf, .jspx, .tag, .tpl, or .vm | Finds cases of inefficient SetUtil operations. |
 SizeIsZeroCheck | [Styling](styling_checks.md#styling-checks) | .java, .jsp, .jspf, .jspx, .tag, .tpl, or .vm | Finds cases of calls like `list.size() == 0` (use `list.isEmpty()` instead). |
@@ -671,9 +676,9 @@ XMLWebFileCheck | [Bug Prevention](bug_prevention_checks.md#bug-prevention-check
 XMLWhitespaceCheck | [Styling](styling_checks.md#styling-checks) | .action, .function, .jelly, .jrxml, .macro, .pom, .project, .properties, .qti, .svg, .testcase, .toggle, .tpl, .wsdl, .xlf, .xml, or .xsd | Finds missing and unnecessary whitespace in `.xml` files. |
 XMLWorkflowDefinitionFileNameCheck | [Styling](styling_checks.md#styling-checks) | .action, .function, .jelly, .jrxml, .macro, .pom, .project, .properties, .qti, .svg, .testcase, .toggle, .tpl, .wsdl, .xlf, .xml, or .xsd | Checks the file name of workflow definition files. |
 XMLWorkflowDefinitionFileStylingCheck | [Styling](styling_checks.md#styling-checks) | .action, .function, .jelly, .jrxml, .macro, .pom, .project, .properties, .qti, .svg, .testcase, .toggle, .tpl, .wsdl, .xlf, .xml, or .xsd | Applies rules to enforce consistency in code style in `*workflow-definition.xml` files. |
-YMLDefinitionOrderCheck | [Styling](styling_checks.md#styling-checks) | .tpl, .yaml, or .yml | Sorts definitions alphabetically in `.yml` files. |
-YMLEmptyLinesCheck | [Styling](styling_checks.md#styling-checks) | .tpl, .yaml, or .yml | Finds missing and unnecessary empty lines. |
-YMLIndentationCheck | [Styling](styling_checks.md#styling-checks) | .tpl, .yaml, or .yml | Finds incorrect indentation in YAML files. |
-YMLRESTConfigFileBreakingChangeCommitMessageCheck | [Bug Prevention](bug_prevention_checks.md#bug-prevention-checks) | .tpl, .yaml, or .yml | Checks that commit message should contain the schematized breaking changes. |
-YMLStylingCheck | [Styling](styling_checks.md#styling-checks) | .tpl, .yaml, or .yml | Applies rules to enforce consistency in code style. |
-YMLWhitespaceCheck | [Styling](styling_checks.md#styling-checks) | .tpl, .yaml, or .yml | Finds missing and unnecessary whitespace in `.yml` files. |
+YMLDefinitionOrderCheck | [Styling](styling_checks.md#styling-checks) | .gotmpl, .tpl, .yaml, or .yml | Sorts definitions alphabetically in `.yml` files. |
+YMLEmptyLinesCheck | [Styling](styling_checks.md#styling-checks) | .gotmpl, .tpl, .yaml, or .yml | Finds missing and unnecessary empty lines. |
+YMLIndentationCheck | [Styling](styling_checks.md#styling-checks) | .gotmpl, .tpl, .yaml, or .yml | Finds incorrect indentation in YAML files. |
+YMLRESTConfigFileBreakingChangeCommitMessageCheck | [Bug Prevention](bug_prevention_checks.md#bug-prevention-checks) | .gotmpl, .tpl, .yaml, or .yml | Checks that commit message should contain the schematized breaking changes. |
+YMLStylingCheck | [Styling](styling_checks.md#styling-checks) | .gotmpl, .tpl, .yaml, or .yml | Applies rules to enforce consistency in code style. |
+YMLWhitespaceCheck | [Styling](styling_checks.md#styling-checks) | .gotmpl, .tpl, .yaml, or .yml | Finds missing and unnecessary whitespace in `.yml` files. |

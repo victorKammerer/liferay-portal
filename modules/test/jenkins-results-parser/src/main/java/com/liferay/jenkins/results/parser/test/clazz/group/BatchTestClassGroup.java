@@ -328,11 +328,6 @@ public abstract class BatchTestClassGroup extends BaseTestClassGroup {
 		return GroupingStrategy.getByString(jobPropertyValue);
 	}
 
-	@Override
-	public Job getJob() {
-		return portalTestClassJob;
-	}
-
 	public JSONObject getJSONObject() {
 		if (jsonObject != null) {
 			return jsonObject;
@@ -374,6 +369,11 @@ public abstract class BatchTestClassGroup extends BaseTestClassGroup {
 		);
 
 		return jsonObject;
+	}
+
+	@Override
+	public Job getJob() {
+		return portalTestClassJob;
 	}
 
 	public Integer getMaximumSlavesPerHost() {
@@ -920,7 +920,9 @@ public abstract class BatchTestClassGroup extends BaseTestClassGroup {
 			if (relevantTestBatchName.startsWith("integration-") ||
 				relevantTestBatchName.startsWith("modules-integration") ||
 				relevantTestBatchName.startsWith("modules-unit") ||
-				relevantTestBatchName.startsWith("unit-")) {
+				relevantTestBatchName.startsWith("unit-") ||
+				relevantTestBatchName.startsWith("workspaces-integration") ||
+				relevantTestBatchName.startsWith("workspaces-unit")) {
 
 				relevantIntegrationUnitBatchNames.add(relevantTestBatchName);
 			}

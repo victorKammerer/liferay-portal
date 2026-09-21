@@ -78,14 +78,14 @@ public abstract class BaseOptionResourceImpl
 	 * curl -X 'DELETE' 'http://localhost:8080/o/headless-commerce-admin-catalog/v1.0/options/{id}'  -u 'test@liferay.com:test'
 	 */
 	@io.swagger.v3.oas.annotations.Operation(
-		description = "Deletes the option identified by id. Returns 404 when the id is not found. Side effects -- Cascades through product option listeners; reindexes affected products."
+		description = "Deletes the option identified by ID. Returns 404 when the ID is not found. Side effects -- Cascades through product option listeners; reindexes affected products."
 	)
 	@io.swagger.v3.oas.annotations.Parameters(
 		value = {
 			@io.swagger.v3.oas.annotations.Parameter(
 				description = "Internal numeric identifier of the target resource. Counterpart to the `by-externalReferenceCode` path variant; identifiers are server-assigned and stable across the resource's lifetime.",
 				in = io.swagger.v3.oas.annotations.enums.ParameterIn.PATH,
-				name = "id"
+				name = "id", required = true
 			)
 		}
 	)
@@ -165,7 +165,7 @@ public abstract class BaseOptionResourceImpl
 			@io.swagger.v3.oas.annotations.Parameter(
 				description = "External reference code that addresses the target resource on the `by-externalReferenceCode` paths. The code is the integration-supplied idempotency key, unique within the resource scope; POST against this path is upsert (create when absent, replace when present).",
 				in = io.swagger.v3.oas.annotations.enums.ParameterIn.PATH,
-				name = "externalReferenceCode"
+				name = "externalReferenceCode", required = true
 			)
 		}
 	)
@@ -196,14 +196,14 @@ public abstract class BaseOptionResourceImpl
 	 * curl -X 'GET' 'http://localhost:8080/o/headless-commerce-admin-catalog/v1.0/options/{id}'  -u 'test@liferay.com:test'
 	 */
 	@io.swagger.v3.oas.annotations.Operation(
-		description = "Fetches the option identified by id. Returns 404 when the id is not found."
+		description = "Fetches the option identified by ID. Returns 404 when the ID is not found."
 	)
 	@io.swagger.v3.oas.annotations.Parameters(
 		value = {
 			@io.swagger.v3.oas.annotations.Parameter(
 				description = "Internal numeric identifier of the target resource. Counterpart to the `by-externalReferenceCode` path variant; identifiers are server-assigned and stable across the resource's lifetime.",
 				in = io.swagger.v3.oas.annotations.enums.ParameterIn.PATH,
-				name = "id"
+				name = "id", required = true
 			),
 			@io.swagger.v3.oas.annotations.Parameter(
 				description = "Comma-separated list of nested fields to embed in each returned resource. Each value names a relationship exposed on the resource; when omitted, those relationships are not expanded inline.",
@@ -242,7 +242,7 @@ public abstract class BaseOptionResourceImpl
 			@io.swagger.v3.oas.annotations.Parameter(
 				description = "External reference code that addresses the target resource on the `by-externalReferenceCode` paths. The code is the integration-supplied idempotency key, unique within the resource scope; POST against this path is upsert (create when absent, replace when present).",
 				in = io.swagger.v3.oas.annotations.enums.ParameterIn.PATH,
-				name = "externalReferenceCode"
+				name = "externalReferenceCode", required = true
 			),
 			@io.swagger.v3.oas.annotations.Parameter(
 				description = "Comma-separated list of nested fields to embed in each returned resource. Each value names a relationship exposed on the resource; when omitted, those relationships are not expanded inline.",
@@ -339,14 +339,14 @@ public abstract class BaseOptionResourceImpl
 	 * curl -X 'PATCH' 'http://localhost:8080/o/headless-commerce-admin-catalog/v1.0/options/{id}' -d $'{"catalogId": ___, "customFields": ___, "description": ___, "externalReferenceCode": ___, "facetable": ___, "fieldType": ___, "key": ___, "name": ___, "optionValues": ___, "priority": ___, "required": ___, "skuContributor": ___}' --header 'Content-Type: application/json' -u 'test@liferay.com:test'
 	 */
 	@io.swagger.v3.oas.annotations.Operation(
-		description = "Partially updates the option identified by id. Returns 404 when the id is not found. Side effects -- Reindexes the option."
+		description = "Partially updates the option identified by ID. Returns 404 when the ID is not found. Side effects -- Reindexes the option."
 	)
 	@io.swagger.v3.oas.annotations.Parameters(
 		value = {
 			@io.swagger.v3.oas.annotations.Parameter(
 				description = "Internal numeric identifier of the target resource. Counterpart to the `by-externalReferenceCode` path variant; identifiers are server-assigned and stable across the resource's lifetime.",
 				in = io.swagger.v3.oas.annotations.enums.ParameterIn.PATH,
-				name = "id"
+				name = "id", required = true
 			)
 		}
 	)
@@ -384,7 +384,7 @@ public abstract class BaseOptionResourceImpl
 			@io.swagger.v3.oas.annotations.Parameter(
 				description = "External reference code that addresses the target resource on the `by-externalReferenceCode` paths. The code is the integration-supplied idempotency key, unique within the resource scope; POST against this path is upsert (create when absent, replace when present).",
 				in = io.swagger.v3.oas.annotations.enums.ParameterIn.PATH,
-				name = "externalReferenceCode"
+				name = "externalReferenceCode", required = true
 			)
 		}
 	)
@@ -570,7 +570,7 @@ public abstract class BaseOptionResourceImpl
 			@io.swagger.v3.oas.annotations.Parameter(
 				description = "External reference code that addresses the target resource on the `by-externalReferenceCode` paths. The code is the integration-supplied idempotency key, unique within the resource scope; POST against this path is upsert (create when absent, replace when present).",
 				in = io.swagger.v3.oas.annotations.enums.ParameterIn.PATH,
-				name = "externalReferenceCode"
+				name = "externalReferenceCode", required = true
 			)
 		}
 	)
@@ -1380,4 +1380,4 @@ public abstract class BaseOptionResourceImpl
 		LogFactoryUtil.getLog(BaseOptionResourceImpl.class);
 
 }
-// LIFERAY-REST-BUILDER-HASH:1456017199
+// LIFERAY-REST-BUILDER-HASH:2040675031

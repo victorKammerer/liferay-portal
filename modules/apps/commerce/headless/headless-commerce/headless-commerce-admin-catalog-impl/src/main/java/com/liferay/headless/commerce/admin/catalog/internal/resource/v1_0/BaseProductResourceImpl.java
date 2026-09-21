@@ -78,14 +78,14 @@ public abstract class BaseProductResourceImpl
 	 * curl -X 'DELETE' 'http://localhost:8080/o/headless-commerce-admin-catalog/v1.0/products/{id}'  -u 'test@liferay.com:test'
 	 */
 	@io.swagger.v3.oas.annotations.Operation(
-		description = "Deletes the product identified by product id. Returns 404 when the product id is not found. Side effects -- Cascades product definition delete (skus, options, attachments, categorization)."
+		description = "Deletes the product identified by product ID. Returns 404 when the product ID is not found. Side effects -- Cascades product definition delete (skus, options, attachments, categorization)."
 	)
 	@io.swagger.v3.oas.annotations.Parameters(
 		value = {
 			@io.swagger.v3.oas.annotations.Parameter(
 				description = "Internal numeric identifier of the target resource. Counterpart to the `by-externalReferenceCode` path variant; identifiers are server-assigned and stable across the resource's lifetime.",
 				in = io.swagger.v3.oas.annotations.enums.ParameterIn.PATH,
-				name = "id"
+				name = "id", required = true
 			)
 		}
 	)
@@ -161,7 +161,7 @@ public abstract class BaseProductResourceImpl
 			@io.swagger.v3.oas.annotations.Parameter(
 				description = "External reference code that addresses the target resource on the `by-externalReferenceCode` paths. The code is the integration-supplied idempotency key, unique within the resource scope; POST against this path is upsert (create when absent, replace when present).",
 				in = io.swagger.v3.oas.annotations.enums.ParameterIn.PATH,
-				name = "externalReferenceCode"
+				name = "externalReferenceCode", required = true
 			)
 		}
 	)
@@ -195,12 +195,12 @@ public abstract class BaseProductResourceImpl
 			@io.swagger.v3.oas.annotations.Parameter(
 				description = "External reference code that addresses the target resource on the `by-externalReferenceCode` paths. The code is the integration-supplied idempotency key, unique within the resource scope; POST against this path is upsert (create when absent, replace when present).",
 				in = io.swagger.v3.oas.annotations.enums.ParameterIn.PATH,
-				name = "externalReferenceCode"
+				name = "externalReferenceCode", required = true
 			),
 			@io.swagger.v3.oas.annotations.Parameter(
 				description = "Numeric version of the resource snapshot to address. Used on operations that return or act on a specific historical revision rather than the current state.",
 				in = io.swagger.v3.oas.annotations.enums.ParameterIn.PATH,
-				name = "version"
+				name = "version", required = true
 			)
 		}
 	)
@@ -231,19 +231,19 @@ public abstract class BaseProductResourceImpl
 	 * curl -X 'DELETE' 'http://localhost:8080/o/headless-commerce-admin-catalog/v1.0/products/{id}/by-version/{version}'  -u 'test@liferay.com:test'
 	 */
 	@io.swagger.v3.oas.annotations.Operation(
-		description = "Deletes a specific historical version of the product identified by product id. Returns 404 when the product id or version is not found. Side effects -- Cascades product definition delete for the targeted version only."
+		description = "Deletes a specific historical version of the product identified by product ID. Returns 404 when the product ID or version is not found. Side effects -- Cascades product definition delete for the targeted version only."
 	)
 	@io.swagger.v3.oas.annotations.Parameters(
 		value = {
 			@io.swagger.v3.oas.annotations.Parameter(
 				description = "Internal numeric identifier of the target resource. Counterpart to the `by-externalReferenceCode` path variant; identifiers are server-assigned and stable across the resource's lifetime.",
 				in = io.swagger.v3.oas.annotations.enums.ParameterIn.PATH,
-				name = "id"
+				name = "id", required = true
 			),
 			@io.swagger.v3.oas.annotations.Parameter(
 				description = "Numeric version of the resource snapshot to address. Used on operations that return or act on a specific historical revision rather than the current state.",
 				in = io.swagger.v3.oas.annotations.enums.ParameterIn.PATH,
-				name = "version"
+				name = "version", required = true
 			)
 		}
 	)
@@ -272,14 +272,14 @@ public abstract class BaseProductResourceImpl
 	 * curl -X 'GET' 'http://localhost:8080/o/headless-commerce-admin-catalog/v1.0/products/{id}'  -u 'test@liferay.com:test'
 	 */
 	@io.swagger.v3.oas.annotations.Operation(
-		description = "Fetches the latest published version of the product identified by product id. Returns 404 when the product id is not found."
+		description = "Fetches the latest published version of the product identified by product ID. Returns 404 when the product ID is not found."
 	)
 	@io.swagger.v3.oas.annotations.Parameters(
 		value = {
 			@io.swagger.v3.oas.annotations.Parameter(
 				description = "Internal numeric identifier of the target resource. Counterpart to the `by-externalReferenceCode` path variant; identifiers are server-assigned and stable across the resource's lifetime.",
 				in = io.swagger.v3.oas.annotations.enums.ParameterIn.PATH,
-				name = "id"
+				name = "id", required = true
 			),
 			@io.swagger.v3.oas.annotations.Parameter(
 				description = "Comma-separated list of nested fields to embed in each returned resource. Each value names a relationship exposed on the resource; when omitted, those relationships are not expanded inline.",
@@ -318,7 +318,7 @@ public abstract class BaseProductResourceImpl
 			@io.swagger.v3.oas.annotations.Parameter(
 				description = "External reference code that addresses the target resource on the `by-externalReferenceCode` paths. The code is the integration-supplied idempotency key, unique within the resource scope; POST against this path is upsert (create when absent, replace when present).",
 				in = io.swagger.v3.oas.annotations.enums.ParameterIn.PATH,
-				name = "externalReferenceCode"
+				name = "externalReferenceCode", required = true
 			),
 			@io.swagger.v3.oas.annotations.Parameter(
 				description = "Comma-separated list of nested fields to embed in each returned resource. Each value names a relationship exposed on the resource; when omitted, those relationships are not expanded inline.",
@@ -359,12 +359,12 @@ public abstract class BaseProductResourceImpl
 			@io.swagger.v3.oas.annotations.Parameter(
 				description = "External reference code that addresses the target resource on the `by-externalReferenceCode` paths. The code is the integration-supplied idempotency key, unique within the resource scope; POST against this path is upsert (create when absent, replace when present).",
 				in = io.swagger.v3.oas.annotations.enums.ParameterIn.PATH,
-				name = "externalReferenceCode"
+				name = "externalReferenceCode", required = true
 			),
 			@io.swagger.v3.oas.annotations.Parameter(
 				description = "Numeric version of the resource snapshot to address. Used on operations that return or act on a specific historical revision rather than the current state.",
 				in = io.swagger.v3.oas.annotations.enums.ParameterIn.PATH,
-				name = "version"
+				name = "version", required = true
 			),
 			@io.swagger.v3.oas.annotations.Parameter(
 				description = "Comma-separated list of nested fields to embed in each returned resource. Each value names a relationship exposed on the resource; when omitted, those relationships are not expanded inline.",
@@ -402,19 +402,19 @@ public abstract class BaseProductResourceImpl
 	 * curl -X 'GET' 'http://localhost:8080/o/headless-commerce-admin-catalog/v1.0/products/{id}/by-version/{version}'  -u 'test@liferay.com:test'
 	 */
 	@io.swagger.v3.oas.annotations.Operation(
-		description = "Fetches a specific historical version of the product identified by product id. Returns 404 when the product id or version is not found."
+		description = "Fetches a specific historical version of the product identified by product ID. Returns 404 when the product ID or version is not found."
 	)
 	@io.swagger.v3.oas.annotations.Parameters(
 		value = {
 			@io.swagger.v3.oas.annotations.Parameter(
 				description = "Internal numeric identifier of the target resource. Counterpart to the `by-externalReferenceCode` path variant; identifiers are server-assigned and stable across the resource's lifetime.",
 				in = io.swagger.v3.oas.annotations.enums.ParameterIn.PATH,
-				name = "id"
+				name = "id", required = true
 			),
 			@io.swagger.v3.oas.annotations.Parameter(
 				description = "Numeric version of the resource snapshot to address. Used on operations that return or act on a specific historical revision rather than the current state.",
 				in = io.swagger.v3.oas.annotations.enums.ParameterIn.PATH,
-				name = "version"
+				name = "version", required = true
 			),
 			@io.swagger.v3.oas.annotations.Parameter(
 				description = "Comma-separated list of nested fields to embed in each returned resource. Each value names a relationship exposed on the resource; when omitted, those relationships are not expanded inline.",
@@ -513,14 +513,14 @@ public abstract class BaseProductResourceImpl
 	 * curl -X 'PATCH' 'http://localhost:8080/o/headless-commerce-admin-catalog/v1.0/products/{id}' -d $'{"active": ___, "attachments": ___, "catalogExternalReferenceCode": ___, "catalogId": ___, "categories": ___, "createDate": ___, "customFields": ___, "defaultSku": ___, "description": ___, "diagram": ___, "displayDate": ___, "expando": ___, "expirationDate": ___, "externalReferenceCode": ___, "images": ___, "linkedProducts": ___, "mappedProducts": ___, "metaDescription": ___, "metaKeyword": ___, "metaTitle": ___, "modifiedDate": ___, "name": ___, "neverExpire": ___, "pins": ___, "productAccountGroupFilter": ___, "productAccountGroups": ___, "productChannelFilter": ___, "productChannels": ___, "productConfiguration": ___, "productOptions": ___, "productSpecifications": ___, "productStatus": ___, "productType": ___, "productVirtualSettings": ___, "relatedProducts": ___, "shippingConfiguration": ___, "shortDescription": ___, "skus": ___, "subscriptionConfiguration": ___, "tags": ___, "taxConfiguration": ___, "urls": ___}' --header 'Content-Type: application/json' -u 'test@liferay.com:test'
 	 */
 	@io.swagger.v3.oas.annotations.Operation(
-		description = "Partially updates the product identified by product id. Returns 404 when the product id is not found. Side effects -- Updates custom field storage, asset categorization, asset tags, and may trigger workflow draft transition."
+		description = "Partially updates the product identified by product ID. Returns 404 when the product ID is not found. Side effects -- Updates custom field storage, asset categorization, asset tags, and may trigger workflow draft transition."
 	)
 	@io.swagger.v3.oas.annotations.Parameters(
 		value = {
 			@io.swagger.v3.oas.annotations.Parameter(
 				description = "Internal numeric identifier of the target resource. Counterpart to the `by-externalReferenceCode` path variant; identifiers are server-assigned and stable across the resource's lifetime.",
 				in = io.swagger.v3.oas.annotations.enums.ParameterIn.PATH,
-				name = "id"
+				name = "id", required = true
 			)
 		}
 	)
@@ -556,7 +556,7 @@ public abstract class BaseProductResourceImpl
 			@io.swagger.v3.oas.annotations.Parameter(
 				description = "External reference code that addresses the target resource on the `by-externalReferenceCode` paths. The code is the integration-supplied idempotency key, unique within the resource scope; POST against this path is upsert (create when absent, replace when present).",
 				in = io.swagger.v3.oas.annotations.enums.ParameterIn.PATH,
-				name = "externalReferenceCode"
+				name = "externalReferenceCode", required = true
 			)
 		}
 	)
@@ -764,12 +764,12 @@ public abstract class BaseProductResourceImpl
 			@io.swagger.v3.oas.annotations.Parameter(
 				description = "External reference code that addresses the target resource on the `by-externalReferenceCode` paths. The code is the integration-supplied idempotency key, unique within the resource scope; POST against this path is upsert (create when absent, replace when present).",
 				in = io.swagger.v3.oas.annotations.enums.ParameterIn.PATH,
-				name = "externalReferenceCode"
+				name = "externalReferenceCode", required = true
 			),
 			@io.swagger.v3.oas.annotations.Parameter(
 				description = "External reference code identifying the source catalog when cloning a product into another catalog.",
 				in = io.swagger.v3.oas.annotations.enums.ParameterIn.QUERY,
-				name = "catalogExternalReferenceCode"
+				name = "catalogExternalReferenceCode", required = true
 			)
 		}
 	)
@@ -802,14 +802,14 @@ public abstract class BaseProductResourceImpl
 	 * curl -X 'POST' 'http://localhost:8080/o/headless-commerce-admin-catalog/v1.0/products/{id}/clone'  -u 'test@liferay.com:test'
 	 */
 	@io.swagger.v3.oas.annotations.Operation(
-		description = "Clones the product identified by product id, optionally into a different catalog. Returns 404 when the source product id is not found. Side effects -- Creates a brand new product definition with cloned SKUs, options, attachments, etc.."
+		description = "Clones the product identified by product ID, optionally into a different catalog. Returns 404 when the source product ID is not found. Side effects -- Creates a brand new product definition with cloned SKUs, options, attachments, etc.."
 	)
 	@io.swagger.v3.oas.annotations.Parameters(
 		value = {
 			@io.swagger.v3.oas.annotations.Parameter(
 				description = "Internal numeric identifier of the target resource. Counterpart to the `by-externalReferenceCode` path variant; identifiers are server-assigned and stable across the resource's lifetime.",
 				in = io.swagger.v3.oas.annotations.enums.ParameterIn.PATH,
-				name = "id"
+				name = "id", required = true
 			),
 			@io.swagger.v3.oas.annotations.Parameter(
 				description = "Catalog ID used to scope the result set to a single catalog.",
@@ -933,7 +933,7 @@ public abstract class BaseProductResourceImpl
 			@io.swagger.v3.oas.annotations.Parameter(
 				description = "External reference code that addresses the target resource on the `by-externalReferenceCode` paths. The code is the integration-supplied idempotency key, unique within the resource scope; POST against this path is upsert (create when absent, replace when present).",
 				in = io.swagger.v3.oas.annotations.enums.ParameterIn.PATH,
-				name = "externalReferenceCode"
+				name = "externalReferenceCode", required = true
 			)
 		}
 	)
@@ -1749,4 +1749,4 @@ public abstract class BaseProductResourceImpl
 		LogFactoryUtil.getLog(BaseProductResourceImpl.class);
 
 }
-// LIFERAY-REST-BUILDER-HASH:1386424305
+// LIFERAY-REST-BUILDER-HASH:61740807

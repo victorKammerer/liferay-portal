@@ -11,6 +11,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 
 import com.liferay.petra.function.UnsafeSupplier;
 import com.liferay.petra.string.StringBundler;
+import com.liferay.portal.kernel.json.JSONFactoryUtil;
 import com.liferay.portal.kernel.util.StringUtil;
 import com.liferay.portal.vulcan.graphql.annotation.GraphQLField;
 import com.liferay.portal.vulcan.graphql.annotation.GraphQLName;
@@ -27,6 +28,8 @@ import java.io.Serializable;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 
+import java.util.Arrays;
+import java.util.Collection;
 import java.util.Date;
 import java.util.Iterator;
 import java.util.Map;
@@ -457,6 +460,55 @@ public class AssetEntry implements Serializable {
 	private Supplier<String> _groupDescriptiveNameSupplier;
 
 	@io.swagger.v3.oas.annotations.media.Schema(
+		description = "The asset entry's permissions."
+	)
+	@Valid
+	public com.liferay.portal.vulcan.permission.Permission[] getPermissions() {
+		if (_permissionsSupplier != null) {
+			permissions = _permissionsSupplier.get();
+
+			_permissionsSupplier = null;
+		}
+
+		return permissions;
+	}
+
+	public void setPermissions(
+		com.liferay.portal.vulcan.permission.Permission[] permissions) {
+
+		this.permissions = permissions;
+
+		_permissionsSupplier = null;
+	}
+
+	@JsonIgnore
+	public void setPermissions(
+		UnsafeSupplier
+			<com.liferay.portal.vulcan.permission.Permission[], Exception>
+				permissionsUnsafeSupplier) {
+
+		_permissionsSupplier = () -> {
+			try {
+				return permissionsUnsafeSupplier.get();
+			}
+			catch (RuntimeException runtimeException) {
+				throw runtimeException;
+			}
+			catch (Exception exception) {
+				throw new RuntimeException(exception);
+			}
+		};
+	}
+
+	@GraphQLField(description = "The asset entry's permissions.")
+	@JsonProperty(access = JsonProperty.Access.READ_ONLY)
+	protected com.liferay.portal.vulcan.permission.Permission[] permissions;
+
+	@JsonIgnore
+	private Supplier<com.liferay.portal.vulcan.permission.Permission[]>
+		_permissionsSupplier;
+
+	@io.swagger.v3.oas.annotations.media.Schema(
 		description = "The asset entry's workflow status."
 	)
 	public Integer getStatus() {
@@ -702,6 +754,29 @@ public class AssetEntry implements Serializable {
 			sb.append("\"");
 		}
 
+		com.liferay.portal.vulcan.permission.Permission[] permissions =
+			getPermissions();
+
+		if (permissions != null) {
+			if (sb.length() > 1) {
+				sb.append(", ");
+			}
+
+			sb.append("\"permissions\": ");
+
+			sb.append("[");
+
+			for (int i = 0; i < permissions.length; i++) {
+				sb.append(permissions[i]);
+
+				if ((i + 1) < permissions.length) {
+					sb.append(", ");
+				}
+			}
+
+			sb.append("]");
+		}
+
 		Integer status = getStatus();
 
 		if (status != null) {
@@ -823,6 +898,27 @@ public class AssetEntry implements Serializable {
 		return sb.toString();
 	}
 
+	private static String _toJSON(Object value) {
+		if (value instanceof Collection) {
+			return String.valueOf(
+				JSONFactoryUtil.createJSONArray((Collection<?>)value));
+		}
+		else if (value instanceof Map) {
+			return String.valueOf(
+				JSONFactoryUtil.createJSONObject((Map<?, ?>)value));
+		}
+		else if (value instanceof Object[]) {
+			return String.valueOf(
+				JSONFactoryUtil.createJSONArray(
+					Arrays.asList((Object[])value)));
+		}
+		else if (value instanceof String) {
+			return StringBundler.concat("\"", _escape(value), "\"");
+		}
+
+		return String.valueOf(value);
+	}
+
 	private static final String[][] _JSON_ESCAPE_STRINGS = {
 		{"\\", "\"", "\b", "\f", "\n", "\r", "\t"},
 		{"\\\\", "\\\"", "\\b", "\\f", "\\n", "\\r", "\\t"}
@@ -831,4 +927,4 @@ public class AssetEntry implements Serializable {
 	private Map<String, Serializable> _extendedProperties;
 
 }
-// LIFERAY-REST-BUILDER-HASH:-1847726870
+// LIFERAY-REST-BUILDER-HASH:9134073

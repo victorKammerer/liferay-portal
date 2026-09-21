@@ -74,14 +74,14 @@ public abstract class BaseShippingMethodResourceImpl
 	 * curl -X 'GET' 'http://localhost:8080/o/headless-commerce-admin-channel/v1.0/channels/{channelId}/shipping-methods'  -u 'test@liferay.com:test'
 	 */
 	@io.swagger.v3.oas.annotations.Operation(
-		description = "Lists the ShippingMethod entries belonging to the parent Channel, addressed by internal ID. Calls CommerceChannelService.getCommerceChannel + CommerceShippingMethodService.getCommerceShippingMethods + CommerceShippingMethodService.getCommerceShippingMethodsCount. Validation -- NoSuchChannelException -> 404 when channel id not found. Side effects -- falls back to the engine name and description and embeds the channel's shipping options. List query support — page and pageSize paginate the related entries."
+		description = "Lists the ShippingMethod entries belonging to the parent Channel, addressed by internal ID. Calls CommerceChannelService.getCommerceChannel + CommerceShippingMethodService.getCommerceShippingMethods + CommerceShippingMethodService.getCommerceShippingMethodsCount. Validation -- NoSuchChannelException -> 404 when channel ID not found. Side effects -- falls back to the engine name and description and embeds the channel's shipping options. List query support — page and pageSize paginate the related entries."
 	)
 	@io.swagger.v3.oas.annotations.Parameters(
 		value = {
 			@io.swagger.v3.oas.annotations.Parameter(
 				description = "Identifier of a commerce channel. Addresses a single storefront bound to a Liferay site, with its own currency, account visibility, and display pages.",
 				in = io.swagger.v3.oas.annotations.enums.ParameterIn.PATH,
-				name = "channelId"
+				name = "channelId", required = true
 			),
 			@io.swagger.v3.oas.annotations.Parameter(
 				description = "1-based page number for paginated responses. Defaults to 1.",
@@ -125,7 +125,7 @@ public abstract class BaseShippingMethodResourceImpl
 			@io.swagger.v3.oas.annotations.Parameter(
 				description = "Identifier of a commerce channel. Addresses a single storefront bound to a Liferay site, with its own currency, account visibility, and display pages.",
 				in = io.swagger.v3.oas.annotations.enums.ParameterIn.PATH,
-				name = "channelId"
+				name = "channelId", required = true
 			),
 			@io.swagger.v3.oas.annotations.Parameter(
 				in = io.swagger.v3.oas.annotations.enums.ParameterIn.QUERY,
@@ -861,4 +861,4 @@ public abstract class BaseShippingMethodResourceImpl
 		LogFactoryUtil.getLog(BaseShippingMethodResourceImpl.class);
 
 }
-// LIFERAY-REST-BUILDER-HASH:1893360013
+// LIFERAY-REST-BUILDER-HASH:-243708679

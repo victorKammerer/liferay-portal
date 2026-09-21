@@ -13,6 +13,7 @@ import jakarta.annotation.Generated;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 
+import java.util.Collection;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Objects;
@@ -161,6 +162,26 @@ public class AssetEntrySerDes {
 			sb.append("\"");
 		}
 
+		if (assetEntry.getPermissions() != null) {
+			if (sb.length() > 1) {
+				sb.append(", ");
+			}
+
+			sb.append("\"permissions\": ");
+
+			sb.append("[");
+
+			for (int i = 0; i < assetEntry.getPermissions().length; i++) {
+				sb.append(assetEntry.getPermissions()[i]);
+
+				if ((i + 1) < assetEntry.getPermissions().length) {
+					sb.append(", ");
+				}
+			}
+
+			sb.append("]");
+		}
+
 		if (assetEntry.getStatus() != null) {
 			if (sb.length() > 1) {
 				sb.append(", ");
@@ -274,6 +295,13 @@ public class AssetEntrySerDes {
 				String.valueOf(assetEntry.getGroupDescriptiveName()));
 		}
 
+		if (assetEntry.getPermissions() == null) {
+			map.put("permissions", null);
+		}
+		else {
+			map.put("permissions", String.valueOf(assetEntry.getPermissions()));
+		}
+
 		if (assetEntry.getStatus() == null) {
 			map.put("status", null);
 		}
@@ -333,6 +361,9 @@ public class AssetEntrySerDes {
 			else if (Objects.equals(
 						jsonParserFieldName, "groupDescriptiveName")) {
 
+				return false;
+			}
+			else if (Objects.equals(jsonParserFieldName, "permissions")) {
 				return false;
 			}
 			else if (Objects.equals(jsonParserFieldName, "status")) {
@@ -403,6 +434,26 @@ public class AssetEntrySerDes {
 						(String)jsonParserFieldValue);
 				}
 			}
+			else if (Objects.equals(jsonParserFieldName, "permissions")) {
+				if (jsonParserFieldValue != null) {
+					Object[] jsonParserFieldValues =
+						(Object[])jsonParserFieldValue;
+
+					com.liferay.headless.delivery.client.permission.Permission[]
+						permissionsArray = new
+						com.liferay.headless.delivery.client.permission.
+							Permission[jsonParserFieldValues.length];
+
+					for (int i = 0; i < permissionsArray.length; i++) {
+						permissionsArray[i] =
+							com.liferay.headless.delivery.client.permission.
+								Permission.toDTO(
+									(String)jsonParserFieldValues[i]);
+					}
+
+					assetEntry.setPermissions(permissionsArray);
+				}
+			}
 			else if (Objects.equals(jsonParserFieldName, "status")) {
 				if (jsonParserFieldValue != null) {
 					assetEntry.setStatus(
@@ -463,6 +514,12 @@ public class AssetEntrySerDes {
 			return "null";
 		}
 
+		if (value instanceof Collection) {
+			Collection<?> collection = (Collection<?>)value;
+
+			return _toJSON(collection.toArray());
+		}
+
 		if (value instanceof Map) {
 			return _toJSON((Map)value);
 		}
@@ -495,4 +552,4 @@ public class AssetEntrySerDes {
 	}
 
 }
-// LIFERAY-REST-BUILDER-HASH:-600015839
+// LIFERAY-REST-BUILDER-HASH:-1198010889

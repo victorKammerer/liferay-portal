@@ -48,6 +48,16 @@ public class CPDefinitionOptionRelServiceWrapper
 	@Override
 	public CPDefinitionOptionRel addCPDefinitionOptionRel(
 			long cpDefinitionId, long cpOptionId,
+			com.liferay.portal.kernel.service.ServiceContext serviceContext)
+		throws com.liferay.portal.kernel.exception.PortalException {
+
+		return _cpDefinitionOptionRelService.addCPDefinitionOptionRel(
+			cpDefinitionId, cpOptionId, serviceContext);
+	}
+
+	@Override
+	public CPDefinitionOptionRel addCPDefinitionOptionRel(
+			String externalReferenceCode, long cpDefinitionId, long cpOptionId,
 			java.util.Map<java.util.Locale, String> nameMap,
 			java.util.Map<java.util.Locale, String> descriptionMap,
 			String commerceOptionTypeKey, String infoItemServiceKey,
@@ -58,20 +68,10 @@ public class CPDefinitionOptionRelServiceWrapper
 		throws com.liferay.portal.kernel.exception.PortalException {
 
 		return _cpDefinitionOptionRelService.addCPDefinitionOptionRel(
-			cpDefinitionId, cpOptionId, nameMap, descriptionMap,
-			commerceOptionTypeKey, infoItemServiceKey, priority,
+			externalReferenceCode, cpDefinitionId, cpOptionId, nameMap,
+			descriptionMap, commerceOptionTypeKey, infoItemServiceKey, priority,
 			definedExternally, facetable, required, skuContributor,
 			importOptionValue, priceType, typeSettings, serviceContext);
-	}
-
-	@Override
-	public CPDefinitionOptionRel addCPDefinitionOptionRel(
-			long cpDefinitionId, long cpOptionId,
-			com.liferay.portal.kernel.service.ServiceContext serviceContext)
-		throws com.liferay.portal.kernel.exception.PortalException {
-
-		return _cpDefinitionOptionRelService.addCPDefinitionOptionRel(
-			cpDefinitionId, cpOptionId, serviceContext);
 	}
 
 	@Override
@@ -101,12 +101,34 @@ public class CPDefinitionOptionRelServiceWrapper
 	}
 
 	@Override
+	public CPDefinitionOptionRel
+			fetchCPDefinitionOptionRelByExternalReferenceCode(
+				String externalReferenceCode, long companyId)
+		throws com.liferay.portal.kernel.exception.PortalException {
+
+		return _cpDefinitionOptionRelService.
+			fetchCPDefinitionOptionRelByExternalReferenceCode(
+				externalReferenceCode, companyId);
+	}
+
+	@Override
 	public CPDefinitionOptionRel getCPDefinitionOptionRel(
 			long cpDefinitionOptionRelId)
 		throws com.liferay.portal.kernel.exception.PortalException {
 
 		return _cpDefinitionOptionRelService.getCPDefinitionOptionRel(
 			cpDefinitionOptionRelId);
+	}
+
+	@Override
+	public CPDefinitionOptionRel
+			getCPDefinitionOptionRelByExternalReferenceCode(
+				String externalReferenceCode, long companyId)
+		throws com.liferay.portal.kernel.exception.PortalException {
+
+		return _cpDefinitionOptionRelService.
+			getCPDefinitionOptionRelByExternalReferenceCode(
+				externalReferenceCode, companyId);
 	}
 
 	@Override
@@ -177,6 +199,17 @@ public class CPDefinitionOptionRelServiceWrapper
 			cpDefinitionId, skuContributor);
 	}
 
+	@Override
+	public CPDefinitionOptionRel getOrAddEmptyCPDefinitionOptionRel(
+			String externalReferenceCode, long cpDefinitionId, long cpOptionId,
+			String commerceOptionTypeKey)
+		throws com.liferay.portal.kernel.exception.PortalException {
+
+		return _cpDefinitionOptionRelService.getOrAddEmptyCPDefinitionOptionRel(
+			externalReferenceCode, cpDefinitionId, cpOptionId,
+			commerceOptionTypeKey);
+	}
+
 	/**
 	 * Returns the OSGi service identifier.
 	 *
@@ -244,6 +277,15 @@ public class CPDefinitionOptionRelServiceWrapper
 	}
 
 	@Override
+	public CPDefinitionOptionRel updateExternalReferenceCode(
+			long cpDefinitionOptionRelId, String externalReferenceCode)
+		throws com.liferay.portal.kernel.exception.PortalException {
+
+		return _cpDefinitionOptionRelService.updateExternalReferenceCode(
+			cpDefinitionOptionRelId, externalReferenceCode);
+	}
+
+	@Override
 	public CPDefinitionOptionRelService getWrappedService() {
 		return _cpDefinitionOptionRelService;
 	}
@@ -258,4 +300,4 @@ public class CPDefinitionOptionRelServiceWrapper
 	private CPDefinitionOptionRelService _cpDefinitionOptionRelService;
 
 }
-// LIFERAY-SERVICE-BUILDER-HASH:862840564
+// LIFERAY-SERVICE-BUILDER-HASH:1429335976

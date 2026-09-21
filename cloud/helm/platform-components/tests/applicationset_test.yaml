@@ -97,6 +97,26 @@ tests:
                 repoURL: oci://example-registry/liferay-azure
     -   asserts:
             -   equal:
+                    path: spec.template.spec.syncPolicy.managedNamespaceMetadata.labels
+                    value:
+                        licensing.liferay.com/environment: "true"
+                        liferay.com/observable: "true"
+                        pod-security.kubernetes.io/enforce: restricted
+                template: templates/applicationset-infrastructure.yaml
+            -   equal:
+                    path: spec.template.spec.syncPolicy.managedNamespaceMetadata.labels
+                    value:
+                        licensing.liferay.com/environment: "true"
+                        liferay.com/observable: "true"
+                        pod-security.kubernetes.io/enforce: restricted
+                template: templates/applicationset-liferay.yaml
+        it: Labels the environment namespace identically from the infrastructure and Liferay ApplicationSets
+        set:
+            gitops:
+                repository:
+                    url: https://github.com/example/liferay-gitops.git
+    -   asserts:
+            -   equal:
                     path: spec.template.spec.sources[0].helm.valueFiles
                     value:
                         -   $values/liferay/projects/{{path[2]}}/base/infrastructure.yaml
@@ -159,6 +179,26 @@ tests:
     -   asserts:
             -   contains:
                     content:
+                        name: persistence.storageClassName
+                        value: managed-csi-premium-v2
+                    path: spec.template.spec.sources[0].helm.parameters
+                template: templates/applicationset-infrastructure.yaml
+            -   equal:
+                    path: spec.template.spec.sources[0].helm.parameters[6]
+                    value:
+                        name: persistence.storageClassName
+                        value: managed-csi-premium-v2
+                template: templates/applicationset-infrastructure.yaml
+        it: Passes the configured infrastructure parameters to the infrastructure ApplicationSet
+        set:
+            infrastructure:
+                parameters:
+                    -   name: persistence.storageClassName
+                        value: managed-csi-premium-v2
+                repoURL: oci://example-registry/liferay-azure-infrastructure
+    -   asserts:
+            -   contains:
+                    content:
                         name: deploymentContext.deploymentName
                         value: liferay-test
                     path: spec.sources[0].helm.parameters
@@ -169,6 +209,34 @@ tests:
                 deploymentName: liferay-test
             infrastructureProvider:
                 repoURL: oci://example-registry/liferay-azure-infrastructure-provider
+    -   asserts:
+            -   contains:
+                    content:
+                        namespace: elastic-system
+                        server: https://kubernetes.default.svc
+                    path: spec.destinations
+                template: templates/appproject-operator.yaml
+            -   contains:
+                    content:
+                        namespace: monitoring
+                        server: https://kubernetes.default.svc
+                    path: spec.destinations
+                template: templates/appproject-operator.yaml
+            -   notContains:
+                    content:
+                        namespace: kube-system
+                        server: https://kubernetes.default.svc
+                    path: spec.destinations
+                template: templates/appproject-operator.yaml
+            -   lengthEqual:
+                    count: 9
+                    path: spec.destinations
+                template: templates/appproject-operator.yaml
+        it: Permits the extra destination namespaces declared by an operator application
+        set:
+            operatorApplications.eckOperator.extraDestinationNamespaces:
+                -   monitoring
+            operatorApplications.keda.extraDestinationNamespaces: null
     -   asserts:
             -   contains:
                     content: https://charts.example.com
@@ -315,8 +383,14 @@ tests:
                         server: https://kubernetes.default.svc
                     path: spec.destinations
                 template: templates/appproject-operator.yaml
+            -   contains:
+                    content:
+                        namespace: kube-system
+                        server: https://kubernetes.default.svc
+                    path: spec.destinations
+                template: templates/appproject-operator.yaml
             -   lengthEqual:
-                    count: 8
+                    count: 9
                     path: spec.destinations
                 template: templates/appproject-operator.yaml
             -   equal:

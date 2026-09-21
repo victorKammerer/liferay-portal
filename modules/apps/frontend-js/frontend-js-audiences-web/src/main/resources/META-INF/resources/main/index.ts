@@ -44,6 +44,7 @@ export interface RuleGroup {
 }
 
 export type Attribute =
+	| 'batch_segments'
 	| 'browser_name'
 	| 'browser_version'
 	| 'cookies'
@@ -54,9 +55,9 @@ export type Attribute =
 	| 'local_date'
 	| 'local_hour'
 	| 'pathname'
+	| 'real_time_segments'
 	| 'referrer'
 	| `request_parameters`
-	| 'segment'
 	| 'timezone'
 	| 'url'
 	| 'user_agent';
@@ -82,14 +83,48 @@ export interface Handler {
 	(): Promise<void> | void;
 }
 
+export interface RunDetectionOptions {
+	filterAudiences?: (audience: Audience) => boolean;
+	timeout?: number;
+}
+
 export interface AudiencesAPI {
 	clear(): void;
 	clearHandlers(): void;
 	get(): Set<AudienceId>;
 	getPriority(audienceId: AudienceId): number;
 	on(audienceId: AudienceId, handler: Handler): void;
-	runDetection(audiencesDefinitionURL: string): Promise<void>;
+
+	/**
+	 * Detect audiences based on a given audiences definition URL.
+	 *
+	 * This method clears all previously defined audiences before running the
+	 * detection.
+	 *
+	 * When `options.filterAudiences` is given, only the audiences it accepts
+	 * take part in the detection, and the rest are ignored as if they were
+	 * absent from the definition.
+	 *
+	 * This method tries to do its best but it never rejects, just logs the
+	 * errors/timeouts.
+	 * @param audiencesDefinitionURL
+	 * @param options
+	 */
+	runDetection(
+		audiencesDefinitionURL: string,
+		options?: RunDetectionOptions
+	): Promise<void>;
+
+	/**
+	 * Run handlers based on currently detected audiences.
+	 *
+	 * This method clears all registered handlers after running.
+	 *
+	 * This method tries to do its best but it never rejects, just logs the
+	 * errors.
+	 */
 	runHandlers(): Promise<void>;
+
 	setLogEnabled(enabled: boolean): void;
 }
 

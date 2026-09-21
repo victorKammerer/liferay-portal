@@ -35,9 +35,7 @@ public interface JenkinsUser {
 
 		@Override
 		public int compareTo(APIToken apiToken) {
-			Date createDate = apiToken.getCreationDate();
-
-			return createDate.compareTo(_creationDate);
+			return _creationDate.compareTo(apiToken.getCreationDate());
 		}
 
 		public Date getCreationDate() {
@@ -48,15 +46,15 @@ public interface JenkinsUser {
 			return _creationDateString;
 		}
 
-		public String getHash() {
-			return _hash;
-		}
-
 		public JenkinsResultsParserUtil.HTTPAuthorization
 			getHTTPAuthorization() {
 
 			return new JenkinsResultsParserUtil.BasicHTTPAuthorization(
 				getToken(), getJenkinsUserID());
+		}
+
+		public String getHash() {
+			return _hash;
 		}
 
 		public String getJenkinsUserID() {

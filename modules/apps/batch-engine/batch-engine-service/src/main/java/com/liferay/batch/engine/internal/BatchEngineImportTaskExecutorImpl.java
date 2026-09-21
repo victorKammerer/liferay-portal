@@ -55,6 +55,7 @@ import com.liferay.portal.kernel.search.SearchContext;
 import com.liferay.portal.kernel.security.auth.CompanyThreadLocal;
 import com.liferay.portal.kernel.service.CompanyLocalService;
 import com.liferay.portal.kernel.service.UserLocalService;
+import com.liferay.portal.kernel.spring.orm.LastSessionRecorderHelperUtil;
 import com.liferay.portal.kernel.transaction.Propagation;
 import com.liferay.portal.kernel.transaction.TransactionConfig;
 import com.liferay.portal.kernel.transaction.TransactionInvokerUtil;
@@ -140,8 +141,9 @@ public class BatchEngineImportTaskExecutorImpl
 			return;
 		}
 
-		try (SafeCloseable safeCloseable2 = SearchContext.openBatchMode()) {
-			BatchEngineThreadLocal.setBatchImportInProcess(true);
+		try (SafeCloseable safeCloseable2 =
+				BatchEngineThreadLocal.setBatchImportInProcessWithSafeCloseable(
+					true)) {
 
 			batchEngineImportTask.setExecuteStatus(
 				BatchEngineTaskExecuteStatus.STARTED.toString());
@@ -167,12 +169,14 @@ public class BatchEngineImportTaskExecutorImpl
 			BatchEngineImportTask finalBatchEngineImportTask =
 				batchEngineImportTask;
 
-			batchEngineImportTask = BatchEngineTaskExecutorUtil.execute(
-				checkPermissions,
-				() -> _importFile(
-					finalBatchEngineImportTask, batchEngineTaskItemDelegate,
-					file, user),
-				user);
+			try (SafeCloseable safeCloseable3 = SearchContext.openBatchMode()) {
+				batchEngineImportTask = BatchEngineTaskExecutorUtil.execute(
+					checkPermissions,
+					() -> _importFile(
+						finalBatchEngineImportTask, batchEngineTaskItemDelegate,
+						file, user),
+					user);
+			}
 
 			_updateBatchEngineImportTask(
 				BatchEngineTaskExecuteStatus.COMPLETED, batchEngineImportTask,
@@ -189,8 +193,6 @@ public class BatchEngineImportTaskExecutorImpl
 				throwable);
 		}
 		finally {
-			BatchEngineThreadLocal.setBatchImportInProcess(false);
-
 			file.delete();
 
 			// LPS-167011 Because of call to _updateBatchEngineImportTask when
@@ -567,6 +569,8 @@ public class BatchEngineImportTaskExecutorImpl
 
 			TransactionInvokerUtil.invoke(
 				_nestedTransactionConfig, importItemCallable);
+
+			LastSessionRecorderHelperUtil.syncLastSessionState();
 		}
 		catch (Throwable throwable) {
 			Exception exception =

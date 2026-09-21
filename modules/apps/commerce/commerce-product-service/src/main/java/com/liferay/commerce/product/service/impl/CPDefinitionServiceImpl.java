@@ -500,14 +500,14 @@ public class CPDefinitionServiceImpl extends CPDefinitionServiceBaseImpl {
 
 	@Override
 	public CPDefinition updateExternalReferenceCode(
-			String externalReferenceCode, long cpDefinitionId)
+			long cpDefinitionId, String externalReferenceCode)
 		throws PortalException {
 
 		_checkCommerceCatalogByCPDefinitionId(
 			cpDefinitionId, ActionKeys.UPDATE);
 
 		return cpDefinitionLocalService.updateExternalReferenceCode(
-			externalReferenceCode, cpDefinitionId);
+			cpDefinitionId, externalReferenceCode);
 	}
 
 	@Override
@@ -610,6 +610,9 @@ public class CPDefinitionServiceImpl extends CPDefinitionServiceBaseImpl {
 	}
 
 	@Reference
+	private CProductPersistence _cProductPersistence;
+
+	@Reference
 	private CommerceCatalogLocalService _commerceCatalogLocalService;
 
 	@Reference(
@@ -620,8 +623,5 @@ public class CPDefinitionServiceImpl extends CPDefinitionServiceBaseImpl {
 
 	@Reference
 	private CommerceCatalogService _commerceCatalogService;
-
-	@Reference
-	private CProductPersistence _cProductPersistence;
 
 }

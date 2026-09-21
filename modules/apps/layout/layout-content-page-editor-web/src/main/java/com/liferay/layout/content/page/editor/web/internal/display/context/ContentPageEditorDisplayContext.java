@@ -1306,6 +1306,10 @@ public class ContentPageEditorDisplayContext {
 					SegmentsEntryConstants.SOURCE_DEFAULT,
 					SegmentsEntryConstants.SOURCE_REFERRED
 				},
+				new int[] {
+					SegmentsEntryConstants.TYPE_BATCH,
+					SegmentsEntryConstants.TYPE_DEFAULT
+				},
 				QueryUtil.ALL_POS, QueryUtil.ALL_POS, null);
 		}
 		else {
@@ -1313,6 +1317,10 @@ public class ContentPageEditorDisplayContext {
 				stagingGroupHelper.getStagedPortletGroupId(
 					getGroupId(), SegmentsPortletKeys.SEGMENTS),
 				new String[] {SegmentsEntryConstants.SOURCE_ASAH_FARO_BACKEND},
+				new int[] {
+					SegmentsEntryConstants.TYPE_BATCH,
+					SegmentsEntryConstants.TYPE_DEFAULT
+				},
 				QueryUtil.ALL_POS, QueryUtil.ALL_POS, null);
 		}
 
@@ -1871,6 +1879,33 @@ public class ContentPageEditorDisplayContext {
 		);
 	}
 
+	private LayoutStructure _getMasterLayoutStructure() {
+		if (_masterLayoutStructure != null) {
+			return _masterLayoutStructure;
+		}
+
+		Layout layout = themeDisplay.getLayout();
+
+		if (layout.getMasterLayoutPlid() <= 0) {
+			return _masterLayoutStructure;
+		}
+
+		try {
+			_masterLayoutStructure = LayoutStructureUtil.getLayoutStructure(
+				layout.getGroupId(), layout.getMasterLayoutPlid(),
+				SegmentsExperienceConstants.KEY_DEFAULT);
+
+			return _masterLayoutStructure;
+		}
+		catch (Exception exception) {
+			if (_log.isDebugEnabled()) {
+				_log.debug("Unable to get master layout structure", exception);
+			}
+		}
+
+		return _masterLayoutStructure;
+	}
+
 	private List<Map<String, Object>> _getMasterLayouts() {
 		ArrayList<Map<String, Object>> masterLayouts = new ArrayList<>();
 
@@ -1908,33 +1943,6 @@ public class ContentPageEditorDisplayContext {
 		}
 
 		return masterLayouts;
-	}
-
-	private LayoutStructure _getMasterLayoutStructure() {
-		if (_masterLayoutStructure != null) {
-			return _masterLayoutStructure;
-		}
-
-		Layout layout = themeDisplay.getLayout();
-
-		if (layout.getMasterLayoutPlid() <= 0) {
-			return _masterLayoutStructure;
-		}
-
-		try {
-			_masterLayoutStructure = LayoutStructureUtil.getLayoutStructure(
-				layout.getGroupId(), layout.getMasterLayoutPlid(),
-				SegmentsExperienceConstants.KEY_DEFAULT);
-
-			return _masterLayoutStructure;
-		}
-		catch (Exception exception) {
-			if (_log.isDebugEnabled()) {
-				_log.debug("Unable to get master layout structure", exception);
-			}
-		}
-
-		return _masterLayoutStructure;
 	}
 
 	private String _getPortletId(HttpServletRequest httpServletRequest) {

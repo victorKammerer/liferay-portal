@@ -7,6 +7,7 @@ package com.liferay.analytics.cms.rest.internal.resource.v1_0;
 
 import com.liferay.analytics.cms.rest.dto.v1_0.PerformanceTopAsset;
 import com.liferay.analytics.cms.rest.internal.client.AnalyticsCloudClient;
+import com.liferay.analytics.cms.rest.internal.cmp.project.util.CMPProjectUtil;
 import com.liferay.analytics.cms.rest.internal.depot.entry.util.DepotEntryUtil;
 import com.liferay.analytics.cms.rest.resource.v1_0.PerformanceTopAssetResource;
 import com.liferay.analytics.settings.rest.manager.AnalyticsSettingsManager;
@@ -21,6 +22,8 @@ import com.liferay.petra.string.StringBundler;
 import com.liferay.portal.kernel.license.util.LicenseManagerUtil;
 import com.liferay.portal.kernel.search.Sort;
 import com.liferay.portal.kernel.search.filter.Filter;
+import com.liferay.portal.kernel.security.permission.ActionKeys;
+import com.liferay.portal.kernel.util.ArrayUtil;
 import com.liferay.portal.kernel.util.Http;
 import com.liferay.portal.kernel.util.ParamUtil;
 import com.liferay.portal.kernel.util.StringUtil;
@@ -41,6 +44,7 @@ import java.io.InputStream;
 import java.time.LocalDate;
 
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
@@ -61,8 +65,8 @@ public class PerformanceTopAssetResourceImpl
 
 	@Override
 	public Response getPerformanceTopAssetExport(
-			Long[] depotEntryIds, Integer rangeKey, String search,
-			Filter filter, Sort[] sorts)
+			Long[] cmpProjectIds, Long[] depotEntryIds, Integer rangeKey,
+			String search, Filter filter, Sort[] sorts)
 		throws Exception {
 
 		LicenseManagerUtil.checkFreeTier();
@@ -72,7 +76,23 @@ public class PerformanceTopAssetResourceImpl
 
 		Long[] groupIds = DepotEntryUtil.getGroupIds(
 			DepotEntryUtil.getDepotEntries(
+				ActionKeys.VIEW_SITE_ADMINISTRATION,
 				contextCompany.getCompanyId(), depotEntryIds));
+
+		if (ArrayUtil.isEmpty(groupIds)) {
+			return _getResponse(
+				outputStream -> {
+				});
+		}
+
+		Long[] filteredCMPProjectIds = CMPProjectUtil.getFilteredCMPProjectIds(
+			ActionKeys.VIEW_SITE_ADMINISTRATION, cmpProjectIds);
+
+		if (CMPProjectUtil.hasNoVisibleCMPProjects(filteredCMPProjectIds)) {
+			return _getResponse(
+				outputStream -> {
+				});
+		}
 
 		AnalyticsCloudClient analyticsCloudClient = new AnalyticsCloudClient(
 			_http);
@@ -80,23 +100,20 @@ public class PerformanceTopAssetResourceImpl
 		InputStream inputStream = analyticsCloudClient.getInputStream(
 			_analyticsSettingsManager.getAnalyticsConfiguration(
 				contextCompany.getCompanyId()),
-			_getFilterString(), Arrays.asList(groupIds), search, null,
-			"/summaries/export", rangeKey, sorts);
+			null,
+			CMPProjectUtil.getFilterString(
+				filteredCMPProjectIds, _getFilterString()),
+			Arrays.asList(groupIds), search, null, "/summaries/export",
+			rangeKey, sorts);
 
-		return Response.ok(
-			(StreamingOutput)outputStream -> StreamUtil.transfer(
-				inputStream, outputStream)
-		).header(
-			"Content-Disposition",
-			StringBundler.concat(
-				"attachment; filename=top-assets-", LocalDate.now(), ".csv")
-		).build();
+		return _getResponse(
+			outputStream -> StreamUtil.transfer(inputStream, outputStream));
 	}
 
 	@Override
 	public Page<PerformanceTopAsset> getPerformanceTopAssetPage(
-			Long[] depotEntryIds, Integer rangeKey, String search,
-			Filter filter, Pagination pagination, Sort[] sorts)
+			Long[] cmpProjectIds, Long[] depotEntryIds, Integer rangeKey,
+			String search, Filter filter, Pagination pagination, Sort[] sorts)
 		throws Exception {
 
 		LicenseManagerUtil.checkFreeTier();
@@ -104,19 +121,32 @@ public class PerformanceTopAssetResourceImpl
 		AnalyticsSettingsManagerUtil.checkAnalyticsEnabled(
 			_analyticsSettingsManager, contextCompany.getCompanyId());
 
+		Long[] groupIds = DepotEntryUtil.getGroupIds(
+			DepotEntryUtil.getDepotEntries(
+				ActionKeys.VIEW_SITE_ADMINISTRATION,
+				contextCompany.getCompanyId(), depotEntryIds));
+
+		if (ArrayUtil.isEmpty(groupIds)) {
+			return Page.of(Collections.emptyList(), pagination, 0);
+		}
+
+		Long[] filteredCMPProjectIds = CMPProjectUtil.getFilteredCMPProjectIds(
+			ActionKeys.VIEW_SITE_ADMINISTRATION, cmpProjectIds);
+
+		if (CMPProjectUtil.hasNoVisibleCMPProjects(filteredCMPProjectIds)) {
+			return Page.of(Collections.emptyList(), pagination, 0);
+		}
+
 		AnalyticsCloudClient analyticsCloudClient = new AnalyticsCloudClient(
 			_http);
 
-		Long[] groupIds = DepotEntryUtil.getGroupIds(
-			DepotEntryUtil.getDepotEntries(
-				contextCompany.getCompanyId(), depotEntryIds));
-
-		Page<PerformanceTopAsset> performanceTopAssetPage =
+		Page<PerformanceTopAsset> page =
 			analyticsCloudClient.getPerformanceTopAssetPage(
 				_analyticsSettingsManager.getAnalyticsConfiguration(
 					contextCompany.getCompanyId()),
-				_getFilterString(), Arrays.asList(groupIds), search, pagination,
-				rangeKey, sorts);
+				CMPProjectUtil.getFilterString(
+					filteredCMPProjectIds, _getFilterString()),
+				Arrays.asList(groupIds), search, pagination, rangeKey, sorts);
 
 		if ((contextHttpServletRequest != null) &&
 			StringUtil.contains(
@@ -125,14 +155,12 @@ public class PerformanceTopAssetResourceImpl
 
 			Map<String, ObjectDefinition> objectDefinitions = new HashMap<>();
 
-			for (PerformanceTopAsset performanceTopAsset :
-					performanceTopAssetPage.getItems()) {
-
+			for (PerformanceTopAsset performanceTopAsset : page.getItems()) {
 				_setEmbedded(groupIds, objectDefinitions, performanceTopAsset);
 			}
 		}
 
-		return performanceTopAssetPage;
+		return page;
 	}
 
 	private String _getFilterString() {
@@ -187,6 +215,16 @@ public class PerformanceTopAssetResourceImpl
 		}
 
 		return null;
+	}
+
+	private Response _getResponse(StreamingOutput streamingOutput) {
+		return Response.ok(
+			streamingOutput
+		).header(
+			"Content-Disposition",
+			StringBundler.concat(
+				"attachment; filename=top-assets-", LocalDate.now(), ".csv")
+		).build();
 	}
 
 	private void _setEmbedded(

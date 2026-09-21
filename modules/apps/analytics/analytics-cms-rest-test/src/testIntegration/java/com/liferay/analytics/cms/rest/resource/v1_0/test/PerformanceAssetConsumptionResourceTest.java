@@ -8,26 +8,23 @@ package com.liferay.analytics.cms.rest.resource.v1_0.test;
 import com.liferay.analytics.cms.rest.client.dto.v1_0.PerformanceAssetConsumption;
 import com.liferay.analytics.cms.rest.client.dto.v1_0.PerformanceAssetConsumptionItem;
 import com.liferay.analytics.cms.rest.client.pagination.Pagination;
+import com.liferay.analytics.cms.rest.client.resource.v1_0.PerformanceAssetConsumptionResource;
+import com.liferay.analytics.cms.rest.resource.v1_0.test.util.DepotEntryTestUtil;
 import com.liferay.analytics.test.util.AnalyticsCloudHttpServer;
 import com.liferay.analytics.test.util.AnalyticsCompanyConfigurationTemporarySwapper;
 import com.liferay.arquillian.extension.junit.bridge.junit.Arquillian;
-import com.liferay.depot.constants.DepotConstants;
 import com.liferay.depot.model.DepotEntry;
-import com.liferay.depot.service.DepotEntryLocalService;
 import com.liferay.object.model.ObjectDefinition;
+import com.liferay.object.model.ObjectEntry;
 import com.liferay.object.service.ObjectDefinitionLocalService;
 import com.liferay.petra.function.transform.TransformUtil;
-import com.liferay.petra.string.StringPool;
 import com.liferay.portal.kernel.json.JSONUtil;
+import com.liferay.portal.kernel.test.ReflectionTestUtil;
 import com.liferay.portal.kernel.test.rule.AggregateTestRule;
 import com.liferay.portal.kernel.test.rule.DeleteAfterTestRun;
 import com.liferay.portal.kernel.test.util.RandomTestUtil;
-import com.liferay.portal.kernel.test.util.ServiceContextTestUtil;
-import com.liferay.portal.kernel.test.util.TestPropsValues;
-import com.liferay.portal.kernel.util.HashMapBuilder;
 import com.liferay.portal.kernel.util.HttpComponentsUtil;
 import com.liferay.portal.kernel.util.LocaleUtil;
-import com.liferay.portal.kernel.util.StringUtil;
 import com.liferay.portal.kernel.util.URLCodec;
 import com.liferay.portal.test.log.LogCapture;
 import com.liferay.portal.test.log.LoggerTestUtil;
@@ -77,24 +74,15 @@ public class PerformanceAssetConsumptionResourceTest
 		_testGetPerformanceAssetConsumptionGroupByStructure();
 		_testGetPerformanceAssetConsumptionResponse();
 		_testGetPerformanceAssetConsumptionURL();
+		_testGetPerformanceAssetConsumptionWithDepotEntryMemberUser();
 		_testGetPerformanceAssetConsumptionWithInvalidGroupBy();
+		_testGetPerformanceAssetConsumptionWithInvisibleCMPProjectIds();
+		_testGetPerformanceAssetConsumptionWithVisibleCMPProjectIds();
 	}
 
-	private DepotEntry _addDepotEntry() throws Exception {
-		DepotEntry depotEntry = _depotEntryLocalService.addDepotEntry(
-			HashMapBuilder.put(
-				LocaleUtil.getDefault(), RandomTestUtil.randomString()
-			).build(),
-			HashMapBuilder.put(
-				LocaleUtil.getDefault(), RandomTestUtil.randomString()
-			).build(),
-			DepotConstants.TYPE_ASSET_LIBRARY,
-			ServiceContextTestUtil.getServiceContext(
-				testGroup.getGroupId(), TestPropsValues.getUserId()));
-
-		_depotEntries.add(depotEntry);
-
-		return depotEntry;
+	private void _addDepotEntry() throws Exception {
+		_depotEntries.add(
+			DepotEntryTestUtil.addDepotEntry(testGroup.getGroupId()));
 	}
 
 	private void _assertParameter(
@@ -155,8 +143,8 @@ public class PerformanceAssetConsumptionResourceTest
 			PerformanceAssetConsumption performanceAssetConsumption =
 				performanceAssetConsumptionResource.
 					getPerformanceAssetConsumption(
-						null, null, "structure", RandomTestUtil.nextInt(), null,
-						null, null, Pagination.of(1, 10));
+						null, null, null, "structure", RandomTestUtil.nextInt(),
+						null, null, null, Pagination.of(1, 10));
 
 			PerformanceAssetConsumptionItem[] performanceAssetConsumptionItems =
 				performanceAssetConsumption.
@@ -237,8 +225,8 @@ public class PerformanceAssetConsumptionResourceTest
 			PerformanceAssetConsumption performanceAssetConsumption =
 				performanceAssetConsumptionResource.
 					getPerformanceAssetConsumption(
-						null, null, "category", RandomTestUtil.nextInt(), null,
-						null, null, Pagination.of(1, 10));
+						null, null, null, "category", RandomTestUtil.nextInt(),
+						null, null, null, Pagination.of(1, 10));
 
 			PerformanceAssetConsumptionItem[] performanceAssetConsumptionItems =
 				performanceAssetConsumption.
@@ -297,7 +285,7 @@ public class PerformanceAssetConsumptionResourceTest
 			long vocabularyId = RandomTestUtil.nextLong();
 
 			performanceAssetConsumptionResource.getPerformanceAssetConsumption(
-				categoryId,
+				categoryId, null,
 				TransformUtil.transformToArray(
 					_depotEntries, DepotEntry::getDepotEntryId, Long.class),
 				"tag", rangeKey, objectDefinition.getObjectDefinitionId(),
@@ -305,17 +293,13 @@ public class PerformanceAssetConsumptionResourceTest
 
 			String location = analyticsCloudHttpServer.getLocation();
 
+			DepotEntryTestUtil.assertGroupIds(_depotEntries, location);
+
 			_assertParameter("viewsMetric", "assetSummaryMetricType", location);
 			_assertParameter(
 				String.valueOf(categoryId), "categoryId", location);
 			_assertParameter(dataSourceId, "dataSourceId", location);
 			_assertParameter("tag", "groupBy", location);
-			_assertParameter(
-				StringUtil.merge(
-					TransformUtil.transformToArray(
-						_depotEntries, DepotEntry::getGroupId, Long.class),
-					StringPool.COMMA),
-				"groupIds", location);
 			_assertParameter(
 				objectDefinition.getName(), "objectType", location);
 			_assertParameter(String.valueOf(page - 1), "page", location);
@@ -324,6 +308,65 @@ public class PerformanceAssetConsumptionResourceTest
 			_assertParameter(String.valueOf(tagId), "tagId", location);
 			_assertParameter(
 				String.valueOf(vocabularyId), "vocabularyId", location);
+		}
+	}
+
+	private void _testGetPerformanceAssetConsumptionWithDepotEntryMemberUser()
+		throws Exception {
+
+		com.liferay.analytics.cms.rest.resource.v1_0.
+			PerformanceAssetConsumptionResource
+				performanceAssetConsumptionResource =
+					ReflectionTestUtil.getFieldValue(
+						this, "_performanceAssetConsumptionResource");
+
+		try (AnalyticsCloudHttpServer analyticsCloudHttpServer =
+				new AnalyticsCloudHttpServer(
+					"/api/1.0/asset-metric/objectEntry/asset-consumption",
+					() -> "{}");
+
+			AnalyticsCompanyConfigurationTemporarySwapper
+				analyticsCompanyConfigurationTemporarySwapper =
+					new AnalyticsCompanyConfigurationTemporarySwapper(
+						testCompany.getCompanyId(),
+						RandomTestUtil.randomString(), true,
+						analyticsCloudHttpServer.getURL())) {
+
+			DepotEntryTestUtil.withDepotEntryMemberUser(
+				_depotEntries.get(0),
+				() -> {
+					DepotEntryTestUtil.assertNoRequest(
+						analyticsCloudHttpServer, null,
+						depotEntryIds ->
+							performanceAssetConsumptionResource.
+								getPerformanceAssetConsumption(
+									null, null, depotEntryIds, "tag",
+									RandomTestUtil.nextInt(), null, null, null,
+									com.liferay.portal.vulcan.pagination.
+										Pagination.of(1, 10)));
+					DepotEntryTestUtil.assertNoRequest(
+						analyticsCloudHttpServer,
+						new DepotEntry[] {_depotEntries.get(0)},
+						depotEntryIds ->
+							performanceAssetConsumptionResource.
+								getPerformanceAssetConsumption(
+									null, null, depotEntryIds, "tag",
+									RandomTestUtil.nextInt(), null, null, null,
+									com.liferay.portal.vulcan.pagination.
+										Pagination.of(1, 10)));
+					DepotEntryTestUtil.assertNoRequest(
+						analyticsCloudHttpServer,
+						_depotEntries.toArray(new DepotEntry[0]),
+						depotEntryIds ->
+							performanceAssetConsumptionResource.
+								getPerformanceAssetConsumption(
+									null, null, depotEntryIds, "tag",
+									RandomTestUtil.nextInt(), null, null, null,
+									com.liferay.portal.vulcan.pagination.
+										Pagination.of(1, 10)));
+
+					return null;
+				});
 		}
 	}
 
@@ -343,17 +386,111 @@ public class PerformanceAssetConsumptionResourceTest
 				HttpURLConnection.HTTP_BAD_REQUEST,
 				performanceAssetConsumptionResource.
 					getPerformanceAssetConsumptionHttpResponse(
-						null, null, RandomTestUtil.randomString(),
+						null, null, null, RandomTestUtil.randomString(),
 						RandomTestUtil.nextInt(), null, null, null,
 						Pagination.of(1, 10)));
 		}
 	}
 
+	private void _testGetPerformanceAssetConsumptionWithInvisibleCMPProjectIds()
+		throws Exception {
+
+		try (AnalyticsCloudHttpServer analyticsCloudHttpServer =
+				new AnalyticsCloudHttpServer(
+					"/api/1.0/asset-metric/objectEntry/asset-consumption",
+					() -> "{}");
+
+			AnalyticsCompanyConfigurationTemporarySwapper
+				analyticsCompanyConfigurationTemporarySwapper =
+					new AnalyticsCompanyConfigurationTemporarySwapper(
+						testCompany.getCompanyId(),
+						RandomTestUtil.randomString(), true,
+						analyticsCloudHttpServer.getURL())) {
+
+			performanceAssetConsumptionResource.getPerformanceAssetConsumption(
+				null, new Long[] {RandomTestUtil.randomLong()},
+				TransformUtil.transformToArray(
+					_depotEntries, DepotEntry::getDepotEntryId, Long.class),
+				"category", RandomTestUtil.nextInt(), null, null, null,
+				Pagination.of(1, 10));
+
+			Assert.assertNull(analyticsCloudHttpServer.getLocation());
+		}
+	}
+
+	private void _testGetPerformanceAssetConsumptionWithVisibleCMPProjectIds()
+		throws Exception {
+
+		ObjectEntry objectEntry = DepotEntryTestUtil.addCMPProjectObjectEntry(
+			_cmpProjectDepotEntries, testGroup.getGroupId());
+
+		String key = RandomTestUtil.randomString();
+		String title = RandomTestUtil.randomString();
+
+		try (AnalyticsCloudHttpServer analyticsCloudHttpServer =
+				new AnalyticsCloudHttpServer(
+					"/api/1.0/asset-metric/objectEntry/asset-consumption",
+					() -> JSONUtil.put(
+						"metrics",
+						JSONUtil.putAll(
+							JSONUtil.put(
+								"count", 10
+							).put(
+								"key", key
+							).put(
+								"title", title
+							))
+					).put(
+						"total", 1
+					).put(
+						"totalCount", 10
+					).toString());
+
+			AnalyticsCompanyConfigurationTemporarySwapper
+				analyticsCompanyConfigurationTemporarySwapper =
+					new AnalyticsCompanyConfigurationTemporarySwapper(
+						testCompany.getCompanyId(),
+						RandomTestUtil.randomString(), true,
+						analyticsCloudHttpServer.getURL())) {
+
+			PerformanceAssetConsumption performanceAssetConsumption =
+				performanceAssetConsumptionResource.
+					getPerformanceAssetConsumption(
+						null, new Long[] {objectEntry.getObjectEntryId()},
+						TransformUtil.transformToArray(
+							_depotEntries, DepotEntry::getDepotEntryId,
+							Long.class),
+						"category", RandomTestUtil.nextInt(), null, null, null,
+						Pagination.of(1, 10));
+
+			PerformanceAssetConsumptionItem[] performanceAssetConsumptionItems =
+				performanceAssetConsumption.
+					getPerformanceAssetConsumptionItems();
+
+			Assert.assertEquals(
+				Arrays.toString(performanceAssetConsumptionItems), 1,
+				performanceAssetConsumptionItems.length);
+			Assert.assertEquals(
+				Long.valueOf(10),
+				performanceAssetConsumptionItems[0].getCount());
+			Assert.assertEquals(
+				key, performanceAssetConsumptionItems[0].getKey());
+			Assert.assertEquals(
+				title, performanceAssetConsumptionItems[0].getTitle());
+
+			Assert.assertEquals(
+				Long.valueOf(10), performanceAssetConsumption.getTotalCount());
+
+			DepotEntryTestUtil.assertCMPProjectId(
+				objectEntry, analyticsCloudHttpServer.getLocation());
+		}
+	}
+
+	@DeleteAfterTestRun
+	private final List<DepotEntry> _cmpProjectDepotEntries = new ArrayList<>();
+
 	@DeleteAfterTestRun
 	private final List<DepotEntry> _depotEntries = new ArrayList<>();
-
-	@Inject
-	private DepotEntryLocalService _depotEntryLocalService;
 
 	@Inject
 	private ObjectDefinitionLocalService _objectDefinitionLocalService;

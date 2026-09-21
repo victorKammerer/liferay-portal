@@ -80,7 +80,7 @@ public abstract class BaseCategoryResourceImpl
 			@io.swagger.v3.oas.annotations.Parameter(
 				description = "External reference code that addresses the target resource on the `by-externalReferenceCode` paths. The code is the integration-supplied idempotency key, unique within the resource scope; POST against this path is upsert (create when absent, replace when present).",
 				in = io.swagger.v3.oas.annotations.enums.ParameterIn.PATH,
-				name = "externalReferenceCode"
+				name = "externalReferenceCode", required = true
 			),
 			@io.swagger.v3.oas.annotations.Parameter(
 				description = "One-based page index. Combined with pageSize to paginate the result set; defaults to 1 when omitted.",
@@ -120,14 +120,14 @@ public abstract class BaseCategoryResourceImpl
 	 * curl -X 'GET' 'http://localhost:8080/o/headless-commerce-admin-catalog/v1.0/products/{id}/categories'  -u 'test@liferay.com:test'
 	 */
 	@io.swagger.v3.oas.annotations.Operation(
-		description = "Lists asset categories assigned to the product identified by product id. Returns 404 when the product id is not found."
+		description = "Lists asset categories assigned to the product identified by product ID. Returns 404 when the product ID is not found."
 	)
 	@io.swagger.v3.oas.annotations.Parameters(
 		value = {
 			@io.swagger.v3.oas.annotations.Parameter(
 				description = "Internal numeric identifier of the target resource. Counterpart to the `by-externalReferenceCode` path variant; identifiers are server-assigned and stable across the resource's lifetime.",
 				in = io.swagger.v3.oas.annotations.enums.ParameterIn.PATH,
-				name = "id"
+				name = "id", required = true
 			),
 			@io.swagger.v3.oas.annotations.Parameter(
 				description = "One-based page index. Combined with pageSize to paginate the result set; defaults to 1 when omitted.",
@@ -165,14 +165,14 @@ public abstract class BaseCategoryResourceImpl
 	 * curl -X 'PATCH' 'http://localhost:8080/o/headless-commerce-admin-catalog/v1.0/products/by-externalReferenceCode/{externalReferenceCode}/categories'  -u 'test@liferay.com:test'
 	 */
 	@io.swagger.v3.oas.annotations.Operation(
-		description = "Replaces the asset category assignments of the product identified by external reference code. Returns 404 when the product external reference code is not found, and 404 when any supplied category id is missing. Side effects -- Replaces the product's asset category assignment set (overwrites prior categorization)."
+		description = "Replaces the asset category assignments of the product identified by external reference code. Returns 404 when the product external reference code is not found, and 404 when any supplied category ID is missing. Side effects -- Replaces the product's asset category assignment set (overwrites prior categorization)."
 	)
 	@io.swagger.v3.oas.annotations.Parameters(
 		value = {
 			@io.swagger.v3.oas.annotations.Parameter(
 				description = "External reference code that addresses the target resource on the `by-externalReferenceCode` paths. The code is the integration-supplied idempotency key, unique within the resource scope; POST against this path is upsert (create when absent, replace when present).",
 				in = io.swagger.v3.oas.annotations.enums.ParameterIn.PATH,
-				name = "externalReferenceCode"
+				name = "externalReferenceCode", required = true
 			)
 		}
 	)
@@ -205,14 +205,14 @@ public abstract class BaseCategoryResourceImpl
 	 * curl -X 'PATCH' 'http://localhost:8080/o/headless-commerce-admin-catalog/v1.0/products/{id}/categories'  -u 'test@liferay.com:test'
 	 */
 	@io.swagger.v3.oas.annotations.Operation(
-		description = "Replaces the asset category assignments of the product identified by product id. Returns 404 when the product id is not found, and 404 when any supplied category id is missing. Side effects -- Replaces the product's asset category assignment set."
+		description = "Replaces the asset category assignments of the product identified by product ID. Returns 404 when the product ID is not found, and 404 when any supplied category ID is missing. Side effects -- Replaces the product's asset category assignment set."
 	)
 	@io.swagger.v3.oas.annotations.Parameters(
 		value = {
 			@io.swagger.v3.oas.annotations.Parameter(
 				description = "Internal numeric identifier of the target resource. Counterpart to the `by-externalReferenceCode` path variant; identifiers are server-assigned and stable across the resource's lifetime.",
 				in = io.swagger.v3.oas.annotations.enums.ParameterIn.PATH,
-				name = "id"
+				name = "id", required = true
 			)
 		}
 	)
@@ -895,4 +895,4 @@ public abstract class BaseCategoryResourceImpl
 		LogFactoryUtil.getLog(BaseCategoryResourceImpl.class);
 
 }
-// LIFERAY-REST-BUILDER-HASH:-1176357648
+// LIFERAY-REST-BUILDER-HASH:1306036852

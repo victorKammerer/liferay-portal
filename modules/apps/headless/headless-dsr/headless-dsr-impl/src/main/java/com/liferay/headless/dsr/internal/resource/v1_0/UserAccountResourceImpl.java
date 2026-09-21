@@ -8,6 +8,7 @@ package com.liferay.headless.dsr.internal.resource.v1_0;
 import com.liferay.account.service.AccountEntryUserRelLocalService;
 import com.liferay.headless.dsr.dto.v1_0.UserAccount;
 import com.liferay.headless.dsr.internal.dto.v1_0.converter.UserAccountDTOConverterContext;
+import com.liferay.headless.dsr.internal.security.permission.util.DSRRoleAssignmentPermissionUtil;
 import com.liferay.headless.dsr.internal.util.TicketUtil;
 import com.liferay.headless.dsr.resource.v1_0.UserAccountResource;
 import com.liferay.login.web.constants.LoginPortletKeys;
@@ -33,6 +34,7 @@ import com.liferay.portal.kernel.model.User;
 import com.liferay.portal.kernel.model.role.RoleConstants;
 import com.liferay.portal.kernel.portlet.PortletURLFactoryUtil;
 import com.liferay.portal.kernel.portlet.url.builder.PortletURLBuilder;
+import com.liferay.portal.kernel.security.auth.PrincipalException;
 import com.liferay.portal.kernel.security.permission.ActionKeys;
 import com.liferay.portal.kernel.security.permission.PermissionChecker;
 import com.liferay.portal.kernel.security.permission.PermissionThreadLocal;
@@ -59,7 +61,6 @@ import com.liferay.portal.vulcan.dto.converter.DTOConverterRegistry;
 import com.liferay.portal.vulcan.pagination.Page;
 import com.liferay.portal.vulcan.pagination.Pagination;
 import com.liferay.site.dsr.site.initializer.constants.DSRPortletKeys;
-import com.liferay.site.dsr.site.initializer.constants.DSRRoleConstants;
 import com.liferay.site.dsr.site.initializer.constants.DSRTicketConstants;
 import com.liferay.site.dsr.site.initializer.util.DSRRoomUtil;
 
@@ -75,7 +76,6 @@ import java.io.Serializable;
 
 import java.util.Date;
 import java.util.Map;
-import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 
 import org.osgi.service.component.annotations.Component;
@@ -96,6 +96,8 @@ public class UserAccountResourceImpl extends BaseUserAccountResourceImpl {
 		throws Exception {
 
 		Group group = _getGroup(roomId);
+
+		_checkAssignMembersPermission(group, userAccountId);
 
 		LiveUsers.leaveGroup(
 			contextCompany.getCompanyId(), group.getGroupId(), userAccountId);
@@ -142,8 +144,7 @@ public class UserAccountResourceImpl extends BaseUserAccountResourceImpl {
 
 		User user = _userLocalService.getUser(userAccountId);
 
-		_userGroupRoleLocalService.deleteUserGroupRoles(
-			new long[] {user.getUserId()}, group.getGroupId());
+		_checkAssignMembersPermission(group, user.getUserId());
 
 		if (Validator.isNotNull(userAccount.getRoleKey())) {
 			Role role = _roleLocalService.getRole(
@@ -156,6 +157,9 @@ public class UserAccountResourceImpl extends BaseUserAccountResourceImpl {
 						RoleConstants.getTypeLabel(role.getType()), " is not ",
 						RoleConstants.getTypeLabel(RoleConstants.TYPE_SITE)));
 			}
+
+			_userGroupRoleLocalService.deleteUserGroupRoles(
+				new long[] {user.getUserId()}, group.getGroupId());
 
 			_userGroupRoleLocalService.addUserGroupRoles(
 				user.getUserId(), group.getGroupId(),
@@ -370,23 +374,35 @@ public class UserAccountResourceImpl extends BaseUserAccountResourceImpl {
 			membershipExpirationDate, new ServiceContext());
 	}
 
-	private void _checkPermission(Group group, String roleKey)
+	private void _checkAssignMembersPermission(Group group, long userId)
 		throws Exception {
-
-		if (!Objects.equals(
-				roleKey, DSRRoleConstants.NAME_DSR_ROOM_COLLABORATOR)) {
-
-			return;
-		}
 
 		PermissionChecker permissionChecker =
 			PermissionThreadLocal.getPermissionChecker();
 
-		if (!permissionChecker.isGroupAdmin(group.getGroupId()) &&
-			!permissionChecker.isGroupOwner(group.getGroupId())) {
+		if (permissionChecker.isGroupAdmin(group.getGroupId()) ||
+			permissionChecker.isGroupOwner(group.getGroupId())) {
 
-			throw new RoleAssignmentException();
+			return;
 		}
+
+		int rolePriority = DSRRoleAssignmentPermissionUtil.getRolePriority(
+			group.getGroupId(), contextUser.getUserId());
+
+		if (rolePriority <= DSRRoleAssignmentPermissionUtil.getRolePriority(
+				group.getGroupId(), userId)) {
+
+			throw new PrincipalException.MustHavePermission(
+				permissionChecker, Group.class.getName(), group.getGroupId(),
+				ActionKeys.ASSIGN_MEMBERS);
+		}
+	}
+
+	private void _checkPermission(Group group, String roleKey)
+		throws Exception {
+
+		DSRRoleAssignmentPermissionUtil.checkPermission(
+			group, roleKey, contextUser.getUserId());
 	}
 
 	private Group _getGroup(long roomId) throws Exception {

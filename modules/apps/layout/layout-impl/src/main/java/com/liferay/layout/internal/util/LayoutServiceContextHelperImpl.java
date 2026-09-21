@@ -5,7 +5,9 @@
 
 package com.liferay.layout.internal.util;
 
+import com.liferay.layout.internal.servlet.IsolatedAttributesHttpServletRequest;
 import com.liferay.layout.util.LayoutServiceContextHelper;
+import com.liferay.petra.string.StringBundler;
 import com.liferay.petra.string.StringPool;
 import com.liferay.portal.kernel.exception.PortalException;
 import com.liferay.portal.kernel.log.Log;
@@ -14,6 +16,7 @@ import com.liferay.portal.kernel.model.ColorScheme;
 import com.liferay.portal.kernel.model.Company;
 import com.liferay.portal.kernel.model.Group;
 import com.liferay.portal.kernel.model.GroupConstants;
+import com.liferay.portal.kernel.model.Image;
 import com.liferay.portal.kernel.model.Layout;
 import com.liferay.portal.kernel.model.LayoutConstants;
 import com.liferay.portal.kernel.model.LayoutSet;
@@ -26,6 +29,7 @@ import com.liferay.portal.kernel.security.permission.PermissionCheckerFactoryUti
 import com.liferay.portal.kernel.security.permission.PermissionThreadLocal;
 import com.liferay.portal.kernel.service.CompanyLocalService;
 import com.liferay.portal.kernel.service.GroupLocalService;
+import com.liferay.portal.kernel.service.ImageLocalService;
 import com.liferay.portal.kernel.service.LayoutLocalService;
 import com.liferay.portal.kernel.service.ServiceContext;
 import com.liferay.portal.kernel.service.ServiceContextThreadLocal;
@@ -38,7 +42,6 @@ import com.liferay.portal.kernel.servlet.ServletContextPool;
 import com.liferay.portal.kernel.theme.ThemeDisplay;
 import com.liferay.portal.kernel.util.ConcurrentHashMapBuilder;
 import com.liferay.portal.kernel.util.FriendlyURLNormalizer;
-import com.liferay.portal.kernel.util.HashMapBuilder;
 import com.liferay.portal.kernel.util.Http;
 import com.liferay.portal.kernel.util.LocaleUtil;
 import com.liferay.portal.kernel.util.Portal;
@@ -48,6 +51,7 @@ import com.liferay.portal.kernel.util.PropsValues;
 import com.liferay.portal.kernel.util.ProxyFactory;
 import com.liferay.portal.kernel.util.ProxyUtil;
 import com.liferay.portal.kernel.util.WebKeys;
+import com.liferay.portal.kernel.webserver.WebServerServletToken;
 import com.liferay.portal.theme.ThemeDisplayFactory;
 
 import jakarta.servlet.RequestDispatcher;
@@ -119,6 +123,9 @@ public class LayoutServiceContextHelperImpl
 	private GroupLocalService _groupLocalService;
 
 	@Reference
+	private ImageLocalService _imageLocalService;
+
+	@Reference
 	private LayoutLocalService _layoutLocalService;
 
 	@Reference
@@ -129,6 +136,9 @@ public class LayoutServiceContextHelperImpl
 
 	@Reference
 	private UserLocalService _userLocalService;
+
+	@Reference
+	private WebServerServletToken _webServerServletToken;
 
 	private class ServiceContextTemporarySwapper implements AutoCloseable {
 
@@ -165,26 +175,25 @@ public class LayoutServiceContextHelperImpl
 			if (originalServiceContext == null) {
 				_httpServletRequest = _createMockHttpServletRequest();
 				_httpServletResponse = new DummyHttpServletResponse();
-				_originalHttpServletRequest = null;
 			}
 			else {
 				ThemeDisplay themeDisplay =
 					originalServiceContext.getThemeDisplay();
 
 				if (originalServiceContext.getRequest() != null) {
-					_httpServletRequest = originalServiceContext.getRequest();
-					_originalHttpServletRequest =
-						originalServiceContext.getRequest();
+					_httpServletRequest =
+						new IsolatedAttributesHttpServletRequest(
+							originalServiceContext.getRequest());
 				}
 				else if ((themeDisplay != null) &&
 						 (themeDisplay.getRequest() != null)) {
 
-					_httpServletRequest = themeDisplay.getRequest();
-					_originalHttpServletRequest = themeDisplay.getRequest();
+					_httpServletRequest =
+						new IsolatedAttributesHttpServletRequest(
+							themeDisplay.getRequest());
 				}
 				else {
 					_httpServletRequest = _createMockHttpServletRequest();
-					_originalHttpServletRequest = null;
 				}
 
 				if (originalServiceContext.getResponse() != null) {
@@ -239,8 +248,7 @@ public class LayoutServiceContextHelperImpl
 
 			_permissionChecker = PermissionCheckerFactoryUtil.create(_user);
 
-			_originalHttpServletRequestAttributesMap =
-				_setHttpServletRequestAttributes(_permissionChecker, _user);
+			_setHttpServletRequestAttributes(_permissionChecker, _user);
 
 			_setCompanyServiceContext();
 		}
@@ -257,17 +265,6 @@ public class LayoutServiceContextHelperImpl
 				_originalPermissionChecker);
 			PrincipalThreadLocal.setName(_originalName, false);
 			ServiceContextThreadLocal.popServiceContext();
-
-			if (_originalHttpServletRequest == null) {
-				return;
-			}
-
-			for (Map.Entry<String, Object> entry :
-					_originalHttpServletRequestAttributesMap.entrySet()) {
-
-				_originalHttpServletRequest.setAttribute(
-					entry.getKey(), entry.getValue());
-			}
 		}
 
 		private HttpServletRequest _createMockHttpServletRequest() {
@@ -373,6 +370,41 @@ public class LayoutServiceContextHelperImpl
 			ThemeDisplay themeDisplay = ThemeDisplayFactory.create();
 
 			themeDisplay.setCompany(company);
+			themeDisplay.setPortalDomain(company.getVirtualHostname());
+
+			boolean secure = _isSecure();
+
+			int portalServerPort = _portal.getPortalServerPort(secure);
+
+			themeDisplay.setPortalURL(
+				_portal.getPortalURL(
+					company.getVirtualHostname(), portalServerPort, secure));
+
+			themeDisplay.setPathContext(_portal.getPathContext());
+			themeDisplay.setPathFriendlyURLPrivateGroup(
+				_portal.getPathFriendlyURLPrivateGroup());
+			themeDisplay.setPathFriendlyURLPrivateUser(
+				_portal.getPathFriendlyURLPrivateUser());
+			themeDisplay.setPathFriendlyURLPublic(
+				_portal.getPathFriendlyURLPublic());
+			themeDisplay.setPathImage(_portal.getPathImage());
+			themeDisplay.setPathMain(_portal.getPathMain());
+			themeDisplay.setPermissionChecker(permissionChecker);
+			themeDisplay.setRealUser(user);
+			themeDisplay.setScopeGroupId(_group.getGroupId());
+			themeDisplay.setSecure(secure);
+			themeDisplay.setServerName(company.getVirtualHostname());
+			themeDisplay.setServerPort(portalServerPort);
+			themeDisplay.setSignedIn(!user.isGuestUser());
+			themeDisplay.setSiteGroupId(_group.getGroupId());
+			themeDisplay.setThemeCssFastLoad(PropsValues.THEME_CSS_FAST_LOAD);
+			themeDisplay.setThemeJsFastLoad(PropsValues.JAVASCRIPT_FAST_LOAD);
+			themeDisplay.setTimeZone(user.getTimeZone());
+			themeDisplay.setURLPortal(
+				themeDisplay.getPortalURL() + _portal.getPathContext());
+			themeDisplay.setUser(user);
+
+			_setCompanyLogo(themeDisplay, company);
 
 			if (_layout != null) {
 				themeDisplay.setLanguageId(_layout.getDefaultLanguageId());
@@ -425,25 +457,6 @@ public class LayoutServiceContextHelperImpl
 				themeDisplay.setSiteDefaultLocale(locale);
 			}
 
-			themeDisplay.setPermissionChecker(permissionChecker);
-			themeDisplay.setPortalDomain(company.getVirtualHostname());
-
-			boolean secure = _isSecure();
-
-			int portalServerPort = _portal.getPortalServerPort(secure);
-
-			themeDisplay.setPortalURL(
-				_portal.getPortalURL(
-					company.getVirtualHostname(), portalServerPort, secure));
-
-			themeDisplay.setRealUser(user);
-			themeDisplay.setScopeGroupId(_group.getGroupId());
-			themeDisplay.setServerName(company.getVirtualHostname());
-			themeDisplay.setServerPort(portalServerPort);
-			themeDisplay.setSiteGroupId(_group.getGroupId());
-			themeDisplay.setTimeZone(user.getTimeZone());
-			themeDisplay.setUser(user);
-
 			return themeDisplay;
 		}
 
@@ -469,6 +482,33 @@ public class LayoutServiceContextHelperImpl
 			}
 		}
 
+		private void _setCompanyLogo(
+			ThemeDisplay themeDisplay, Company company) {
+
+			String companyLogo = _portal.getPathImage() + "/company_logo";
+
+			long companyLogoId = company.getLogoId();
+
+			if (companyLogoId <= 0) {
+				themeDisplay.setCompanyLogo(companyLogo);
+
+				return;
+			}
+
+			themeDisplay.setCompanyLogo(
+				StringBundler.concat(
+					companyLogo, "?img_id=", companyLogoId, "&t=",
+					_webServerServletToken.getToken(companyLogoId)));
+
+			Image companyLogoImage = _imageLocalService.getCompanyLogo(
+				companyLogoId);
+
+			if (companyLogoImage != null) {
+				themeDisplay.setCompanyLogoHeight(companyLogoImage.getHeight());
+				themeDisplay.setCompanyLogoWidth(companyLogoImage.getWidth());
+			}
+		}
+
 		private void _setCompanyServiceContext() throws PortalException {
 			PermissionThreadLocal.setPermissionChecker(_permissionChecker);
 
@@ -485,28 +525,9 @@ public class LayoutServiceContextHelperImpl
 			ServiceContextThreadLocal.pushServiceContext(serviceContext);
 		}
 
-		private Map<String, Object> _setHttpServletRequestAttributes(
+		private void _setHttpServletRequestAttributes(
 				PermissionChecker permissionChecker, User user)
 			throws PortalException {
-
-			Map<String, Object> attributes = HashMapBuilder.<String, Object>put(
-				WebKeys.COMPANY_ID,
-				_httpServletRequest.getAttribute(WebKeys.COMPANY_ID)
-			).put(
-				WebKeys.CTX, _httpServletRequest.getAttribute(WebKeys.CTX)
-			).put(
-				WebKeys.LAYOUT, _httpServletRequest.getAttribute(WebKeys.LAYOUT)
-			).put(
-				WebKeys.LOCALE, _httpServletRequest.getAttribute(WebKeys.LOCALE)
-			).put(
-				WebKeys.THEME_DISPLAY,
-				_httpServletRequest.getAttribute(WebKeys.THEME_DISPLAY)
-			).put(
-				WebKeys.USER, _httpServletRequest.getAttribute(WebKeys.USER)
-			).put(
-				WebKeys.USER_ID,
-				_httpServletRequest.getAttribute(WebKeys.USER_ID)
-			).build();
 
 			_httpServletRequest.setAttribute(
 				WebKeys.COMPANY_ID, _company.getCompanyId());
@@ -531,8 +552,6 @@ public class LayoutServiceContextHelperImpl
 			themeDisplay.setRequest(_httpServletRequest);
 
 			themeDisplay.setResponse(_httpServletResponse);
-
-			return attributes;
 		}
 
 		private final Map<String, Object> _attributes;
@@ -570,9 +589,6 @@ public class LayoutServiceContextHelperImpl
 				ProxyFactory.newDummyInstance(HttpSession.class));
 
 		private final Layout _layout;
-		private final HttpServletRequest _originalHttpServletRequest;
-		private final Map<String, Object>
-			_originalHttpServletRequestAttributesMap;
 		private final String _originalName;
 		private final PermissionChecker _originalPermissionChecker;
 		private final PermissionChecker _permissionChecker;

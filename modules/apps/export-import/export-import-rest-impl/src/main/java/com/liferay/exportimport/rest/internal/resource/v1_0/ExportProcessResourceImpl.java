@@ -30,8 +30,6 @@ import com.liferay.portal.background.task.service.BackgroundTaskLocalService;
 import com.liferay.portal.kernel.backgroundtask.constants.BackgroundTaskConstants;
 import com.liferay.portal.kernel.dao.orm.DynamicQuery;
 import com.liferay.portal.kernel.dao.orm.RestrictionsFactoryUtil;
-import com.liferay.portal.kernel.json.JSONFactory;
-import com.liferay.portal.kernel.json.JSONObject;
 import com.liferay.portal.kernel.language.Language;
 import com.liferay.portal.kernel.model.Group;
 import com.liferay.portal.kernel.model.Portlet;
@@ -148,17 +146,6 @@ public class ExportProcessResourceImpl extends BaseExportProcessResourceImpl {
 	}
 
 	@Override
-	public Page<ExportProcess> getExportProcessesPage(
-			Long creatorId, String portletId, String search, Integer status,
-			Pagination pagination, Sort[] sorts)
-		throws Exception {
-
-		return _getExportProcessesPage(
-			creatorId, GroupUtil.getCompanyGroup(contextCompany.getCompanyId()),
-			pagination, portletId, search, sorts, status);
-	}
-
-	@Override
 	public ProcessProgress getExportProcessProgress(Long exportProcessId)
 		throws Exception {
 
@@ -178,6 +165,17 @@ public class ExportProcessResourceImpl extends BaseExportProcessResourceImpl {
 						backgroundTask.getBackgroundTaskId()));
 			}
 		};
+	}
+
+	@Override
+	public Page<ExportProcess> getExportProcessesPage(
+			Long creatorId, String portletId, String search, Integer status,
+			Pagination pagination, Sort[] sorts)
+		throws Exception {
+
+		return _getExportProcessesPage(
+			creatorId, GroupUtil.getCompanyGroup(contextCompany.getCompanyId()),
+			pagination, portletId, search, sorts, status);
 	}
 
 	@Override
@@ -509,18 +507,9 @@ public class ExportProcessResourceImpl extends BaseExportProcessResourceImpl {
 				setDateCreated(backgroundTask::getCreateDate);
 				setDateModified(backgroundTask::getModifiedDate);
 				setErrorMessage(
-					() -> {
-						JSONObject jsonObject =
-							_jsonFactory.safeCreateJSONObject(
-								backgroundTask.getStatusMessage(), true);
-
-						if (jsonObject == null) {
-							return backgroundTask.getStatusMessage();
-						}
-
-						return jsonObject.getString(
-							"message", backgroundTask.getStatusMessage());
-					});
+					() -> BackgroundTaskUtil.getErrorMessage(
+						backgroundTask,
+						contextAcceptLanguage.getPreferredLocale()));
 				setId(backgroundTask::getBackgroundTaskId);
 				setName(() -> BackgroundTaskUtil.getName(backgroundTask));
 				setStatus(
@@ -559,9 +548,6 @@ public class ExportProcessResourceImpl extends BaseExportProcessResourceImpl {
 
 	@Reference
 	private ExportImportLocalService _exportImportLocalService;
-
-	@Reference
-	private JSONFactory _jsonFactory;
 
 	@Reference
 	private Language _language;

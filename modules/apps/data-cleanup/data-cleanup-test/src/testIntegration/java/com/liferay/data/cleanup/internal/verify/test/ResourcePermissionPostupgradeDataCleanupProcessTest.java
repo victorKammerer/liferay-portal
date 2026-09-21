@@ -172,7 +172,7 @@ public class ResourcePermissionPostupgradeDataCleanupProcessTest
 					messages.contains(
 						"ResourcePermissionPostupgradeDataCleanupProcess " +
 							"cannot be executed because there are modules " +
-								"with unsatisfied references"));
+								"that are inactive"));
 			},
 			() -> {
 				Bundle bundle = bundleAtomicReference.get();
@@ -188,15 +188,15 @@ public class ResourcePermissionPostupgradeDataCleanupProcessTest
 	}
 
 	@Override
-	protected Object[] getPostUpgradeDataCleanupProcessArguments() {
-		return new Object[] {connection, _resourcePermissionLocalService};
-	}
-
-	@Override
 	protected Class<?>[] getPostUpgradeDataCleanupProcessArgumentTypes() {
 		return new Class<?>[] {
 			Connection.class, ResourcePermissionLocalService.class
 		};
+	}
+
+	@Override
+	protected Object[] getPostUpgradeDataCleanupProcessArguments() {
+		return new Object[] {connection, _resourcePermissionLocalService};
 	}
 
 	@Override

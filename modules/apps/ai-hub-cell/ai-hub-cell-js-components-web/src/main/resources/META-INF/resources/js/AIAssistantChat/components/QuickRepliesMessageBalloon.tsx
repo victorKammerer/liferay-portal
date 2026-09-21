@@ -4,21 +4,23 @@
  */
 
 import ClayButton from '@clayui/button';
-import ClayIcon from '@clayui/icon';
 import React, {useId, useState} from 'react';
 
-import {executeHttpRequestAction} from '../api';
+import {AIAssistantActionOutcome, requestActionOutcome} from '../api';
 import {AgentComponent, AgentComponentOption} from '../types';
+import AIAssistantMessageBalloonIcon from './AIAssistantMessageBalloonIcon';
 
 import '../chat.scss';
 
 export interface QuickRepliesMessageBalloonProps {
 	component: AgentComponent;
+	onAction?: (outcome: AIAssistantActionOutcome) => void;
 	setIsGenerating: React.Dispatch<React.SetStateAction<boolean>>;
 }
 
 const QuickRepliesMessageBalloon: React.FC<QuickRepliesMessageBalloonProps> = ({
 	component,
+	onAction,
 	setIsGenerating,
 }) => {
 	const [submitted, setSubmitted] = useState(false);
@@ -30,18 +32,23 @@ const QuickRepliesMessageBalloon: React.FC<QuickRepliesMessageBalloonProps> = ({
 
 		setIsGenerating(true);
 
-		try {
-			await executeHttpRequestAction(option.action['http-request']);
-		}
-		catch {
+		const outcome = await requestActionOutcome(
+			option.action['http-request']
+		);
+
+		if (!outcome.success) {
 			setIsGenerating(false);
+
+			setSubmitted(false);
 		}
+
+		onAction?.(outcome);
 	}
 
 	return (
 		<div className="ai-assistant-chat__ai-assistant-message-balloon ai-assistant-chat__content-generation-balloon">
 			<div className="ai-assistant-chat__content-generation-balloon-header">
-				<ClayIcon spritemap={Liferay.Icons.spritemap} symbol="stars" />
+				<AIAssistantMessageBalloonIcon />
 
 				<span
 					className="ai-assistant-chat__content-generation-balloon-title"

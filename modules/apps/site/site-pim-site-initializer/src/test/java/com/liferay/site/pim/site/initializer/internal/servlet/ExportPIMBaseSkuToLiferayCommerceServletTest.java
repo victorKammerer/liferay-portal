@@ -10,8 +10,11 @@ import com.liferay.depot.model.DepotEntry;
 import com.liferay.depot.service.DepotEntryLocalService;
 import com.liferay.object.model.ObjectDefinition;
 import com.liferay.object.model.ObjectEntry;
+import com.liferay.object.rest.filter.factory.FilterFactory;
 import com.liferay.object.service.ObjectDefinitionLocalService;
 import com.liferay.object.service.ObjectEntryLocalService;
+import com.liferay.petra.function.transform.TransformUtil;
+import com.liferay.petra.sql.dsl.expression.Predicate;
 import com.liferay.portal.json.JSONFactoryImpl;
 import com.liferay.portal.kernel.dao.orm.QueryUtil;
 import com.liferay.portal.kernel.exception.PortalException;
@@ -35,6 +38,7 @@ import java.io.Serializable;
 
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.Map;
 
 import org.junit.Assert;
 import org.junit.Before;
@@ -63,6 +67,9 @@ public class ExportPIMBaseSkuToLiferayCommerceServletTest {
 			_exportPIMBaseSkuToLiferayCommerceServlet,
 			"_depotEntryLocalService", _depotEntryLocalService);
 		ReflectionTestUtil.setFieldValue(
+			_exportPIMBaseSkuToLiferayCommerceServlet, "_filterFactory",
+			_filterFactory);
+		ReflectionTestUtil.setFieldValue(
 			_exportPIMBaseSkuToLiferayCommerceServlet, "_jsonFactory",
 			_jsonFactory);
 		ReflectionTestUtil.setFieldValue(
@@ -87,9 +94,26 @@ public class ExportPIMBaseSkuToLiferayCommerceServletTest {
 		_testDoGetWithMissingObjectDefinition();
 		_testDoGetWithMultipleDepotEntries();
 		_testDoGetWithPortalException();
+		_testDoGetWithVariantPIMLink();
+		_testDoGetWithVirtualSku();
+		_testDoGetWithoutUnitOfMeasure();
 	}
 
-	private MockHttpServletResponse _get() throws Exception {
+	private JSONObject _getJSONObject() throws Exception {
+		MockHttpServletResponse mockHttpServletResponse =
+			_getMockHttpServletResponse();
+
+		JSONArray jsonArray = _jsonFactory.createJSONArray(
+			mockHttpServletResponse.getContentAsString());
+
+		Assert.assertEquals(1, jsonArray.length());
+
+		return jsonArray.getJSONObject(0);
+	}
+
+	private MockHttpServletResponse _getMockHttpServletResponse()
+		throws Exception {
+
 		MockHttpServletResponse mockHttpServletResponse =
 			new MockHttpServletResponse();
 
@@ -99,7 +123,36 @@ public class ExportPIMBaseSkuToLiferayCommerceServletTest {
 		return mockHttpServletResponse;
 	}
 
-	private ObjectDefinition _setUpObjectDefinition() {
+	private JSONObject _getSkuJSONObject(JSONObject jsonObject) {
+		JSONArray jsonArray = jsonObject.getJSONArray("skus");
+
+		Assert.assertEquals(1, jsonArray.length());
+
+		return jsonArray.getJSONObject(0);
+	}
+
+	private JSONObject _getSkuUnitOfMeasureJSONObject(JSONObject jsonObject) {
+		JSONArray jsonArray = jsonObject.getJSONArray("skuUnitOfMeasures");
+
+		Assert.assertEquals(1, jsonArray.length());
+
+		return jsonArray.getJSONObject(0);
+	}
+
+	private void _mockGetObjectEntries(
+		long groupId, ObjectDefinition objectDefinition,
+		ObjectEntry... objectEntries) {
+
+		Mockito.when(
+			_objectEntryLocalService.getObjectEntries(
+				groupId, objectDefinition.getObjectDefinitionId(),
+				QueryUtil.ALL_POS, QueryUtil.ALL_POS)
+		).thenReturn(
+			Arrays.asList(objectEntries)
+		);
+	}
+
+	private ObjectDefinition _mockObjectDefinition() {
 		ObjectDefinition objectDefinition = Mockito.mock(
 			ObjectDefinition.class);
 
@@ -122,11 +175,27 @@ public class ExportPIMBaseSkuToLiferayCommerceServletTest {
 		return objectDefinition;
 	}
 
-	private ObjectEntry _setUpObjectEntry(
-			String code, long groupId, ObjectDefinition objectDefinition)
+	private ObjectEntry _mockObjectEntry(
+			String code, String externalReferenceCode)
+		throws Exception {
+
+		return _mockObjectEntry(
+			code, externalReferenceCode,
+			Collections.<String, Serializable>emptyMap());
+	}
+
+	private ObjectEntry _mockObjectEntry(
+			String code, String externalReferenceCode,
+			Map<String, Serializable> values)
 		throws Exception {
 
 		ObjectEntry objectEntry = Mockito.mock(ObjectEntry.class);
+
+		Mockito.when(
+			objectEntry.getExternalReferenceCode()
+		).thenReturn(
+			externalReferenceCode
+		);
 
 		Mockito.when(
 			_objectEntryLocalService.getValues(objectEntry)
@@ -134,24 +203,34 @@ public class ExportPIMBaseSkuToLiferayCommerceServletTest {
 			HashMapBuilder.<String, Serializable>put(
 				"code", code
 			).put(
+				"depth", 10.5D
+			).put(
 				"description", code + " description"
 			).put(
+				"height", 20.5D
+			).put(
 				"name", code + " name"
+			).put(
+				"unitOfMeasureAllowDecimalQuantities", true
+			).put(
+				"unitOfMeasureKey", "box"
+			).put(
+				"unitOfMeasureName", "Box"
+			).put(
+				"virtual", false
+			).put(
+				"weight", 30.5D
+			).put(
+				"width", 40.5D
+			).putAll(
+				values
 			).build()
-		);
-
-		Mockito.when(
-			_objectEntryLocalService.getObjectEntries(
-				groupId, objectDefinition.getObjectDefinitionId(),
-				QueryUtil.ALL_POS, QueryUtil.ALL_POS)
-		).thenReturn(
-			Collections.singletonList(objectEntry)
 		);
 
 		return objectEntry;
 	}
 
-	private void _setUpSpaceDepotEntries(long... groupIds) {
+	private void _mockSpaceDepotEntries(long... groupIds) {
 		DepotEntry[] depotEntries = new DepotEntry[groupIds.length];
 
 		for (int i = 0; i < groupIds.length; i++) {
@@ -172,11 +251,63 @@ public class ExportPIMBaseSkuToLiferayCommerceServletTest {
 		);
 	}
 
-	private void _testDoGet() throws Exception {
-		_setUpObjectEntry("SKU-1", _GROUP_ID, _setUpObjectDefinition());
-		_setUpSpaceDepotEntries(_GROUP_ID);
+	private void _mockVariantPIMLinks(
+			String clusterKey, String... externalReferenceCodes)
+		throws Exception {
 
-		MockHttpServletResponse mockHttpServletResponse = _get();
+		ObjectDefinition objectDefinition = Mockito.mock(
+			ObjectDefinition.class);
+
+		Mockito.when(
+			objectDefinition.getObjectDefinitionId()
+		).thenReturn(
+			RandomTestUtil.randomLong()
+		);
+
+		Mockito.when(
+			_objectDefinitionLocalService.
+				fetchObjectDefinitionByExternalReferenceCode(
+					PIMObjectDefinitionConstants.EXTERNAL_REFERENCE_CODE_LINK,
+					_COMPANY_ID)
+		).thenReturn(
+			objectDefinition
+		);
+
+		Predicate predicate = Mockito.mock(Predicate.class);
+
+		Mockito.when(
+			_filterFactory.create(
+				Mockito.anyString(), Mockito.eq(objectDefinition))
+		).thenReturn(
+			predicate
+		);
+
+		Mockito.when(
+			_objectEntryLocalService.getValuesList(
+				_GROUP_ID, _COMPANY_ID, 0,
+				objectDefinition.getObjectDefinitionId(), predicate, null,
+				QueryUtil.ALL_POS, QueryUtil.ALL_POS, null)
+		).thenReturn(
+			TransformUtil.transform(
+				Arrays.asList(externalReferenceCodes),
+				externalReferenceCode ->
+					HashMapBuilder.<String, Serializable>put(
+						"clusterKey", clusterKey
+					).put(
+						"sourceClassExternalReferenceCode",
+						externalReferenceCode
+					).build())
+		);
+	}
+
+	private void _testDoGet() throws Exception {
+		_mockGetObjectEntries(
+			_GROUP_ID, _mockObjectDefinition(),
+			_mockObjectEntry("SKU-1", "SKU-1"));
+		_mockSpaceDepotEntries(_GROUP_ID);
+
+		MockHttpServletResponse mockHttpServletResponse =
+			_getMockHttpServletResponse();
 
 		Assert.assertEquals(
 			ContentTypes.APPLICATION_JSON,
@@ -195,6 +326,7 @@ public class ExportPIMBaseSkuToLiferayCommerceServletTest {
 
 		JSONObject jsonObject = jsonArray.getJSONObject(0);
 
+		Assert.assertTrue(jsonObject.getBoolean("active"));
 		Assert.assertEquals(
 			"[$MASTER_CATALOG_ID$]", jsonObject.getString("catalogId"));
 		Assert.assertEquals(
@@ -217,9 +349,29 @@ public class ExportPIMBaseSkuToLiferayCommerceServletTest {
 
 		JSONObject skuJSONObject = skusJSONArray.getJSONObject(0);
 
+		Assert.assertEquals(10.5, skuJSONObject.getDouble("depth"), 0);
+		Assert.assertEquals(20.5, skuJSONObject.getDouble("height"), 0);
 		Assert.assertTrue(skuJSONObject.getBoolean("published"));
 		Assert.assertTrue(skuJSONObject.getBoolean("purchasable"));
 		Assert.assertEquals("SKU-1", skuJSONObject.getString("sku"));
+		Assert.assertEquals(30.5, skuJSONObject.getDouble("weight"), 0);
+		Assert.assertEquals(40.5, skuJSONObject.getDouble("width"), 0);
+
+		JSONObject skuUnitOfMeasureJSONObject = _getSkuUnitOfMeasureJSONObject(
+			skuJSONObject);
+
+		Assert.assertEquals(
+			1, skuUnitOfMeasureJSONObject.getInt("incrementalOrderQuantity"));
+		Assert.assertEquals("box", skuUnitOfMeasureJSONObject.getString("key"));
+		Assert.assertEquals(2, skuUnitOfMeasureJSONObject.getInt("precision"));
+		Assert.assertTrue(skuUnitOfMeasureJSONObject.getBoolean("primary"));
+		Assert.assertEquals(1, skuUnitOfMeasureJSONObject.getInt("rate"));
+
+		JSONObject skuUnitOfMeasureNameJSONObject =
+			skuUnitOfMeasureJSONObject.getJSONObject("name");
+
+		Assert.assertEquals(
+			"Box", skuUnitOfMeasureNameJSONObject.getString("en_US"));
 	}
 
 	private void _testDoGetWithMissingObjectDefinition() throws Exception {
@@ -233,7 +385,8 @@ public class ExportPIMBaseSkuToLiferayCommerceServletTest {
 			null
 		);
 
-		MockHttpServletResponse mockHttpServletResponse = _get();
+		MockHttpServletResponse mockHttpServletResponse =
+			_getMockHttpServletResponse();
 
 		Assert.assertEquals(
 			JSONUtil.put(
@@ -251,14 +404,18 @@ public class ExportPIMBaseSkuToLiferayCommerceServletTest {
 	}
 
 	private void _testDoGetWithMultipleDepotEntries() throws Exception {
-		ObjectDefinition objectDefinition = _setUpObjectDefinition();
+		ObjectDefinition objectDefinition = _mockObjectDefinition();
 
-		_setUpObjectEntry("SKU-1", _GROUP_ID, objectDefinition);
-		_setUpObjectEntry("SKU-2", _OTHER_GROUP_ID, objectDefinition);
+		_mockGetObjectEntries(
+			_GROUP_ID, objectDefinition, _mockObjectEntry("SKU-1", "SKU-1"));
+		_mockGetObjectEntries(
+			_OTHER_GROUP_ID, objectDefinition,
+			_mockObjectEntry("SKU-2", "SKU-2"));
 
-		_setUpSpaceDepotEntries(_GROUP_ID, _OTHER_GROUP_ID);
+		_mockSpaceDepotEntries(_GROUP_ID, _OTHER_GROUP_ID);
 
-		MockHttpServletResponse mockHttpServletResponse = _get();
+		MockHttpServletResponse mockHttpServletResponse =
+			_getMockHttpServletResponse();
 
 		Assert.assertEquals(
 			HttpServletResponse.SC_OK, mockHttpServletResponse.getStatus());
@@ -280,10 +437,11 @@ public class ExportPIMBaseSkuToLiferayCommerceServletTest {
 	}
 
 	private void _testDoGetWithPortalException() throws Exception {
-		ObjectEntry objectEntry = _setUpObjectEntry(
-			"SKU-1", _GROUP_ID, _setUpObjectDefinition());
+		ObjectEntry objectEntry = _mockObjectEntry("SKU-1", "SKU-1");
 
-		_setUpSpaceDepotEntries(_GROUP_ID);
+		_mockGetObjectEntries(_GROUP_ID, _mockObjectDefinition(), objectEntry);
+
+		_mockSpaceDepotEntries(_GROUP_ID);
 
 		Mockito.when(
 			_objectEntryLocalService.getValues(objectEntry)
@@ -291,7 +449,8 @@ public class ExportPIMBaseSkuToLiferayCommerceServletTest {
 			new PortalException()
 		);
 
-		MockHttpServletResponse mockHttpServletResponse = _get();
+		MockHttpServletResponse mockHttpServletResponse =
+			_getMockHttpServletResponse();
 
 		Assert.assertEquals(
 			JSONUtil.put(
@@ -301,6 +460,97 @@ public class ExportPIMBaseSkuToLiferayCommerceServletTest {
 		Assert.assertEquals(
 			HttpServletResponse.SC_INTERNAL_SERVER_ERROR,
 			mockHttpServletResponse.getStatus());
+	}
+
+	private void _testDoGetWithVariantPIMLink() throws Exception {
+		ObjectDefinition objectDefinition = _mockObjectDefinition();
+
+		_mockGetObjectEntries(
+			_GROUP_ID, objectDefinition, _mockObjectEntry("SKU-1", "ERC-1"),
+			_mockObjectEntry("SKU-2", "ERC-2"),
+			_mockObjectEntry("SKU-3", "ERC-3"));
+
+		_mockSpaceDepotEntries(_GROUP_ID);
+
+		_mockVariantPIMLinks("cluster-1", "ERC-1", "ERC-2");
+
+		MockHttpServletResponse mockHttpServletResponse =
+			_getMockHttpServletResponse();
+
+		Assert.assertEquals(
+			HttpServletResponse.SC_OK, mockHttpServletResponse.getStatus());
+
+		JSONArray jsonArray = _jsonFactory.createJSONArray(
+			mockHttpServletResponse.getContentAsString());
+
+		Assert.assertEquals(2, jsonArray.length());
+
+		JSONObject jsonObject = jsonArray.getJSONObject(0);
+
+		Assert.assertEquals(
+			"ERC-1", jsonObject.getString("externalReferenceCode"));
+		Assert.assertEquals("simple", jsonObject.getString("productType"));
+
+		JSONObject nameJSONObject = jsonObject.getJSONObject("name");
+
+		Assert.assertEquals("SKU-1 name", nameJSONObject.getString("en_US"));
+
+		JSONArray skusJSONArray = jsonObject.getJSONArray("skus");
+
+		Assert.assertEquals(2, skusJSONArray.length());
+
+		JSONObject skuJSONObject = skusJSONArray.getJSONObject(0);
+
+		Assert.assertEquals("SKU-1", skuJSONObject.getString("sku"));
+
+		skuJSONObject = skusJSONArray.getJSONObject(1);
+
+		Assert.assertEquals("SKU-2", skuJSONObject.getString("sku"));
+
+		jsonObject = jsonArray.getJSONObject(1);
+
+		Assert.assertEquals(
+			"ERC-3", jsonObject.getString("externalReferenceCode"));
+		Assert.assertEquals("simple", jsonObject.getString("productType"));
+
+		skusJSONArray = jsonObject.getJSONArray("skus");
+
+		Assert.assertEquals(1, skusJSONArray.length());
+
+		skuJSONObject = skusJSONArray.getJSONObject(0);
+
+		Assert.assertEquals("SKU-3", skuJSONObject.getString("sku"));
+	}
+
+	private void _testDoGetWithVirtualSku() throws Exception {
+		_mockGetObjectEntries(
+			_GROUP_ID, _mockObjectDefinition(),
+			_mockObjectEntry(
+				"SKU-1", "SKU-1",
+				HashMapBuilder.<String, Serializable>put(
+					"virtual", true
+				).build()));
+		_mockSpaceDepotEntries(_GROUP_ID);
+
+		JSONObject jsonObject = _getJSONObject();
+
+		Assert.assertEquals("virtual", jsonObject.getString("productType"));
+	}
+
+	private void _testDoGetWithoutUnitOfMeasure() throws Exception {
+		_mockGetObjectEntries(
+			_GROUP_ID, _mockObjectDefinition(),
+			_mockObjectEntry(
+				"SKU-1", "SKU-1",
+				HashMapBuilder.<String, Serializable>put(
+					"unitOfMeasureKey", ""
+				).build()));
+		_mockSpaceDepotEntries(_GROUP_ID);
+
+		JSONObject skuJSONObject = _getSkuJSONObject(_getJSONObject());
+
+		Assert.assertEquals("SKU-1", skuJSONObject.getString("sku"));
+		Assert.assertFalse(skuJSONObject.has("skuUnitOfMeasures"));
 	}
 
 	private static final long _COMPANY_ID = RandomTestUtil.randomLong();
@@ -314,6 +564,8 @@ public class ExportPIMBaseSkuToLiferayCommerceServletTest {
 	private final ExportPIMBaseSkuToLiferayCommerceServlet
 		_exportPIMBaseSkuToLiferayCommerceServlet =
 			new ExportPIMBaseSkuToLiferayCommerceServlet();
+	private final FilterFactory<Predicate> _filterFactory = Mockito.mock(
+		FilterFactory.class);
 	private final JSONFactory _jsonFactory = new JSONFactoryImpl();
 	private final ObjectDefinitionLocalService _objectDefinitionLocalService =
 		Mockito.mock(ObjectDefinitionLocalService.class);

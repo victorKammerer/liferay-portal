@@ -77,14 +77,14 @@ public abstract class BaseSkuUnitOfMeasureResourceImpl
 	 * curl -X 'DELETE' 'http://localhost:8080/o/headless-commerce-admin-catalog/v1.0/sku-unit-of-measures/{id}'  -u 'test@liferay.com:test'
 	 */
 	@io.swagger.v3.oas.annotations.Operation(
-		description = "Deletes the SKU unit of measure identified by id. Returns 404 when the record is not found. Side effects -- Removes the unit of measure and its associated price entries."
+		description = "Deletes the SKU unit of measure identified by ID. Returns 404 when the record is not found. Side effects -- Removes the unit of measure and its associated price entries."
 	)
 	@io.swagger.v3.oas.annotations.Parameters(
 		value = {
 			@io.swagger.v3.oas.annotations.Parameter(
 				description = "Internal numeric identifier of the target resource. Counterpart to the `by-externalReferenceCode` path variant; identifiers are server-assigned and stable across the resource's lifetime.",
 				in = io.swagger.v3.oas.annotations.enums.ParameterIn.PATH,
-				name = "id"
+				name = "id", required = true
 			)
 		}
 	)
@@ -164,7 +164,7 @@ public abstract class BaseSkuUnitOfMeasureResourceImpl
 			@io.swagger.v3.oas.annotations.Parameter(
 				description = "External reference code that addresses the target resource on the `by-externalReferenceCode` paths. The code is the integration-supplied idempotency key, unique within the resource scope; POST against this path is upsert (create when absent, replace when present).",
 				in = io.swagger.v3.oas.annotations.enums.ParameterIn.PATH,
-				name = "externalReferenceCode"
+				name = "externalReferenceCode", required = true
 			),
 			@io.swagger.v3.oas.annotations.Parameter(
 				description = "One-based page index. Combined with pageSize to paginate the result set; defaults to 1 when omitted.",
@@ -207,14 +207,14 @@ public abstract class BaseSkuUnitOfMeasureResourceImpl
 	 * curl -X 'GET' 'http://localhost:8080/o/headless-commerce-admin-catalog/v1.0/skus/{id}/sku-unit-of-measures'  -u 'test@liferay.com:test'
 	 */
 	@io.swagger.v3.oas.annotations.Operation(
-		description = "Lists the unit of measure entries of the SKU identified by id. Validation -- None at this layer (returns empty page when id is absent)."
+		description = "Lists the unit of measure entries of the SKU identified by ID. Validation -- None at this layer (returns empty page when ID is absent)."
 	)
 	@io.swagger.v3.oas.annotations.Parameters(
 		value = {
 			@io.swagger.v3.oas.annotations.Parameter(
 				description = "Internal numeric identifier of the target resource. Counterpart to the `by-externalReferenceCode` path variant; identifiers are server-assigned and stable across the resource's lifetime.",
 				in = io.swagger.v3.oas.annotations.enums.ParameterIn.PATH,
-				name = "id"
+				name = "id", required = true
 			),
 			@io.swagger.v3.oas.annotations.Parameter(
 				description = "One-based page index. Combined with pageSize to paginate the result set; defaults to 1 when omitted.",
@@ -254,14 +254,14 @@ public abstract class BaseSkuUnitOfMeasureResourceImpl
 	 * curl -X 'GET' 'http://localhost:8080/o/headless-commerce-admin-catalog/v1.0/sku-unit-of-measures/{id}'  -u 'test@liferay.com:test'
 	 */
 	@io.swagger.v3.oas.annotations.Operation(
-		description = "Fetches the SKU unit of measure identified by id. Returns 404 when the id is not found."
+		description = "Fetches the SKU unit of measure identified by ID. Returns 404 when the ID is not found."
 	)
 	@io.swagger.v3.oas.annotations.Parameters(
 		value = {
 			@io.swagger.v3.oas.annotations.Parameter(
 				description = "Internal numeric identifier of the target resource. Counterpart to the `by-externalReferenceCode` path variant; identifiers are server-assigned and stable across the resource's lifetime.",
 				in = io.swagger.v3.oas.annotations.enums.ParameterIn.PATH,
-				name = "id"
+				name = "id", required = true
 			)
 		}
 	)
@@ -290,14 +290,14 @@ public abstract class BaseSkuUnitOfMeasureResourceImpl
 	 * curl -X 'PATCH' 'http://localhost:8080/o/headless-commerce-admin-catalog/v1.0/sku-unit-of-measures/{id}' -d $'{"active": ___, "basePrice": ___, "incrementalOrderQuantity": ___, "key": ___, "name": ___, "precision": ___, "pricingQuantity": ___, "primary": ___, "priority": ___, "promoPrice": ___, "rate": ___}' --header 'Content-Type: application/json' -u 'test@liferay.com:test'
 	 */
 	@io.swagger.v3.oas.annotations.Operation(
-		description = "Partially updates the SKU unit of measure identified by id, including base and promo prices when supplied. Returns 404 when the id is not found. Side effects -- Updates the unit of measure record and may update base/promo price entries on the parent SKU."
+		description = "Partially updates the SKU unit of measure identified by ID, including base and promo prices when supplied. Returns 404 when the ID is not found. Side effects -- Updates the unit of measure record and may update base/promo price entries on the parent SKU."
 	)
 	@io.swagger.v3.oas.annotations.Parameters(
 		value = {
 			@io.swagger.v3.oas.annotations.Parameter(
 				description = "Internal numeric identifier of the target resource. Counterpart to the `by-externalReferenceCode` path variant; identifiers are server-assigned and stable across the resource's lifetime.",
 				in = io.swagger.v3.oas.annotations.enums.ParameterIn.PATH,
-				name = "id"
+				name = "id", required = true
 			)
 		}
 	)
@@ -335,7 +335,7 @@ public abstract class BaseSkuUnitOfMeasureResourceImpl
 			@io.swagger.v3.oas.annotations.Parameter(
 				description = "External reference code that addresses the target resource on the `by-externalReferenceCode` paths. The code is the integration-supplied idempotency key, unique within the resource scope; POST against this path is upsert (create when absent, replace when present).",
 				in = io.swagger.v3.oas.annotations.enums.ParameterIn.PATH,
-				name = "externalReferenceCode"
+				name = "externalReferenceCode", required = true
 			)
 		}
 	)
@@ -368,14 +368,14 @@ public abstract class BaseSkuUnitOfMeasureResourceImpl
 	 * curl -X 'POST' 'http://localhost:8080/o/headless-commerce-admin-catalog/v1.0/skus/{id}/sku-unit-of-measures' -d $'{"active": ___, "basePrice": ___, "incrementalOrderQuantity": ___, "key": ___, "name": ___, "precision": ___, "pricingQuantity": ___, "primary": ___, "priority": ___, "promoPrice": ___, "rate": ___}' --header 'Content-Type: application/json' -u 'test@liferay.com:test'
 	 */
 	@io.swagger.v3.oas.annotations.Operation(
-		description = "Creates or updates a unit of measure under the SKU identified by id. POST is upsert by external reference code -- creates a new entity when the ERC is unknown, otherwise updates the existing one. Returns 404 when the SKU id is not found. Side effects -- Creates or updates the unit of measure, plus any supplied price entries."
+		description = "Creates or updates a unit of measure under the SKU identified by ID. POST is upsert by external reference code -- creates a new entity when the ERC is unknown, otherwise updates the existing one. Returns 404 when the SKU ID is not found. Side effects -- Creates or updates the unit of measure, plus any supplied price entries."
 	)
 	@io.swagger.v3.oas.annotations.Parameters(
 		value = {
 			@io.swagger.v3.oas.annotations.Parameter(
 				description = "Internal numeric identifier of the target resource. Counterpart to the `by-externalReferenceCode` path variant; identifiers are server-assigned and stable across the resource's lifetime.",
 				in = io.swagger.v3.oas.annotations.enums.ParameterIn.PATH,
-				name = "id"
+				name = "id", required = true
 			)
 		}
 	)
@@ -1195,4 +1195,4 @@ public abstract class BaseSkuUnitOfMeasureResourceImpl
 		LogFactoryUtil.getLog(BaseSkuUnitOfMeasureResourceImpl.class);
 
 }
-// LIFERAY-REST-BUILDER-HASH:-1427861262
+// LIFERAY-REST-BUILDER-HASH:456109220

@@ -16,6 +16,7 @@ import com.liferay.portal.kernel.servlet.SessionErrors;
 import com.liferay.portal.kernel.servlet.SessionMessages;
 import com.liferay.portal.kernel.test.portlet.MockLiferayPortletActionRequest;
 import com.liferay.portal.kernel.test.portlet.MockLiferayPortletActionResponse;
+import com.liferay.portal.kernel.util.LocaleUtil;
 import com.liferay.portal.kernel.util.Portal;
 import com.liferay.portal.kernel.util.StringUtil;
 import com.liferay.portal.test.log.LogCapture;
@@ -192,7 +193,43 @@ public class ImportDataDefinitionMVCActionCommandTest
 	}
 
 	@Test
-	public void testProcessActionWithoutName() throws Exception {
+	public void testProcessActionWithNonsiteDefaultLanguage() throws Exception {
+		MockLiferayPortletActionRequest mockLiferayPortletActionRequest =
+			createMockLiferayPortletActionRequest(
+				"data_definition_with_nondefault_site_language.json",
+				"Imported Structure");
+
+		setUpUploadPortletRequest(mockLiferayPortletActionRequest);
+
+		_mvcActionCommand.processAction(
+			mockLiferayPortletActionRequest,
+			new MockLiferayPortletActionResponse());
+
+		Assert.assertNotNull(
+			SessionMessages.get(
+				mockLiferayPortletActionRequest,
+				portal.getPortletId(mockLiferayPortletActionRequest) +
+					SessionMessages.KEY_SUFFIX_HIDE_DEFAULT_SUCCESS_MESSAGE));
+		Assert.assertNotNull(
+			SessionMessages.get(
+				mockLiferayPortletActionRequest,
+				"importDataDefinitionSuccessMessage"));
+
+		DataDefinition dataDefinition = getImportedDataDefinition();
+
+		DDMStructure ddmStructure = _ddmStructureLocalService.getStructure(
+			dataDefinition.getId());
+
+		Assert.assertEquals(
+			"Imported Structure", ddmStructure.getName(LocaleUtil.US));
+		Assert.assertEquals(
+			"Estructura Exportada", ddmStructure.getName(LocaleUtil.SPAIN));
+	}
+
+	@Test
+	public void testProcessActionWithNonsiteDefaultLanguageWithoutName()
+		throws Exception {
+
 		try (LogCapture logCapture = LoggerTestUtil.configureLog4JLogger(
 				"com.liferay.journal.web.internal.portlet.action." +
 					"ImportDataDefinitionMVCActionCommand",
@@ -200,7 +237,7 @@ public class ImportDataDefinitionMVCActionCommandTest
 
 			MockLiferayPortletActionRequest mockLiferayPortletActionRequest =
 				createMockLiferayPortletActionRequest(
-					"data_definition_with_valid_fields.json", null);
+					"data_definition_with_nondefault_site_language.json", null);
 
 			setUpUploadPortletRequest(mockLiferayPortletActionRequest);
 
@@ -256,6 +293,41 @@ public class ImportDataDefinitionMVCActionCommandTest
 			dataDefinition.getDataDefinitionFields();
 
 		Assert.assertEquals("Text32861154", dataDefinitionFields[0].getName());
+	}
+
+	@Test
+	public void testProcessActionWithoutName() throws Exception {
+		try (LogCapture logCapture = LoggerTestUtil.configureLog4JLogger(
+				"com.liferay.journal.web.internal.portlet.action." +
+					"ImportDataDefinitionMVCActionCommand",
+				LoggerTestUtil.ERROR)) {
+
+			MockLiferayPortletActionRequest mockLiferayPortletActionRequest =
+				createMockLiferayPortletActionRequest(
+					"data_definition_with_valid_fields.json", null);
+
+			setUpUploadPortletRequest(mockLiferayPortletActionRequest);
+
+			_mvcActionCommand.processAction(
+				mockLiferayPortletActionRequest,
+				new MockLiferayPortletActionResponse());
+
+			_assertFailure(mockLiferayPortletActionRequest);
+
+			List<LogEntry> logEntries = logCapture.getLogEntries();
+
+			Assert.assertEquals(logEntries.toString(), 1, logEntries.size());
+
+			LogEntry logEntry = logEntries.get(0);
+
+			Assert.assertEquals(LoggerTestUtil.ERROR, logEntry.getPriority());
+
+			Throwable throwable = logEntry.getThrowable();
+
+			Assert.assertTrue(
+				StringUtil.startsWith(
+					throwable.getMessage(), "Name is null for locale"));
+		}
 	}
 
 	private void _assertFailure(

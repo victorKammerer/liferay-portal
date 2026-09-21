@@ -56,6 +56,7 @@ export namespace Analytics {
 
 	export type Config = {
 		channelId: string;
+		cookieDomain?: string;
 		dataSourceId: string;
 		demandbaseAccountEndpoint: string;
 		endpointUrl: string;
@@ -117,6 +118,7 @@ export namespace Analytics {
 			[Analytics.DataSetList.AnalyticsAssetTitle]?: string;
 			[Analytics.DataSetList.AnalyticsAssetType]: Analytics.ElementType;
 			[Analytics.DataSetList.AnalyticsAssetVocabularies]?: string;
+			[Analytics.DataSetList.AnalyticsCmpProjects]?: string;
 			[Analytics.DataSetList.AnalyticsExternalReferenceCode]: string;
 			[Analytics.DataSetList.AnalyticsObjectDefinitionName]: string;
 			[Analytics.DataSetList.AnalyticsObjectType]?: string;
@@ -136,6 +138,7 @@ export namespace Analytics {
 		AnalyticsAssetType = 'analyticsAssetType',
 		AnalyticsAssetVersion = 'analyticsAssetVersion',
 		AnalyticsAssetVocabularies = 'analyticsAssetVocabularies',
+		AnalyticsCmpProjects = 'analyticsCmpProjects',
 		AnalyticsExternalReferenceCode = 'analyticsExternalReferenceCode',
 		AnalyticsObjectDefinitionName = 'analyticsObjectDefinitionName',
 		AnalyticsObjectType = 'analyticsObjectType',

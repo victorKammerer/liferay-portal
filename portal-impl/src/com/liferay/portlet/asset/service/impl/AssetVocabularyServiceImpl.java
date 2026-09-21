@@ -19,6 +19,7 @@ import com.liferay.portal.kernel.security.permission.ActionKeys;
 import com.liferay.portal.kernel.security.permission.PermissionChecker;
 import com.liferay.portal.kernel.service.ClassNameLocalService;
 import com.liferay.portal.kernel.service.ServiceContext;
+import com.liferay.portal.kernel.util.ArrayUtil;
 import com.liferay.portal.kernel.util.ListUtil;
 import com.liferay.portal.kernel.util.OrderByComparator;
 import com.liferay.portal.kernel.util.Validator;
@@ -29,6 +30,7 @@ import com.liferay.portlet.asset.util.AssetVocabularySettingsHelper;
 import com.liferay.util.dao.orm.CustomSQLUtil;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -239,39 +241,6 @@ public class AssetVocabularyServiceImpl extends AssetVocabularyServiceBaseImpl {
 	}
 
 	@Override
-	public List<AssetVocabulary> getGroupsVocabularies(long[] groupIds) {
-		return getGroupsVocabularies(groupIds, null);
-	}
-
-	@Override
-	public List<AssetVocabulary> getGroupsVocabularies(
-		long[] groupIds, String className) {
-
-		return getGroupsVocabularies(
-			groupIds, className, AssetCategoryConstants.ALL_CLASS_TYPE_PK);
-	}
-
-	@Override
-	public List<AssetVocabulary> getGroupsVocabularies(
-		long[] groupIds, String className, long classTypePK) {
-
-		List<AssetVocabulary> vocabularies =
-			assetVocabularyPersistence.filterFindByGroupId(groupIds);
-
-		if (Validator.isNull(className)) {
-			return vocabularies;
-		}
-
-		long classNameId = _classNameLocalService.getClassNameId(className);
-
-		return ListUtil.filter(
-			vocabularies,
-			assetVocabulary ->
-				assetVocabulary.isAssociatedToClassNameIdAndClassTypePK(
-					classNameId, classTypePK));
-	}
-
-	@Override
 	public List<AssetVocabulary> getGroupVocabularies(long groupId)
 		throws PortalException {
 
@@ -346,12 +315,20 @@ public class AssetVocabularyServiceImpl extends AssetVocabularyServiceBaseImpl {
 
 	@Override
 	public List<AssetVocabulary> getGroupVocabularies(long[] groupIds) {
+		if (ArrayUtil.isEmpty(groupIds)) {
+			return Collections.emptyList();
+		}
+
 		return assetVocabularyPersistence.filterFindByGroupId(groupIds);
 	}
 
 	@Override
 	public List<AssetVocabulary> getGroupVocabularies(
 		long[] groupIds, int[] visibilityTypes) {
+
+		if (ArrayUtil.isEmpty(groupIds)) {
+			return Collections.emptyList();
+		}
 
 		return assetVocabularyPersistence.filterFindByG_V(
 			groupIds, visibilityTypes);
@@ -369,6 +346,10 @@ public class AssetVocabularyServiceImpl extends AssetVocabularyServiceBaseImpl {
 
 	@Override
 	public int getGroupVocabulariesCount(long[] groupIds) {
+		if (ArrayUtil.isEmpty(groupIds)) {
+			return 0;
+		}
+
 		return assetVocabularyPersistence.filterCountByGroupId(groupIds);
 	}
 
@@ -417,6 +398,43 @@ public class AssetVocabularyServiceImpl extends AssetVocabularyServiceBaseImpl {
 
 		return getGroupVocabulariesDisplay(
 			groupId, name, start, end, false, orderByComparator);
+	}
+
+	@Override
+	public List<AssetVocabulary> getGroupsVocabularies(long[] groupIds) {
+		return getGroupsVocabularies(groupIds, null);
+	}
+
+	@Override
+	public List<AssetVocabulary> getGroupsVocabularies(
+		long[] groupIds, String className) {
+
+		return getGroupsVocabularies(
+			groupIds, className, AssetCategoryConstants.ALL_CLASS_TYPE_PK);
+	}
+
+	@Override
+	public List<AssetVocabulary> getGroupsVocabularies(
+		long[] groupIds, String className, long classTypePK) {
+
+		if (ArrayUtil.isEmpty(groupIds)) {
+			return Collections.emptyList();
+		}
+
+		List<AssetVocabulary> vocabularies =
+			assetVocabularyPersistence.filterFindByGroupId(groupIds);
+
+		if (Validator.isNull(className)) {
+			return vocabularies;
+		}
+
+		long classNameId = _classNameLocalService.getClassNameId(className);
+
+		return ListUtil.filter(
+			vocabularies,
+			assetVocabulary ->
+				assetVocabulary.isAssociatedToClassNameIdAndClassTypePK(
+					classNameId, classTypePK));
 	}
 
 	public AssetVocabulary getOrAddEmptyVocabulary(

@@ -564,6 +564,7 @@ export const detailsListColumns = {
 	}),
 	getDateModified: (timeZoneId: string | undefined) => ({
 		accessor: 'dateModified',
+		className: 'text-nowrap',
 		dataFormatter: (dateModified: string | number | null | undefined) =>
 			!isNil(dateModified) &&
 			applyTimeZone(dateModified, timeZoneId).fromNow(),
@@ -1003,7 +1004,7 @@ export const metricsListColumns = {
 							groupId,
 							touchpoint: 'Any',
 							...(assetTitle && {
-								title: encodeURIComponent(assetTitle),
+								title: assetTitle,
 							}),
 							...(id && {id}),
 						})
@@ -1193,8 +1194,8 @@ export const pagesListColumns = {
 					channelId,
 					groupId,
 					siteId: dataSourceId,
-					title: encodeURIComponent(title),
-					touchpoint: encodeURIComponent(url),
+					title,
+					touchpoint: url,
 				}),
 		},
 		label: Liferay.Language.get('page-title'),

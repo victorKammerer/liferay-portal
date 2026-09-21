@@ -25,7 +25,8 @@ taglib uri="http://liferay.com/tld/ui" prefix="liferay-ui" %><%@
 taglib uri="http://liferay.com/tld/user" prefix="liferay-user" %><%@
 taglib uri="http://liferay.com/tld/util" prefix="liferay-util" %>
 
-<%@ page import="com.liferay.admin.kernel.util.PortalMyAccountApplicationType" %><%@
+<%@ page import="com.liferay.account.model.AccountEntry" %><%@
+page import="com.liferay.admin.kernel.util.PortalMyAccountApplicationType" %><%@
 page import="com.liferay.announcements.kernel.model.AnnouncementsDelivery" %><%@
 page import="com.liferay.announcements.kernel.model.AnnouncementsEntryConstants" %><%@
 page import="com.liferay.announcements.kernel.service.AnnouncementsDeliveryLocalServiceUtil" %><%@
@@ -70,6 +71,7 @@ page import="com.liferay.portal.kernel.exception.UserPasswordException" %><%@
 page import="com.liferay.portal.kernel.exception.UserScreenNameException" %><%@
 page import="com.liferay.portal.kernel.exception.UserSmsException" %><%@
 page import="com.liferay.portal.kernel.exception.WebsiteURLException" %><%@
+page import="com.liferay.portal.kernel.frontend.esm.FrontendESMUtil" %><%@
 page import="com.liferay.portal.kernel.json.JSONArray" %><%@
 page import="com.liferay.portal.kernel.json.JSONFactoryUtil" %><%@
 page import="com.liferay.portal.kernel.language.LanguageUtil" %><%@
@@ -172,6 +174,10 @@ page import="com.liferay.users.admin.web.internal.display.context.InitDisplayCon
 page import="com.liferay.users.admin.web.internal.display.context.OrgLaborDisplay" %><%@
 page import="com.liferay.users.admin.web.internal.display.context.OrgLaborFormDisplay" %><%@
 page import="com.liferay.users.admin.web.internal.display.context.OrganizationScreenNavigationDisplayContext" %><%@
+page import="com.liferay.users.admin.web.internal.display.context.SelectAccountEntriesDisplayContext" %><%@
+page import="com.liferay.users.admin.web.internal.display.context.SelectAccountEntriesManagementToolbarDisplayContext" %><%@
+page import="com.liferay.users.admin.web.internal.display.context.SelectOrganizationsDisplayContext" %><%@
+page import="com.liferay.users.admin.web.internal.display.context.SelectOrganizationsManagementToolbarDisplayContext" %><%@
 page import="com.liferay.users.admin.web.internal.display.context.UserDisplayContext" %><%@
 page import="com.liferay.users.admin.web.internal.display.context.ViewFlatUsersDisplayContext" %><%@
 page import="com.liferay.users.admin.web.internal.display.context.ViewFlatUsersDisplayContextFactory" %><%@

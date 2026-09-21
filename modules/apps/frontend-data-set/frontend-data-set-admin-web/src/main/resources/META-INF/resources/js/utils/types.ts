@@ -5,6 +5,19 @@
 
 import {JSXElementConstructor} from 'react';
 
+export enum EActionTarget {
+	ASYNC = 'async',
+	HEADLESS = 'headless',
+	LINK = 'link',
+	MODAL = 'modal',
+	SIDEPANEL = 'sidePanel',
+}
+
+export enum EActionType {
+	CREATION = 'creation',
+	ITEM = 'item',
+}
+
 export enum EFieldFormat {
 	DATE = 'date',
 	DATE_TIME = 'date-time',
@@ -100,6 +113,8 @@ export interface IDataSet {
 	restApplication: string;
 	restEndpoint: string;
 	restSchema: string;
+	searchAsYouType?: boolean;
+	searchSuggestionsEnabled?: boolean;
 	showSearch: boolean;
 	snapshotsEnabled: boolean;
 	sortsOrder?: string;

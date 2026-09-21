@@ -7,9 +7,15 @@ import {EventSource} from 'eventsource';
 import {fetch} from 'frontend-js-web';
 
 import postAuthorizationToken from '../utils/postAuthorizationToken';
+import throwIfRequestTooLarge from '../utils/throwIfRequestTooLarge';
 import {HttpRequestAction} from './types';
 
 const AI_HUB_ENDPOINT = '/o/ai-hub/v1.0';
+
+export interface AIAssistantActionOutcome {
+	response?: Response;
+	success: boolean;
+}
 
 export interface ChatContext {
 	fileUploadSelector?: string;
@@ -47,7 +53,7 @@ export async function createEventSource() {
 	);
 }
 
-export async function executeHttpRequestAction({
+async function executeHttpRequestAction({
 	body,
 	href,
 	method,
@@ -72,11 +78,13 @@ export async function executeHttpRequestAction({
 
 export async function postChatByExternalReferenceCodeMessage({
 	chatContext,
+	chatbotExternalReferenceCode,
 	eventSourceReference,
 	instructionDefinitionScope,
 	message,
 }: {
 	chatContext: ChatContext;
+	chatbotExternalReferenceCode?: string;
 	eventSourceReference: string;
 	instructionDefinitionScope: string;
 	message: string;
@@ -84,13 +92,14 @@ export async function postChatByExternalReferenceCodeMessage({
 	const authorizationToken = await postAuthorizationToken();
 
 	if (!authorizationToken) {
-		return;
+		throw new Error('Unable to authorize the chat message request');
 	}
 
-	return await fetch(
+	const response = await fetch(
 		`${authorizationToken.serviceURL}${AI_HUB_ENDPOINT}/chats/by-external-reference-code/${eventSourceReference}/messages`,
 		{
 			body: JSON.stringify({
+				chatbotExternalReferenceCode,
 				context: chatContext,
 				instructionDefinitionScope,
 				text: message,
@@ -105,4 +114,30 @@ export async function postChatByExternalReferenceCodeMessage({
 			method: 'POST',
 		}
 	);
+
+	if (!response.ok) {
+		throwIfRequestTooLarge(
+			response,
+			Liferay.Language.get(
+				'the-message-is-too-long-shorten-it-and-try-again'
+			)
+		);
+
+		throw new Error(`Unable to send the chat message: ${response.status}`);
+	}
+
+	return response;
+}
+
+export async function requestActionOutcome(
+	httpRequestAction: HttpRequestAction
+): Promise<AIAssistantActionOutcome> {
+	try {
+		const response = await executeHttpRequestAction(httpRequestAction);
+
+		return {response, success: response?.ok ?? false};
+	}
+	catch {
+		return {success: false};
+	}
 }

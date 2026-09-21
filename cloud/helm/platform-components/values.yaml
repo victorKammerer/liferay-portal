@@ -79,7 +79,6 @@ infrastructure:
     targetRevision: ""
 infrastructureProvider:
     enabled: true
-    parameters: []
     path: ""
     repoURL: ""
     targetRevision: ""
@@ -94,7 +93,7 @@ observability:
     namespace: observability
     parameters: []
     repoURL: oci://us-central1-docker.pkg.dev/external-assets-prd/liferay-helm-chart/observability
-    targetRevision: 1.0.0
+    targetRevision: 1.1.1
 operatorApplications:
     ackPrometheusService:
         enabled: false
@@ -110,7 +109,7 @@ operatorApplications:
         name: argo-workflows
         namespace: argo-workflows-system
         repoURL: https://argoproj.github.io/argo-helm
-        targetRevision: 1.0.10
+        targetRevision: 2.0.3
         values:
             controller:
                 resources:
@@ -128,7 +127,7 @@ operatorApplications:
                                 type: RuntimeDefault
             executor:
                 image:
-                    tag: v4.0.4-nonroot
+                    tag: v4.1.2-nonroot
                 securityContext:
                     allowPrivilegeEscalation: false
                     capabilities:
@@ -255,12 +254,13 @@ operatorApplications:
         namespaceLabels:
             pod-security.kubernetes.io/enforce: restricted
         repoURL: oci://us-central1-docker.pkg.dev/external-assets-prd/liferay-helm-chart/liferay-dxp-operator
-        targetRevision: 0.0.1
+        targetRevision: 0.1.2
         values:
             fullnameOverride: dxp-operator
     eckOperator:
         chart: eck-operator
         enabled: true
+        masterIpv4CidrBlock: 172.16.0.0/28
         name: eck-operator
         namespace: elastic-system
         namespaceLabels:
@@ -337,6 +337,8 @@ operatorApplications:
     keda:
         chart: keda
         enabled: false
+        extraDestinationNamespaces:
+            -   kube-system
         name: keda
         namespace: keda-system
         repoURL: https://kedacore.github.io/charts

@@ -1,0 +1,157 @@
+/**
+ * SPDX-FileCopyrightText: (c) 2026 Liferay, Inc. https://liferay.com
+ * SPDX-License-Identifier: LGPL-2.1-or-later OR LicenseRef-Liferay-DXP-EULA-2.0.0-2023-06
+ */
+
+import functionalStorage from './functionalStorage';
+
+const DEFAULT_MAX_ENTRIES = 20;
+
+const STORAGE_KEY_PREFIX = 'LFR_RECENT_SEARCHES_';
+
+/**
+ * Stores a search query, most recent first, and returns the queries stored
+ * afterwards.
+ *
+ * Queries are deduplicated case insensitively, and a query that continues a
+ * stored query within the same word replaces it, so typing "pant" and then
+ * "pantalon" leaves only "pantalon". A query that merely extends a stored one
+ * at a word boundary is kept alongside it, because the two read as different
+ * intents: "lego" and "lego star wars" are both stored.
+ *
+ * @param fdsName Name of the Data Set the query belongs to
+ * @param query The search query to store
+ * @param options Caps the history, evicting the oldest queries. Defaults to 20
+ * entries.
+ */
+function add(
+	fdsName: string,
+	query: string,
+	{maxEntries = DEFAULT_MAX_ENTRIES}: {maxEntries?: number} = {}
+): string[] {
+	const search = query.trim();
+
+	if (!search) {
+		return get(fdsName);
+	}
+
+	const recentSearches = get(fdsName);
+
+	if (
+		recentSearches.some((recentSearch) =>
+			_continuesWord(search, recentSearch)
+		)
+	) {
+		return recentSearches;
+	}
+
+	return _setRecentSearches(
+		fdsName,
+		[
+			search,
+			...recentSearches.filter(
+				(recentSearch) =>
+					!_isSameSearch(recentSearch, search) &&
+					!_continuesWord(recentSearch, search)
+			),
+		].slice(0, maxEntries)
+	);
+}
+
+/**
+ * Removes every stored search query for a Data Set and returns the queries
+ * stored afterwards.
+ *
+ * @param fdsName Name of the Data Set
+ */
+function clear(fdsName: string): string[] {
+	functionalStorage.remove(_getStorageKey(fdsName));
+
+	return get(fdsName);
+}
+
+/**
+ * Returns the stored search queries for a Data Set, most recent first, or an
+ * empty array when there are none or the stored value cannot be read.
+ *
+ * @param fdsName Name of the Data Set
+ */
+function get(fdsName: string): string[] {
+	const storageKey = _getStorageKey(fdsName);
+
+	const recentSearches = functionalStorage.get(storageKey);
+
+	if (recentSearches === null) {
+		return [];
+	}
+
+	if (
+		!Array.isArray(recentSearches) ||
+		recentSearches.some((recentSearch) => typeof recentSearch !== 'string')
+	) {
+		functionalStorage.logWarning(storageKey, 'malformed data');
+
+		return [];
+	}
+
+	return recentSearches;
+}
+
+/**
+ * Removes a single stored search query, matched case insensitively, and returns
+ * the queries stored afterwards.
+ *
+ * @param fdsName Name of the Data Set
+ * @param query The search query to remove
+ */
+function remove(fdsName: string, query: string): string[] {
+	return _setRecentSearches(
+		fdsName,
+		get(fdsName).filter(
+			(recentSearch) => !_isSameSearch(recentSearch, query)
+		)
+	);
+}
+
+function _continuesWord(prefix: string, search: string): boolean {
+	const normalizedPrefix = _normalize(prefix);
+	const normalizedSearch = _normalize(search);
+
+	return (
+		normalizedSearch.length > normalizedPrefix.length &&
+		normalizedSearch.startsWith(normalizedPrefix) &&
+		normalizedSearch[normalizedPrefix.length] !== ' '
+	);
+}
+
+function _getStorageKey(fdsName: string): string {
+	return `${STORAGE_KEY_PREFIX}${fdsName}`;
+}
+
+function _isSameSearch(search: string, otherSearch: string): boolean {
+	return _normalize(search) === _normalize(otherSearch);
+}
+
+function _normalize(search: string): string {
+	return search.trim().toLowerCase();
+}
+
+// The queries are read back rather than returned as written, so a write that
+// browser storage rejects cannot leave the caller showing a history the Data
+// Set does not have
+
+function _setRecentSearches(
+	fdsName: string,
+	recentSearches: string[]
+): string[] {
+	functionalStorage.set(_getStorageKey(fdsName), recentSearches);
+
+	return get(fdsName);
+}
+
+export default {
+	add,
+	clear,
+	get,
+	remove,
+};

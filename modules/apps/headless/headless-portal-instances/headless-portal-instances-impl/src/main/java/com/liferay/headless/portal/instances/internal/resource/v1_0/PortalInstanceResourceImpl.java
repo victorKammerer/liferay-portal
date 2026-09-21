@@ -14,7 +14,6 @@ import com.liferay.headless.portal.instances.resource.v1_0.PortalInstanceResourc
 import com.liferay.portal.instances.exporter.PortalInstanceExporter;
 import com.liferay.portal.kernel.exception.UserEmailAddressException;
 import com.liferay.portal.kernel.exception.UserScreenNameException;
-import com.liferay.portal.kernel.feature.flag.FeatureFlagManagerUtil;
 import com.liferay.portal.kernel.instance.PortalInstancePool;
 import com.liferay.portal.kernel.log.Log;
 import com.liferay.portal.kernel.log.LogFactoryUtil;
@@ -50,6 +49,8 @@ public class PortalInstanceResourceImpl extends BasePortalInstanceResourceImpl {
 
 	@Override
 	public void deletePortalInstance(String portalInstanceId) throws Exception {
+		_checkPermission();
+
 		Company company = _companyService.getCompanyByWebId(portalInstanceId);
 
 		_companyService.deleteCompany(company.getCompanyId());
@@ -59,6 +60,8 @@ public class PortalInstanceResourceImpl extends BasePortalInstanceResourceImpl {
 	public PortalInstance getPortalInstance(String portalInstanceId)
 		throws Exception {
 
+		_checkPermission();
+
 		return _toPortalInstance(
 			_companyService.getCompanyByWebId(portalInstanceId));
 	}
@@ -66,6 +69,8 @@ public class PortalInstanceResourceImpl extends BasePortalInstanceResourceImpl {
 	@Override
 	public Page<PortalInstance> getPortalInstancesPage(Boolean skipDefault)
 		throws Exception {
+
+		_checkPermission();
 
 		boolean finalSkipDefault = GetterUtil.getBoolean(skipDefault);
 
@@ -89,6 +94,8 @@ public class PortalInstanceResourceImpl extends BasePortalInstanceResourceImpl {
 			String portalInstanceId, PortalInstance portalInstance)
 		throws Exception {
 
+		_checkPermission();
+
 		Company company = _companyService.getCompanyByWebId(portalInstanceId);
 
 		String virtualHostname = GetterUtil.getString(
@@ -105,6 +112,8 @@ public class PortalInstanceResourceImpl extends BasePortalInstanceResourceImpl {
 	@Override
 	public PortalInstance postPortalInstance(PortalInstance portalInstance)
 		throws Exception {
+
+		_checkPermission();
 
 		Admin admin = portalInstance.getAdmin();
 
@@ -143,8 +152,6 @@ public class PortalInstanceResourceImpl extends BasePortalInstanceResourceImpl {
 	public PortalInstance postPortalInstanceCopy(
 			String portalInstanceId, PortalInstanceCopy portalInstanceCopy)
 		throws Exception {
-
-		_checkFeatureFlag();
 
 		_checkPermission();
 
@@ -195,8 +202,6 @@ public class PortalInstanceResourceImpl extends BasePortalInstanceResourceImpl {
 			String portalInstanceId)
 		throws Exception {
 
-		_checkFeatureFlag();
-
 		_checkPermission();
 
 		try {
@@ -231,8 +236,6 @@ public class PortalInstanceResourceImpl extends BasePortalInstanceResourceImpl {
 			PortalInstanceImport portalInstanceImport)
 		throws Exception {
 
-		_checkFeatureFlag();
-
 		_checkPermission();
 
 		if (portalInstanceImport == null) {
@@ -264,6 +267,8 @@ public class PortalInstanceResourceImpl extends BasePortalInstanceResourceImpl {
 	public void putPortalInstanceActivate(String portalInstanceId)
 		throws Exception {
 
+		_checkPermission();
+
 		Company company = _companyService.getCompanyByWebId(portalInstanceId);
 
 		_companyService.updateCompany(
@@ -275,19 +280,13 @@ public class PortalInstanceResourceImpl extends BasePortalInstanceResourceImpl {
 	public void putPortalInstanceDeactivate(String portalInstanceId)
 		throws Exception {
 
+		_checkPermission();
+
 		Company company = _companyService.getCompanyByWebId(portalInstanceId);
 
 		_companyService.updateCompany(
 			company.getCompanyId(), company.getVirtualHostname(),
 			company.getMx(), company.getMaxUsers(), false);
-	}
-
-	private void _checkFeatureFlag() {
-		if (!FeatureFlagManagerUtil.isEnabled(
-				contextCompany.getCompanyId(), "LPD-11342")) {
-
-			throw new UnsupportedOperationException();
-		}
 	}
 
 	private void _checkPermission() throws Exception {

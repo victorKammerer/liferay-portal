@@ -88,6 +88,45 @@ run "should_assemble_the_deployment_context" {
 	}
 	command=plan
 }
+run "should_bind_the_keda_identity_to_the_monitor_workspace" {
+	assert {
+		condition=azurerm_user_assigned_identity.keda[0].name == "liferay-test-keda"
+		error_message="The KEDA identity name must be derived from deployment_name"
+	}
+	assert {
+		condition=azurerm_federated_identity_credential.keda[0].name == "keda"
+		error_message="The KEDA federated credential must not include a deployment name prefix"
+	}
+	assert {
+		condition=azurerm_federated_identity_credential.keda[0].subject == "system:serviceaccount:keda-system:keda-operator"
+		error_message="The KEDA federated credential must bind the keda-operator service account in the KEDA namespace"
+	}
+	assert {
+		condition=one(azurerm_federated_identity_credential.keda[0].audience) == "api://AzureADTokenExchange"
+		error_message="The KEDA federated credential must use the Azure AD token exchange audience"
+	}
+	assert {
+		condition=azurerm_role_assignment.keda_monitoring_data_reader[0].role_definition_name == "Monitoring Data Reader"
+		error_message="The KEDA identity must be granted the Monitoring Data Reader role"
+	}
+	assert {
+		condition=azurerm_role_assignment.keda_monitoring_data_reader[0].scope == azurerm_monitor_workspace.main[0].id
+		error_message="The KEDA Monitoring Data Reader grant must be scoped to the Azure Monitor workspace"
+	}
+	assert {
+		condition=output.keda_service_account_namespace == "keda-system"
+		error_message="The KEDA service account namespace must be published"
+	}
+	command=plan
+	variables {
+		keda_config={
+			enabled=true
+		}
+		observability_config={
+			enabled=true
+		}
+	}
+}
 run "should_build_the_azure_key_vault_secret_store_provider" {
 	assert {
 		condition=join(",", keys(local.cluster_secret_store_provider)) == "azurekv"
@@ -195,6 +234,10 @@ run "should_disable_ingestion_by_default" {
 		condition=output.prometheus_data_collection_rule_id == "" && output.prometheus_metrics_ingestion_endpoint == ""
 		error_message="Remote write outputs must be empty when observability is disabled"
 	}
+	assert {
+		condition=output.prometheus_workspace_id == ""
+		error_message="The workspace ID output must be empty when observability is disabled"
+	}
 	command=plan
 }
 run "should_expose_remote_write_outputs_when_enabled" {
@@ -205,6 +248,18 @@ run "should_expose_remote_write_outputs_when_enabled" {
 	assert {
 		condition=output.prometheus_data_collection_rule_id == "dcr-00000000000000000000000000000000"
 		error_message="The data collection rule output must expose the immutable ID that the remote write URL embeds"
+	}
+	command=plan
+	variables {
+		observability_config={
+			enabled=true
+		}
+	}
+}
+run "should_expose_the_workspace_id_when_enabled" {
+	assert {
+		condition=output.prometheus_workspace_id == "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/liferay-test/providers/Microsoft.Monitor/accounts/liferay-test-amw"
+		error_message="The workspace ID output must expose the Azure Monitor workspace that the Prometheus rule group targets"
 	}
 	command=plan
 	variables {
@@ -240,6 +295,43 @@ run "should_grant_monitoring_metrics_publisher_on_the_data_collection_rule" {
 	}
 	command=plan
 	variables {
+		observability_config={
+			enabled=true
+		}
+	}
+}
+run "should_grant_monitoring_reader_on_the_resource_group" {
+	assert {
+		condition=azurerm_role_assignment.observability_monitoring_reader[0].role_definition_name == "Monitoring Reader"
+		error_message="The observability identity must be granted the Monitoring Reader role to read Azure Monitor metrics for the databases"
+	}
+	assert {
+		condition=azurerm_role_assignment.observability_monitoring_reader[0].scope == data.azurerm_resource_group.liferay.id
+		error_message="The Monitoring Reader grant must be scoped to the resource group"
+	}
+	command=plan
+	variables {
+		observability_config={
+			enabled=true
+		}
+	}
+}
+run "should_honor_a_custom_keda_service_account" {
+	assert {
+		condition=azurerm_federated_identity_credential.keda[0].subject == "system:serviceaccount:keda:keda-operator-custom"
+		error_message="The KEDA federated credential subject must follow the configured namespace and service account name"
+	}
+	assert {
+		condition=output.keda_service_account_namespace == "keda"
+		error_message="The published KEDA namespace must follow the configured namespace"
+	}
+	command=plan
+	variables {
+		keda_config={
+			enabled=true
+			namespace="keda"
+			service_account_name="keda-operator-custom"
+		}
 		observability_config={
 			enabled=true
 		}
@@ -318,7 +410,7 @@ run "should_not_create_observability_identity_by_default" {
 		error_message="No observability identity or federated credential must be created when observability is disabled"
 	}
 	assert {
-		condition=length(azurerm_role_assignment.observability_monitoring_data_reader) == 0 && length(azurerm_role_assignment.observability_monitoring_metrics_publisher) == 0
+		condition=length(azurerm_role_assignment.observability_monitoring_data_reader) == 0 && length(azurerm_role_assignment.observability_monitoring_metrics_publisher) == 0 && length(azurerm_role_assignment.observability_monitoring_reader) == 0
 		error_message="No monitoring grant must be created when observability is disabled"
 	}
 	assert {
@@ -326,6 +418,41 @@ run "should_not_create_observability_identity_by_default" {
 		error_message="The observability identity client ID output must be empty when observability is disabled"
 	}
 	command=plan
+}
+run "should_omit_the_keda_identity_by_default" {
+	assert {
+		condition=length(azurerm_user_assigned_identity.keda) == 0
+		error_message="KEDA identity should not be created by default"
+	}
+	assert {
+		condition=length(azurerm_federated_identity_credential.keda) == 0
+		error_message="KEDA federated credential should not be created by default"
+	}
+	assert {
+		condition=length(azurerm_role_assignment.keda_monitoring_data_reader) == 0
+		error_message="Monitoring Data Reader must not be granted by default to KEDA"
+	}
+	assert {
+		condition=output.keda_identity_client_id == "" && output.keda_service_account_namespace == ""
+		error_message="The KEDA outputs must be empty so the bootstrap leaves KEDA unconfigured"
+	}
+	command=plan
+}
+run "should_omit_the_keda_identity_when_observability_is_disabled" {
+	assert {
+		condition=length(azurerm_user_assigned_identity.keda) == 0
+		error_message="Enabling KEDA without observability must not create the KEDA identity"
+	}
+	assert {
+		condition=length(azurerm_role_assignment.keda_monitoring_data_reader) == 0
+		error_message="Enabling KEDA without observability must not grant Monitoring Data Reader"
+	}
+	command=plan
+	variables {
+		keda_config={
+			enabled=true
+		}
+	}
 }
 run "should_reject_a_cluster_secret_store_with_both_branches" {
 	command=plan
@@ -437,11 +564,11 @@ run "should_wire_the_platform_identities" {
 		error_message="The Crossplane IAM identity must hold Role Based Access Control Administrator on the resource group"
 	}
 	assert {
-		condition=data.azurerm_role_definition.key_vault_crypto_service_encryption_user.name == "Key Vault Crypto Service Encryption User" && data.azurerm_role_definition.storage_blob_data_contributor.name == "Storage Blob Data Contributor" && data.azurerm_role_definition.storage_blob_data_reader.name == "Storage Blob Data Reader"
+		condition=join(",", [for role_definition in [data.azurerm_role_definition.backup_operator, data.azurerm_role_definition.key_vault_crypto_service_encryption_user, data.azurerm_role_definition.reader, data.azurerm_role_definition.storage_account_backup_contributor, data.azurerm_role_definition.storage_blob_data_contributor, data.azurerm_role_definition.storage_blob_data_reader] : role_definition.name]) == "Backup Operator,Key Vault Crypto Service Encryption User,Reader,Storage Account Backup Contributor,Storage Blob Data Contributor,Storage Blob Data Reader"
 		error_message="The grantable role allowlist must resolve the intended built in roles by name"
 	}
 	assert {
-		condition=strcontains(azurerm_role_assignment.crossplane_iam_rbac_administrator.condition, basename(data.azurerm_role_definition.key_vault_crypto_service_encryption_user.role_definition_id)) && strcontains(azurerm_role_assignment.crossplane_iam_rbac_administrator.condition, basename(data.azurerm_role_definition.storage_blob_data_contributor.role_definition_id)) && strcontains(azurerm_role_assignment.crossplane_iam_rbac_administrator.condition, basename(data.azurerm_role_definition.storage_blob_data_reader.role_definition_id))
+		condition=length(local.crossplane_iam_grantable_role_definition_ids) == 6 && alltrue([for role_definition in [data.azurerm_role_definition.backup_operator, data.azurerm_role_definition.key_vault_crypto_service_encryption_user, data.azurerm_role_definition.reader, data.azurerm_role_definition.storage_account_backup_contributor, data.azurerm_role_definition.storage_blob_data_contributor, data.azurerm_role_definition.storage_blob_data_reader] : strcontains(azurerm_role_assignment.crossplane_iam_rbac_administrator.condition, basename(role_definition.role_definition_id))])
 		error_message="The role assignment condition must restrict grantable roles to the allowlist"
 	}
 	assert {

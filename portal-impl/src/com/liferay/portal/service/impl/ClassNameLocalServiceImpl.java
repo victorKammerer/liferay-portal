@@ -8,6 +8,8 @@ package com.liferay.portal.service.impl;
 import com.liferay.petra.function.transform.TransformUtil;
 import com.liferay.portal.kernel.cache.CacheRegistryItem;
 import com.liferay.portal.kernel.change.tracking.CTAware;
+import com.liferay.portal.kernel.exception.NoSuchClassNameException;
+import com.liferay.portal.kernel.exception.PortalException;
 import com.liferay.portal.kernel.log.Log;
 import com.liferay.portal.kernel.log.LogFactoryUtil;
 import com.liferay.portal.kernel.model.ClassName;
@@ -130,6 +132,22 @@ public class ClassNameLocalServiceImpl
 	}
 
 	@Override
+	public ClassName getClassName(long classNameId) throws PortalException {
+		try {
+			return classNamePersistence.findByPrimaryKey(classNameId);
+		}
+		catch (NoSuchClassNameException noSuchClassNameException) {
+			ClassName className = ClassNamePool.fetchByClassNameId(classNameId);
+
+			if (className != null) {
+				ClassNamePool.remove(className);
+			}
+
+			throw noSuchClassNameException;
+		}
+	}
+
+	@Override
 	@Transactional(enabled = false)
 	public ClassName getClassName(String value) {
 		if (Validator.isNull(value)) {
@@ -178,6 +196,11 @@ public class ClassNameLocalServiceImpl
 	}
 
 	@Override
+	public Supplier<Long> getClassNameIdSupplier(String className) {
+		return () -> getClassNameId(className);
+	}
+
+	@Override
 	public Supplier<long[]> getClassNameIdsSupplier(String[] classNames) {
 		Map<Long, long[]> classNameIdsMap = new ConcurrentHashMap<>();
 
@@ -201,11 +224,6 @@ public class ClassNameLocalServiceImpl
 
 			return classNameIds;
 		};
-	}
-
-	@Override
-	public Supplier<Long> getClassNameIdSupplier(String className) {
-		return () -> getClassNameId(className);
 	}
 
 	@Override

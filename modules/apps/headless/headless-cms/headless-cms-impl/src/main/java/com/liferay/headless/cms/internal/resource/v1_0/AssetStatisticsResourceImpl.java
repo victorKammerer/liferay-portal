@@ -19,6 +19,7 @@ import com.liferay.object.service.ObjectEntryLocalService;
 import com.liferay.petra.sql.dsl.expression.Predicate;
 import com.liferay.portal.kernel.exception.PortalException;
 import com.liferay.portal.kernel.feature.flag.FeatureFlagManagerUtil;
+import com.liferay.portal.kernel.license.util.LicenseManagerUtil;
 import com.liferay.portal.kernel.log.Log;
 import com.liferay.portal.kernel.log.LogFactoryUtil;
 import com.liferay.portal.kernel.util.ArrayUtil;
@@ -48,6 +49,8 @@ public class AssetStatisticsResourceImpl
 	@Override
 	public AssetStatistics getAssetStatistics(Long assetLibraryId)
 		throws Exception {
+
+		LicenseManagerUtil.checkFreeTier();
 
 		Long[] spaceGroupIds = CMSGroupUtil.getSpaceGroupIds(
 			contextCompany.getCompanyId(), _depotEntryService,
@@ -243,9 +246,9 @@ public class AssetStatisticsResourceImpl
 	private ObjectEntryLocalService _objectEntryLocalService;
 
 	@Reference
-	private Searcher _searcher;
+	private SearchRequestBuilderFactory _searchRequestBuilderFactory;
 
 	@Reference
-	private SearchRequestBuilderFactory _searchRequestBuilderFactory;
+	private Searcher _searcher;
 
 }

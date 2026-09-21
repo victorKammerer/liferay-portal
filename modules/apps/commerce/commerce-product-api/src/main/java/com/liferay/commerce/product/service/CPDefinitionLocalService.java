@@ -119,6 +119,12 @@ public interface CPDefinitionLocalService
 			int status, ServiceContext serviceContext)
 		throws PortalException;
 
+	public CPDefinitionLocalization addCPDefinitionLocalization(
+			CPDefinition cpDefinition, String languageId, String description,
+			String metaDescription, String metaKeywords, String metaTitle,
+			String name, String shortDescription)
+		throws PortalException;
+
 	public CPDefinition addOrUpdateCPDefinition(
 			String externalReferenceCode, long userId, long groupId,
 			long cpDefinitionId, long cpTaxCategoryId,
@@ -671,7 +677,7 @@ public interface CPDefinitionLocalService
 		throws PortalException;
 
 	public CPDefinition updateExternalReferenceCode(
-			String externalReferenceCode, long cpDefinitionId)
+			long cpDefinitionId, String externalReferenceCode)
 		throws PortalException;
 
 	@Indexable(type = IndexableType.REINDEX)
@@ -721,4 +727,4 @@ public interface CPDefinitionLocalService
 		throws E;
 
 }
-// LIFERAY-SERVICE-BUILDER-HASH:-1375766560
+// LIFERAY-SERVICE-BUILDER-HASH:927766104

@@ -13,12 +13,13 @@ import com.liferay.mcp.server.rest.internal.util.ToolSetUtil;
 import com.liferay.object.constants.ObjectDefinitionConstants;
 import com.liferay.object.model.ObjectDefinition;
 import com.liferay.object.model.ObjectEntry;
+import com.liferay.object.model.ObjectRelationship;
 import com.liferay.object.rest.filter.factory.FilterFactory;
 import com.liferay.object.service.ObjectDefinitionLocalService;
 import com.liferay.object.service.ObjectEntryLocalService;
+import com.liferay.object.service.ObjectRelationshipLocalService;
 import com.liferay.petra.function.transform.TransformUtil;
 import com.liferay.petra.sql.dsl.expression.Predicate;
-import com.liferay.petra.string.CharPool;
 import com.liferay.petra.string.StringBundler;
 import com.liferay.petra.string.StringPool;
 import com.liferay.portal.kernel.dao.orm.QueryUtil;
@@ -30,7 +31,6 @@ import com.liferay.portal.kernel.util.GetterUtil;
 import com.liferay.portal.kernel.util.HashMapBuilder;
 import com.liferay.portal.kernel.util.MapUtil;
 import com.liferay.portal.kernel.util.Portal;
-import com.liferay.portal.kernel.util.StringUtil;
 import com.liferay.portal.kernel.util.Validator;
 
 import io.modelcontextprotocol.common.McpTransportContext;
@@ -56,6 +56,7 @@ import java.io.Serializable;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -80,24 +81,7 @@ import org.osgi.service.component.annotations.Reference;
 )
 public class MCPServerServlet extends HttpServlet {
 
-	@Override
-	public void destroy() {
-		synchronized (this) {
-			for (Servlet servlet : _servlets.values()) {
-				servlet.destroy();
-			}
-
-			_servlets.clear();
-		}
-	}
-
-	public void invalidate(long companyId, String mcpServerProfileName) {
-		synchronized (this) {
-			_destroy(_getServletKey(companyId, mcpServerProfileName));
-		}
-	}
-
-	public void invalidateAll(long companyId) {
+	public void clearServletCache(long companyId) {
 		synchronized (this) {
 			String companyIdString = String.valueOf(companyId);
 
@@ -109,6 +93,23 @@ public class MCPServerServlet extends HttpServlet {
 					_destroy(servletKey);
 				}
 			}
+		}
+	}
+
+	public void clearServletCache(long companyId, String mcpServerProfileName) {
+		synchronized (this) {
+			_destroy(_getServletKey(companyId, mcpServerProfileName));
+		}
+	}
+
+	@Override
+	public void destroy() {
+		synchronized (this) {
+			for (Servlet servlet : _servlets.values()) {
+				servlet.destroy();
+			}
+
+			_servlets.clear();
 		}
 	}
 
@@ -160,31 +161,35 @@ public class MCPServerServlet extends HttpServlet {
 						"/mcp/" + mcpServerProfileName : "/mcp"
 				).build();
 
+		List<ObjectEntry> mcpServerProfileToolObjectEntries =
+			_getMCPServerProfileToolObjectEntries(mcpServerProfileObjectEntry);
+
+		Map<String, String> restrictFieldsMap = _getRestrictFieldsMap(
+			mcpServerProfileToolObjectEntries);
+
 		List<McpStatelessServerFeatures.SyncToolSpecification>
-			syncToolSpecifications = TransformUtil.transformToList(
-				StringUtil.splitLines((String)values.get("tools")),
-				tool -> {
-					String[] tokens = StringUtil.split(tool, CharPool.SPACE);
+			syncToolSpecifications = TransformUtil.transform(
+				mcpServerProfileToolObjectEntries,
+				mcpServerProfileToolObjectEntry -> {
+					Map<String, Serializable> mcpServerProfileToolValues =
+						mcpServerProfileToolObjectEntry.getValues();
 
-					if (tokens.length != 2) {
-						throw new IllegalArgumentException(
-							"Profile tool must be in \"<toolSetName> " +
-								"<toolName>\" format: " + tool);
-					}
-
-					String toolName = tokens[1];
-					String toolSetName = tokens[0];
+					String toolName = MapUtil.getString(
+						mcpServerProfileToolValues, "toolName");
+					String toolSetName = MapUtil.getString(
+						mcpServerProfileToolValues, "toolSetName");
 
 					try {
 						return new McpStatelessServerFeatures.
 							SyncToolSpecification(
 								_getTool(
-									httpServletRequest, toolName, toolSetName),
+									httpServletRequest, restrictFieldsMap,
+									toolName, toolSetName),
 								(mcpTransportContext, callToolRequest) -> _call(
 									mcpTransportContext,
 									callToolRequest.arguments(), companyId,
 									mcpServerProfileExternalReferenceCode,
-									toolName, toolSetName));
+									restrictFieldsMap, toolName, toolSetName));
 					}
 					catch (Exception exception) {
 						_log.error(
@@ -208,6 +213,8 @@ public class MCPServerServlet extends HttpServlet {
 			).build()
 		).immediateExecution(
 			true
+		).instructions(
+			(String)values.get("instructions")
 		).prompts(
 			_getSyncPromptSpecifications(companyId)
 		).tools(
@@ -253,7 +260,8 @@ public class MCPServerServlet extends HttpServlet {
 	private McpSchema.CallToolResult _call(
 		McpTransportContext mcpTransportContext, Object inputObject,
 		long companyId, String mcpServerProfileExternalReferenceCode,
-		String toolName, String toolSetName) {
+		Map<String, String> restrictFieldsMap, String toolName,
+		String toolSetName) {
 
 		HttpServletRequest httpServletRequest =
 			(HttpServletRequest)mcpTransportContext.get("httpServletRequest");
@@ -262,7 +270,8 @@ public class MCPServerServlet extends HttpServlet {
 			Response response = ToolSetUtil.invokeTool(
 				_getDataMaskExternalReferenceCodes(
 					companyId, mcpServerProfileExternalReferenceCode),
-				httpServletRequest, inputObject, toolName, toolSetName);
+				httpServletRequest, inputObject, restrictFieldsMap, toolName,
+				toolSetName);
 
 			int responseCode = response.getStatus();
 			String content = (String)response.getEntity();
@@ -385,12 +394,60 @@ public class MCPServerServlet extends HttpServlet {
 
 			Map<String, Serializable> values = objectEntry.getValues();
 
-			if (mcpServerProfileName.equals(values.get("name"))) {
+			if (mcpServerProfileName.equals(values.get("name")) &&
+				Objects.equals(values.get("profileStatus"), "active")) {
+
 				return objectEntry;
 			}
 		}
 
 		return null;
+	}
+
+	private List<ObjectEntry> _getMCPServerProfileToolObjectEntries(
+		ObjectEntry mcpServerProfileObjectEntry) {
+
+		try {
+			ObjectRelationship objectRelationship =
+				_objectRelationshipLocalService.getObjectRelationship(
+					mcpServerProfileObjectEntry.getObjectDefinitionId(),
+					"mcpServerProfileToTools");
+
+			return _objectEntryLocalService.getOneToManyObjectEntries(
+				0, objectRelationship.getObjectRelationshipId(), null, false,
+				mcpServerProfileObjectEntry.getObjectEntryId(), true, null,
+				QueryUtil.ALL_POS, QueryUtil.ALL_POS, null);
+		}
+		catch (PortalException portalException) {
+			throw new RuntimeException(portalException);
+		}
+	}
+
+	private Map<String, String> _getRestrictFieldsMap(
+		List<ObjectEntry> mcpServerProfileToolObjectEntries) {
+
+		Map<String, String> restrictFieldsMap = new HashMap<>();
+
+		for (ObjectEntry mcpServerProfileToolObjectEntry :
+				mcpServerProfileToolObjectEntries) {
+
+			Map<String, Serializable> values =
+				mcpServerProfileToolObjectEntry.getValues();
+
+			String restrictFields = MapUtil.getString(values, "restrictFields");
+
+			if (Validator.isNull(restrictFields)) {
+				continue;
+			}
+
+			restrictFieldsMap.put(
+				ToolSetUtil.getToolKey(
+					MapUtil.getString(values, "toolName"),
+					MapUtil.getString(values, "toolSetName")),
+				restrictFields);
+		}
+
+		return restrictFieldsMap;
 	}
 
 	private Servlet _getServlet(
@@ -456,12 +513,13 @@ public class MCPServerServlet extends HttpServlet {
 	}
 
 	private McpSchema.Tool _getTool(
-		HttpServletRequest httpServletRequest, String toolName,
+		HttpServletRequest httpServletRequest,
+		Map<String, String> restrictFieldsMap, String toolName,
 		String toolSetName) {
 
 		try {
 			Tool tool = ToolSetUtil.getTool(
-				httpServletRequest, toolName, toolSetName);
+				httpServletRequest, restrictFieldsMap, toolName, toolSetName);
 
 			return McpSchema.Tool.builder(
 			).description(
@@ -493,6 +551,9 @@ public class MCPServerServlet extends HttpServlet {
 
 	@Reference
 	private ObjectEntryLocalService _objectEntryLocalService;
+
+	@Reference
+	private ObjectRelationshipLocalService _objectRelationshipLocalService;
 
 	@Reference
 	private Portal _portal;

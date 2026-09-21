@@ -77,6 +77,7 @@ import java.math.BigDecimal;
 
 import java.util.Collections;
 import java.util.List;
+import java.util.Locale;
 import java.util.Objects;
 
 /**
@@ -151,13 +152,7 @@ public class ObjectFieldInfoFieldConverter {
 			).editable(
 				editable
 			).labelInfoLocalizedValue(
-				InfoLocalizedValue.<String>builder(
-				).defaultLocale(
-					LocaleUtil.fromLanguageId(
-						objectField.getDefaultLanguageId())
-				).values(
-					objectField.getLabelMap()
-				).build()
+				_getLabelInfoLocalizedValue(objectField)
 			).localizable(
 				objectField.isLocalized()
 			).readOnly(
@@ -405,6 +400,37 @@ public class ObjectFieldInfoFieldConverter {
 		}
 	}
 
+	private InfoLocalizedValue<String> _getLabelInfoLocalizedValue(
+		ObjectField objectField) {
+
+		Locale defaultLocale = LocaleUtil.fromLanguageId(
+			objectField.getDefaultLanguageId());
+
+		return InfoLocalizedValue.<String>builder(
+		).defaultLocale(
+			defaultLocale
+		).values(
+			objectField.getLabelMap()
+		).value(
+			defaultLocale,
+			objectField.getLabel(objectField.getDefaultLanguageId())
+		).build();
+	}
+
+	private long _getMaxLength(ObjectField objectField, long defaultMaxLength) {
+		ObjectFieldSetting objectFieldSetting =
+			_objectFieldSettingLocalService.fetchObjectFieldSetting(
+				objectField.getObjectFieldId(),
+				ObjectFieldSettingConstants.NAME_MAX_LENGTH);
+
+		if (objectFieldSetting == null) {
+			return defaultMaxLength;
+		}
+
+		return GetterUtil.getLong(
+			objectFieldSetting.getValue(), defaultMaxLength);
+	}
+
 	private long _getMaximumFileSize(ObjectField objectField) {
 		ObjectFieldSetting objectFieldSetting =
 			_objectFieldSettingLocalService.fetchObjectFieldSetting(
@@ -428,20 +454,6 @@ public class ObjectFieldInfoFieldConverter {
 		}
 
 		return maximumFileSize;
-	}
-
-	private long _getMaxLength(ObjectField objectField, long defaultMaxLength) {
-		ObjectFieldSetting objectFieldSetting =
-			_objectFieldSettingLocalService.fetchObjectFieldSetting(
-				objectField.getObjectFieldId(),
-				ObjectFieldSettingConstants.NAME_MAX_LENGTH);
-
-		if (objectFieldSetting == null) {
-			return defaultMaxLength;
-		}
-
-		return GetterUtil.getLong(
-			objectFieldSetting.getValue(), defaultMaxLength);
 	}
 
 	private ObjectEntry _getObjectEntry() {

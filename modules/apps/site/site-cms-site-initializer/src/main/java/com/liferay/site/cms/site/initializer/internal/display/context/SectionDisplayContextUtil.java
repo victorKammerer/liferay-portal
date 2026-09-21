@@ -33,6 +33,8 @@ import com.liferay.portal.kernel.json.JSONFactoryUtil;
 import com.liferay.portal.kernel.json.JSONObject;
 import com.liferay.portal.kernel.json.JSONUtil;
 import com.liferay.portal.kernel.language.LanguageUtil;
+import com.liferay.portal.kernel.license.util.App;
+import com.liferay.portal.kernel.license.util.LicenseManagerUtil;
 import com.liferay.portal.kernel.log.Log;
 import com.liferay.portal.kernel.log.LogFactoryUtil;
 import com.liferay.portal.kernel.model.Group;
@@ -82,6 +84,18 @@ import java.util.TimeZone;
  * @author Daniel Sanz
  */
 public class SectionDisplayContextUtil {
+
+	public static void addScheduleDateFDSActionDropdownItems(
+		List<FDSActionDropdownItem> fdsActionDropdownItems,
+		HttpServletRequest httpServletRequest) {
+
+		fdsActionDropdownItems.add(
+			getScheduleDateFDSActionDropdownItem(
+				"update-expiration-date", httpServletRequest));
+		fdsActionDropdownItems.add(
+			getScheduleDateFDSActionDropdownItem(
+				"update-review-date", httpServletRequest));
+	}
 
 	public static String appendGroupIds(
 		String filterString, HttpServletRequest httpServletRequest) {
@@ -216,26 +230,9 @@ public class SectionDisplayContextUtil {
 			).build(
 				"find-and-replace"
 			));
-		bulkActionDropdownItems.add(
-			FDSActionDropdownItemBuilder.setHref(
-				StringPool.POUND
-			).setIcon(
-				"date-time"
-			).setLabel(
-				LanguageUtil.get(httpServletRequest, "update-expiration-date")
-			).build(
-				"update-expiration-date"
-			));
-		bulkActionDropdownItems.add(
-			FDSActionDropdownItemBuilder.setHref(
-				StringPool.POUND
-			).setIcon(
-				"date-time"
-			).setLabel(
-				LanguageUtil.get(httpServletRequest, "update-review-date")
-			).build(
-				"update-review-date"
-			));
+
+		_addScheduleDateBulkActionDropdownItems(
+			bulkActionDropdownItems, httpServletRequest);
 
 		_addPermissionsBulkActions(bulkActionDropdownItems, httpServletRequest);
 
@@ -264,12 +261,9 @@ public class SectionDisplayContextUtil {
 			).build(
 				"download"
 			));
-		fdsActionDropdownItems.add(
-			getScheduleDateFDSActionDropdownItem(
-				"update-expiration-date", httpServletRequest));
-		fdsActionDropdownItems.add(
-			getScheduleDateFDSActionDropdownItem(
-				"update-review-date", httpServletRequest));
+
+		addScheduleDateFDSActionDropdownItems(
+			fdsActionDropdownItems, httpServletRequest);
 
 		return fdsActionDropdownItems;
 	}
@@ -307,6 +301,22 @@ public class SectionDisplayContextUtil {
 		return collaboratorURLs;
 	}
 
+	public static String getContentProgressFilterString(
+		HttpServletRequest httpServletRequest) {
+
+		return appendGroupIds(
+			appendStatus(_CMS_CONTENT_FILTER_STRING), httpServletRequest);
+	}
+
+	public static String getContentViewURL(ThemeDisplay themeDisplay) {
+		return StringBundler.concat(
+			themeDisplay.getPortalURL(), themeDisplay.getPathMain(),
+			GroupConstants.CMS_FRIENDLY_URL,
+			"/edit_content_item?p_l_mode=read&p_p_state=",
+			LiferayWindowState.POP_UP, "&redirect=",
+			themeDisplay.getURLCurrent(), "&objectEntryId={embedded.id}");
+	}
+
 	public static List<DropdownItem> getContentsBulkActionDropdownItems(
 		HttpServletRequest httpServletRequest) {
 
@@ -332,6 +342,9 @@ public class SectionDisplayContextUtil {
 		_addAddAssetsToProjectBulkAction(
 			bulkActionDropdownItems, httpServletRequest);
 
+		_addScheduleDateBulkActionDropdownItems(
+			bulkActionDropdownItems, httpServletRequest);
+
 		_addPermissionsBulkActions(bulkActionDropdownItems, httpServletRequest);
 
 		return bulkActionDropdownItems;
@@ -345,16 +358,10 @@ public class SectionDisplayContextUtil {
 
 		_addAddToLaunchAction(fdsActionDropdownItems, httpServletRequest);
 
-		return fdsActionDropdownItems;
-	}
+		addScheduleDateFDSActionDropdownItems(
+			fdsActionDropdownItems, httpServletRequest);
 
-	public static String getContentViewURL(ThemeDisplay themeDisplay) {
-		return StringBundler.concat(
-			themeDisplay.getPortalURL(), themeDisplay.getPathMain(),
-			GroupConstants.CMS_FRIENDLY_URL,
-			"/edit_content_item?p_l_mode=read&p_p_state=",
-			LiferayWindowState.POP_UP, "&redirect=",
-			themeDisplay.getURLCurrent(), "&objectEntryId={embedded.id}");
+		return fdsActionDropdownItems;
 	}
 
 	public static CreationMenu getCreationMenu(
@@ -859,6 +866,9 @@ public class SectionDisplayContextUtil {
 		_addAddAssetsToProjectBulkAction(
 			bulkActionDropdownItems, httpServletRequest);
 
+		_addScheduleDateBulkActionDropdownItems(
+			bulkActionDropdownItems, httpServletRequest);
+
 		_addPermissionsBulkActions(bulkActionDropdownItems, httpServletRequest);
 
 		return bulkActionDropdownItems;
@@ -895,7 +905,7 @@ public class SectionDisplayContextUtil {
 			).setIcon(
 				"download"
 			).setLabel(
-				LanguageUtil.get(httpServletRequest, "download")
+				LanguageUtil.get(httpServletRequest, "download-folder")
 			).setMethod(
 				"get"
 			).setTarget(
@@ -907,6 +917,9 @@ public class SectionDisplayContextUtil {
 			).build(
 				"download-folder"
 			));
+
+		addScheduleDateFDSActionDropdownItems(
+			fdsActionDropdownItems, httpServletRequest);
 
 		return fdsActionDropdownItems;
 	}
@@ -957,12 +970,8 @@ public class SectionDisplayContextUtil {
 		List<FDSActionDropdownItem> fdsActionDropdownItems =
 			getFDSActionDropdownItems(httpServletRequest);
 
-		fdsActionDropdownItems.add(
-			getScheduleDateFDSActionDropdownItem(
-				"update-expiration-date", httpServletRequest));
-		fdsActionDropdownItems.add(
-			getScheduleDateFDSActionDropdownItem(
-				"update-review-date", httpServletRequest));
+		addScheduleDateFDSActionDropdownItems(
+			fdsActionDropdownItems, httpServletRequest);
 
 		return fdsActionDropdownItems;
 	}
@@ -1057,13 +1066,7 @@ public class SectionDisplayContextUtil {
 		List<DropdownItem> bulkActionDropdownItems,
 		HttpServletRequest httpServletRequest) {
 
-		ThemeDisplay themeDisplay =
-			(ThemeDisplay)httpServletRequest.getAttribute(
-				WebKeys.THEME_DISPLAY);
-
-		if (!FeatureFlagManagerUtil.isEnabled(
-				themeDisplay.getCompanyId(), "LPD-58677")) {
-
+		if (!LicenseManagerUtil.isAppEnabled(App.CMP)) {
 			return;
 		}
 
@@ -1198,6 +1201,32 @@ public class SectionDisplayContextUtil {
 					httpServletRequest, "reset-to-default-permissions")
 			).build(
 				"reset-to-default-permissions"
+			));
+	}
+
+	private static void _addScheduleDateBulkActionDropdownItems(
+		List<DropdownItem> bulkActionDropdownItems,
+		HttpServletRequest httpServletRequest) {
+
+		bulkActionDropdownItems.add(
+			FDSActionDropdownItemBuilder.setHref(
+				StringPool.POUND
+			).setIcon(
+				"date-time"
+			).setLabel(
+				LanguageUtil.get(httpServletRequest, "update-expiration-date")
+			).build(
+				"update-expiration-date"
+			));
+		bulkActionDropdownItems.add(
+			FDSActionDropdownItemBuilder.setHref(
+				StringPool.POUND
+			).setIcon(
+				"date-time"
+			).setLabel(
+				LanguageUtil.get(httpServletRequest, "update-review-date")
+			).build(
+				"update-review-date"
 			));
 	}
 

@@ -2,6 +2,8 @@
 apiVersion: licensing.liferay.com/v1alpha1
 kind: LiferayEnvironment
 metadata:
+    annotations:
+        argocd.argoproj.io/sync-options: SkipDryRunOnMissingResource=true
     labels:
         app: {{ include "liferay.name" . }}
         {{- include "liferay.labels" . | nindent 8 }}
@@ -9,10 +11,13 @@ metadata:
     namespace: {{ include "liferay.namespace" . }}
 spec:
     activationCodeSecretRef:
-        key: {{ .Values.license.activationCodeSecretKey }}
-        name: {{ .Values.license.activationCodeSecretName | default (printf "%s-activation" (include "liferay.name" .)) }}
+        key: {{ .Values.licensing.activationCodeSecretKey }}
+        name: {{ include "liferay.activationCodeSecretName" . }}
     {{- if not .Values.autoscaling.enabled }}
     desiredReplicas: {{ .Values.replicaCount }}
+    {{- end }}
+    {{- with .Values.licensing.dxpVersion }}
+    dxpVersion: {{ . | quote }}
     {{- end }}
     {{- if .Values.licensing.offline }}
     offline: true

@@ -8,7 +8,6 @@ package com.liferay.headless.admin.user.internal.resource.v1_0;
 import com.liferay.account.exception.DuplicateAccountEntryOrganizationRelException;
 import com.liferay.account.model.AccountEntry;
 import com.liferay.account.model.AccountEntryOrganizationRel;
-import com.liferay.account.service.AccountEntryOrganizationRelLocalService;
 import com.liferay.account.service.AccountEntryOrganizationRelService;
 import com.liferay.account.service.AccountEntryService;
 import com.liferay.asset.kernel.model.AssetCategory;
@@ -72,7 +71,7 @@ import com.liferay.portal.kernel.service.OrgLaborService;
 import com.liferay.portal.kernel.service.OrganizationLocalService;
 import com.liferay.portal.kernel.service.OrganizationService;
 import com.liferay.portal.kernel.service.PhoneService;
-import com.liferay.portal.kernel.service.ResourcePermissionLocalService;
+import com.liferay.portal.kernel.service.ResourcePermissionService;
 import com.liferay.portal.kernel.service.RoleLocalService;
 import com.liferay.portal.kernel.service.RoleService;
 import com.liferay.portal.kernel.service.ServiceContext;
@@ -152,9 +151,8 @@ public class OrganizationResourceImpl
 	public void deleteAccountOrganization(Long accountId, String organizationId)
 		throws Exception {
 
-		_accountEntryOrganizationRelLocalService.
-			deleteAccountEntryOrganizationRel(
-				accountId, GetterUtil.getLong(organizationId));
+		_accountEntryOrganizationRelService.deleteAccountEntryOrganizationRel(
+			accountId, GetterUtil.getLong(organizationId));
 	}
 
 	@Override
@@ -231,7 +229,8 @@ public class OrganizationResourceImpl
 
 		AccountEntryOrganizationRel accountEntryOrganizationRel =
 			_accountEntryOrganizationRelService.getAccountEntryOrganizationRel(
-				accountEntry.getAccountEntryId(), Long.valueOf(organizationId));
+				accountEntry.getAccountEntryId(),
+				GetterUtil.getLong(organizationId));
 
 		return _toOrganization(
 			String.valueOf(accountEntryOrganizationRel.getOrganizationId()));
@@ -260,7 +259,8 @@ public class OrganizationResourceImpl
 
 		AccountEntryOrganizationRel accountEntryOrganizationRel =
 			_accountEntryOrganizationRelService.getAccountEntryOrganizationRel(
-				accountEntry.getAccountEntryId(), Long.valueOf(organizationId));
+				accountEntry.getAccountEntryId(),
+				GetterUtil.getLong(organizationId));
 
 		return _toOrganization(
 			String.valueOf(accountEntryOrganizationRel.getOrganizationId()));
@@ -534,7 +534,7 @@ public class OrganizationResourceImpl
 	public void postAccountOrganization(Long accountId, String organizationId)
 		throws Exception {
 
-		_accountEntryOrganizationRelLocalService.addAccountEntryOrganizationRel(
+		_accountEntryOrganizationRelService.addAccountEntryOrganizationRel(
 			accountId, GetterUtil.getLong(organizationId));
 	}
 
@@ -1076,6 +1076,27 @@ public class OrganizationResourceImpl
 		return _file.getBytes(fileEntry.getContentStream());
 	}
 
+	private List<OrgLabor> _getOrgLabors(
+			Organization organization,
+			com.liferay.portal.kernel.model.Organization
+				serviceBuilderOrganization)
+		throws Exception {
+
+		Service[] services = organization.getServices();
+
+		if (services == null) {
+			if (serviceBuilderOrganization != null) {
+				return _orgLaborService.getOrgLabors(
+					serviceBuilderOrganization.getOrganizationId());
+			}
+
+			return Collections.emptyList();
+		}
+
+		return ListUtil.filter(
+			transformToList(services, this::_toOrgLabor), Objects::nonNull);
+	}
+
 	private Page<Organization> _getOrganizationsPage(
 			Map<String, Map<String, String>> actions,
 			String parentOrganizationId, Boolean flatten, Filter filter,
@@ -1123,27 +1144,6 @@ public class OrganizationResourceImpl
 			sorts,
 			document -> _toOrganization(
 				GetterUtil.getString(document.get(Field.ENTRY_CLASS_PK))));
-	}
-
-	private List<OrgLabor> _getOrgLabors(
-			Organization organization,
-			com.liferay.portal.kernel.model.Organization
-				serviceBuilderOrganization)
-		throws Exception {
-
-		Service[] services = organization.getServices();
-
-		if (services == null) {
-			if (serviceBuilderOrganization != null) {
-				return _orgLaborService.getOrgLabors(
-					serviceBuilderOrganization.getOrganizationId());
-			}
-
-			return Collections.emptyList();
-		}
-
-		return ListUtil.filter(
-			transformToList(services, this::_toOrgLabor), Objects::nonNull);
 	}
 
 	private long _getParentOrganizationId(
@@ -1319,17 +1319,6 @@ public class OrganizationResourceImpl
 		}
 	}
 
-	private Organization _toOrganization(String organizationId)
-		throws Exception {
-
-		if (Validator.isBlank(organizationId)) {
-			return null;
-		}
-
-		return _organizationResourceDTOConverter.toDTO(
-			_getDTOConverterContext(organizationId));
-	}
-
 	private OrgLabor _toOrgLabor(Service service) {
 		long listTypeId = ServiceBuilderListTypeUtil.toServiceBuilderListTypeId(
 			contextCompany.getCompanyId(), "administrative",
@@ -1409,6 +1398,17 @@ public class OrganizationResourceImpl
 		return orgLabor;
 	}
 
+	private Organization _toOrganization(String organizationId)
+		throws Exception {
+
+		if (Validator.isBlank(organizationId)) {
+			return null;
+		}
+
+		return _organizationResourceDTOConverter.toDTO(
+			_getDTOConverterContext(organizationId));
+	}
+
 	private int _toTime(String timeString) {
 		if (Validator.isNull(timeString)) {
 			return -1;
@@ -1462,7 +1462,7 @@ public class OrganizationResourceImpl
 		return ResourcePermissionUtil.setResourcePermissions(
 			serviceBuilderOrganization,
 			serviceBuilderOrganization.getCompanyId(),
-			organization.getPermissions(), _resourcePermissionLocalService,
+			organization.getPermissions(), _resourcePermissionService,
 			_roleService, _roleTypeContributorProvider);
 	}
 
@@ -1471,10 +1471,6 @@ public class OrganizationResourceImpl
 
 	private static final EntityModel _entityModel =
 		new OrganizationEntityModel();
-
-	@Reference
-	private AccountEntryOrganizationRelLocalService
-		_accountEntryOrganizationRelLocalService;
 
 	@Reference
 	private AccountEntryOrganizationRelService
@@ -1508,6 +1504,12 @@ public class OrganizationResourceImpl
 	private ListTypeLocalService _listTypeLocalService;
 
 	@Reference
+	private OrgLaborLocalService _orgLaborLocalService;
+
+	@Reference
+	private OrgLaborService _orgLaborService;
+
+	@Reference
 	private OrganizationLocalService _organizationLocalService;
 
 	@Reference(
@@ -1521,16 +1523,10 @@ public class OrganizationResourceImpl
 	private OrganizationService _organizationService;
 
 	@Reference
-	private OrgLaborLocalService _orgLaborLocalService;
-
-	@Reference
-	private OrgLaborService _orgLaborService;
-
-	@Reference
 	private PhoneService _phoneService;
 
 	@Reference
-	private ResourcePermissionLocalService _resourcePermissionLocalService;
+	private ResourcePermissionService _resourcePermissionService;
 
 	@Reference
 	private RoleLocalService _roleLocalService;

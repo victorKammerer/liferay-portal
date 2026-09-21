@@ -92,47 +92,60 @@ public final class CompanyLogRoutingAppender extends AbstractAppender {
 		}
 
 		@PluginBuilderAttribute("advertise")
+		@SuppressWarnings("log4j.public.setter")
 		private boolean _advertise;
 
 		@PluginBuilderAttribute("advertiseUri")
+		@SuppressWarnings("log4j.public.setter")
 		private String _advertiseUri;
 
 		@PluginBuilderAttribute("append")
+		@SuppressWarnings("log4j.public.setter")
 		private boolean _append = true;
 
-		@PluginBuilderAttribute("bufferedIo")
-		private boolean _bufferedIo = true;
-
 		@PluginBuilderAttribute("bufferSize")
+		@SuppressWarnings("log4j.public.setter")
 		private int _bufferSize = Constants.ENCODER_BYTE_BUFFER_SIZE;
+
+		@PluginBuilderAttribute("bufferedIo")
+		@SuppressWarnings("log4j.public.setter")
+		private boolean _bufferedIo = true;
 
 		@PluginElement("FilePattern")
 		@Required
 		private CompanyLogRoutingFilePattern[] _companyLogRoutingFilePatterns;
 
 		@PluginBuilderAttribute("createOnDemand")
+		@SuppressWarnings("log4j.public.setter")
 		private boolean _createOnDemand;
 
 		@PluginBuilderAttribute("dirPattern")
 		@Required
+		@SuppressWarnings("log4j.public.setter")
 		private String _dirPattern;
 
 		@PluginBuilderAttribute("fileGroup")
+		@SuppressWarnings("log4j.public.setter")
 		private String _fileGroup;
 
 		@PluginBuilderAttribute("fileName")
+		@SuppressWarnings("log4j.public.setter")
 		private String _fileName;
 
 		@PluginBuilderAttribute("fileOwner")
+		@SuppressWarnings("log4j.public.setter")
 		private String _fileOwner;
 
 		@PluginBuilderAttribute("filePermissions")
+		@SuppressWarnings("log4j.public.setter")
 		private String _filePermissions;
 
 		@PluginBuilderAttribute("immediateFlush")
+		@SuppressWarnings("log4j.public.setter")
 		private boolean _immediateFlush = true;
 
 		@PluginBuilderAttribute("locking")
+		@SuppressWarnings("log4j.public.setter")
 		private boolean _locking;
 
 		@PluginElement("Strategy")
@@ -285,8 +298,8 @@ public final class CompanyLogRoutingAppender extends AbstractAppender {
 	private final boolean _append;
 	private final Map<Long, List<Appender>> _appenders =
 		new ConcurrentHashMap<>();
-	private final boolean _bufferedIo;
 	private final int _bufferSize;
+	private final boolean _bufferedIo;
 	private final CompanyLogRoutingFilePattern[] _companyLogRoutingFilePatterns;
 	private final boolean _createOnDemand;
 	private final String _dirPattern;

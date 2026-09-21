@@ -312,6 +312,23 @@ describe('getDefaultValue', () => {
 		).toBe('true');
 	});
 
+	it('should return CustomValueMap with name and searching items for PropertyTypes.SearchTerm', () => {
+		const result = getDefaultValue(
+			new Property({name: 'shoes', type: PropertyTypes.SearchTerm})
+		);
+		const nameIdx = getIndexFromPropertyName(result, 'name');
+		const searchingIdx = getIndexFromPropertyName(result, 'searching');
+
+		expect(nameIdx).toBeGreaterThanOrEqual(0);
+		expect(searchingIdx).toBeGreaterThanOrEqual(0);
+		expect(
+			result.getIn(['criterionGroup', 'items', nameIdx, 'value'])
+		).toBe('shoes');
+		expect(
+			result.getIn(['criterionGroup', 'items', searchingIdx, 'value'])
+		).toBe('true');
+	});
+
 	it('should seed no asset type for PropertyTypes.Behavior', () => {
 		const result = getDefaultValue(
 			new Property({name: 'download', type: PropertyTypes.Behavior})
@@ -376,6 +393,40 @@ describe('getDefaultValue', () => {
 		expect(result.getIn(['criterionGroup', 'items', idx, 'value'])).toBe(
 			''
 		);
+	});
+
+	it('should return CustomValueMap seeded with the first option and no date filter for PropertyTypes.SessionChannel', () => {
+		const result = getDefaultValue(
+			new Property({
+				name: 'context/channel',
+				options: [
+					{label: 'Direct', value: 'direct'},
+					{label: 'Organic', value: 'organic'}
+				],
+				type: PropertyTypes.SessionChannel
+			})
+		);
+		const items = result.getIn(['criterionGroup', 'items']);
+
+		expect(items.size).toBe(1);
+		expect(items.getIn([0, 'propertyName'])).toBe('context/channel');
+		expect(items.getIn([0, 'value'])).toBe('direct');
+	});
+
+	it('should return CustomValueMap seeded with the first UTM parameter and no date filter for PropertyTypes.SessionUtmParameter', () => {
+		const result = getDefaultValue(
+			new Property({
+				name: 'attribute/utmParameter',
+				type: PropertyTypes.SessionUtmParameter
+			})
+		);
+		const items = result.getIn(['criterionGroup', 'items']);
+
+		expect(items.size).toBe(1);
+		expect(items.getIn([0, 'propertyName'])).toBe(
+			'context/acquisitionSource'
+		);
+		expect(items.getIn([0, 'value'])).toBe('');
 	});
 
 	it('should return empty string for an unrecognized property type', () => {

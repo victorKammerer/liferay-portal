@@ -776,13 +776,6 @@ public class AccountEntryLocalServiceImpl
 			AccountEntry accountEntry, String externalReferenceCode)
 		throws PortalException {
 
-		if (Objects.equals(
-				accountEntry.getExternalReferenceCode(),
-				externalReferenceCode)) {
-
-			return accountEntry;
-		}
-
 		accountEntry.setExternalReferenceCode(externalReferenceCode);
 
 		return updateAccountEntry(accountEntry);
@@ -1333,10 +1326,10 @@ public class AccountEntryLocalServiceImpl
 	private ResourceLocalService _resourceLocalService;
 
 	@Reference
-	private Searcher _searcher;
+	private SearchRequestBuilderFactory _searchRequestBuilderFactory;
 
 	@Reference
-	private SearchRequestBuilderFactory _searchRequestBuilderFactory;
+	private Searcher _searcher;
 
 	@Reference
 	private SortFieldBuilder _sortFieldBuilder;

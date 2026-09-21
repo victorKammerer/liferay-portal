@@ -4,8 +4,8 @@
     {{- if eq .name "http" -}}{{- $backendPort = .port -}}{{- end -}}
 {{- end -}}
 {{- $suffix := ternary "" (printf "-%s" .name) (eq .name "") }}
-{{- $license := .statefulset.license | default dict }}
-{{- $licenseSecretName := $license.secretName | default (printf "%s-entitlements" (include "liferay.name" .root)) }}
+{{- $licensing := .statefulset.licensing | default dict }}
+{{- $licenseSecretName := $licensing.secretName | default (printf "%s-entitlements" (include "liferay.name" .root)) }}
 {{- $licenseVolumeName := "liferay-license" }}
 {{- $marketplace := .statefulset.marketplace | default dict }}
 {{- $marketplaceClaimName := printf "%s-marketplace" (include "liferay.name" .root) }}
@@ -176,7 +176,7 @@ spec:
             tolerations:
             {{- toYaml . | nindent 12 }}
             {{- end }}
-            {{- if or .statefulset.volumes .statefulset.customVolumes $license.enabled $marketplace.enabled }}
+            {{- if or .statefulset.volumes .statefulset.customVolumes $licensing.enabled $marketplace.enabled }}
             volumes:
                 {{- with .statefulset.volumes }}
                 {{- toYaml . | nindent 16 }}
@@ -184,7 +184,7 @@ spec:
                 {{- range $k, $v := .statefulset.customVolumes }}
                 {{- toYaml $v | nindent 16 }}
                 {{- end }}
-                {{- if $license.enabled }}
+                {{- if $licensing.enabled }}
                 {{- list (dict "name" $licenseVolumeName "secret" (dict "items" (list (dict "key" "license.xml" "path" "license.xml")) "optional" true "secretName" $licenseSecretName)) | toYaml | nindent 16 }}
                 {{- end }}
                 {{- if $marketplace.enabled }}
@@ -302,6 +302,10 @@ spec:
                 -   path:
                         type: PathPrefix
                         value: /
+            {{- with $ctx.statefulset.network.sessionPersistence }}
+            sessionPersistence:
+                {{- toYaml . | nindent 16 }}
+            {{- end }}
             {{- with $ctx.statefulset.network.timeouts }}
             timeouts:
                 backendRequest: {{ .backendRequest }}
@@ -343,6 +347,10 @@ spec:
                 -   path:
                         type: PathPrefix
                         value: /
+            {{- with .statefulset.network.sessionPersistence }}
+            sessionPersistence:
+                {{- toYaml . | nindent 16 }}
+            {{- end }}
             {{- with .statefulset.network.timeouts }}
             timeouts:
                 backendRequest: {{ .backendRequest }}
@@ -498,7 +506,11 @@ spec:
             ports:
                 -   port: cluster
                     protocol: TCP
+                -   port: cluster-tx
+                    protocol: TCP
                 -   port: http
+                    protocol: TCP
+                -   port: session
                     protocol: TCP
         {{- with .statefulset.networkPolicy.extraIngress }}
         {{- toYaml . | nindent 8 }}

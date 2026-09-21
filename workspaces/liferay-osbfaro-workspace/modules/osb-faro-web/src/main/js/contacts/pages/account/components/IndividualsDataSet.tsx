@@ -5,15 +5,18 @@ import {
 	pagination,
 } from 'shared/components/FrontendDataSet';
 import {formatTime} from 'shared/util/time';
-import {Routes} from 'shared/util/router';
+import {omit, pickBy} from 'lodash';
+import {RangeKeyTimeRanges} from 'shared/util/constants';
+import {Routes, setUriQueryValues} from 'shared/util/router';
 import {toThousands} from 'shared/util/numbers';
 import {useParams} from 'react-router-dom';
+import {useQueryRangeSelectors} from 'shared/hooks/useQueryRangeSelectors';
 
 const FDS_ID = 'account-individuals-dataset';
 
 const PREVIEW_FDS_ID = 'most-engaged-individuals-dataset';
 
-const PREVIEW_DELTA = 3;
+const PREVIEW_DELTA = 5;
 
 const SORTS = [
 	{
@@ -64,15 +67,43 @@ interface IIndividualsDataSetProps {
 const IndividualsDataSet: React.FC<IIndividualsDataSetProps> = ({
 	preview = false,
 }) => {
-	const {channelId, groupId, id} = useParams<{
+	const {
+		channelId = '',
+		groupId = '',
+		id = '',
+	} = useParams<{
 		channelId: string;
 		groupId: string;
 		id: string;
 	}>();
 
+	const rangeSelectors = useQueryRangeSelectors();
+
+	/**
+	 * `rangeEnd` and `rangeStart` are only set for a custom range, so drop the
+	 * empty ones rather than sending them as `null`. The individual profile
+	 * link carries the same range so the selection survives the redirect.
+	 */
+
+	const rangeQueryValues = pickBy(rangeSelectors);
+
+	/**
+	 * `CUSTOM` is a client side sentinel that keeps the dropdown showing the
+	 * picked dates. The API takes an integer range key and answers anything
+	 * else with a 500, so a custom range travels as its bounds alone.
+	 */
+
+	const apiRangeQueryValues =
+		rangeQueryValues.rangeKey === RangeKeyTimeRanges.CustomRange
+			? omit(rangeQueryValues, 'rangeKey')
+			: rangeQueryValues;
+
 	return (
 		<FrontendDataSet
-			apiURL={`/o/faro/contacts/${groupId}/account/${id}/individuals?channelId=${channelId}`}
+			apiURL={setUriQueryValues(
+				{channelId, ...apiRangeQueryValues},
+				`/o/faro/contacts/${groupId}/account/${id}/individuals`
+			)}
 			customDataRenderers={{
 				avgSessionDurationRenderer: ({value}: {value?: number}) =>
 					value ? formatTime(value) : '',
@@ -87,6 +118,7 @@ const IndividualsDataSet: React.FC<IIndividualsDataSetProps> = ({
 						channelId,
 						groupId,
 						itemData,
+						queryValues: rangeQueryValues,
 						route: Routes.CONTACTS_INDIVIDUAL,
 						value,
 					}),
@@ -103,6 +135,12 @@ const IndividualsDataSet: React.FC<IIndividualsDataSetProps> = ({
 					typeof value === 'number'
 						? columns.cmsLabelRenderer(getVisitorType(value))
 						: '',
+			}}
+			emptyState={{
+				description: Liferay.Language.get(
+					'no-activities-were-found-on-the-selected-period'
+				),
+				title: Liferay.Language.get('no-individuals-were-found'),
 			}}
 			id={preview ? PREVIEW_FDS_ID : FDS_ID}
 			pagination={preview ? undefined : pagination}

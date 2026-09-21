@@ -13,6 +13,16 @@ export class ProductDetailsPage {
 	readonly attachmentItem: (title: string) => Promise<Locator>;
 	readonly attachmentItems: Locator;
 	readonly diagramPin: (pinSequence: string) => Promise<Locator>;
+	readonly breadcrumb: Locator;
+	readonly breadcrumbLink: (name: string) => Locator;
+	readonly diagramSvgPin: (sequence: string) => Locator;
+	readonly diagramTooltip: Locator;
+	readonly diagramTooltipExternalName: (name: string) => Locator;
+	readonly diagramTooltipQuantity: Locator;
+	readonly diagramTooltipReplacementAlert: (text: string) => Locator;
+	readonly diagramTooltipSubtitleLink: (name: string) => Locator;
+	readonly diagramTooltipTitleLink: (name: string) => Locator;
+	readonly diagramTooltipViewLink: Locator;
 	readonly downloadAttachmentLink: Locator;
 	readonly downloadSampleField: (
 		downloadSampleText: string
@@ -25,6 +35,14 @@ export class ProductDetailsPage {
 	readonly layoutsPage: CommerceLayoutsPage;
 	readonly mappedProductAddToCartButton: Locator;
 	readonly mappedProductCheckbox: Locator;
+	readonly mappedProductCheckboxFor: (
+		sku: string,
+		productName: string
+	) => Locator;
+	readonly mappedProductRow: (value: string) => Locator;
+	readonly mappedProductRowAt: (index: number) => Locator;
+	readonly mappedProductSelectAllCheckbox: Locator;
+	readonly mappedProductsTable: Locator;
 	readonly mpnField: (mpn: string) => Promise<Locator>;
 	readonly nameField: (name: string) => Promise<Locator>;
 	readonly optionSelector: (optionName: string) => Locator;
@@ -38,7 +56,12 @@ export class ProductDetailsPage {
 		container?: Locator | Page
 	) => Promise<Locator>;
 	readonly productNameHeading: (productName: string) => Promise<Locator>;
+	readonly productDetail: Locator;
+	readonly productDetailAddToCartButton: Locator;
+	readonly productDetailQuantitySelector: Locator;
 	readonly productOptionUploadFormFeedback: Locator;
+	readonly relatedDiagramLink: (name: string) => Locator;
+	readonly productTitle: (productName: string) => Locator;
 	readonly promoPriceField: (
 		promoPrice: string,
 		container?: Locator | Page
@@ -63,7 +86,13 @@ export class ProductDetailsPage {
 	) => Promise<Locator>;
 	readonly skuField: (sku: string) => Promise<Locator>;
 	readonly unitOfMeasureSelect: Locator;
+	readonly unitOfMeasureSelectedOption: Locator;
 	readonly uomCombobox: Locator;
+	readonly uomPriceTable: Locator;
+	readonly uomPriceTableColumnHeader: (columnName: string) => Locator;
+	readonly uomPriceTableRow: (rowIndex: number) => Locator;
+	readonly uomPriceTableRowCells: (rowIndex: number) => Locator;
+	readonly uomPriceTableRows: Locator;
 	readonly uomTable: (uomTableCell: string) => Promise<Locator>;
 	readonly viewButton: Locator;
 
@@ -83,6 +112,32 @@ export class ProductDetailsPage {
 				.locator("[class='pin-node-text']")
 				.filter({hasText: pinSequence});
 		};
+		this.breadcrumb = page.getByLabel('Breadcrumb');
+		this.breadcrumbLink = (name: string) =>
+			this.breadcrumb.getByRole('link', {name});
+		this.diagramSvgPin = (sequence: string) =>
+			page
+				.locator('text.pin')
+				.filter({hasText: new RegExp(`^${sequence}$`)});
+		this.diagramTooltip = page.locator('.diagram-tooltip');
+		this.diagramTooltipExternalName = (name: string) =>
+			this.diagramTooltip.locator('.h4').filter({hasText: name});
+		this.diagramTooltipQuantity =
+			this.diagramTooltip.getByText('Quantity:');
+		this.diagramTooltipReplacementAlert = (text: string) =>
+			this.diagramTooltip.getByText(text);
+		this.diagramTooltipSubtitleLink = (name: string) =>
+			this.diagramTooltip
+				.locator('.component-subtitle')
+				.getByRole('link', {exact: true, name});
+		this.diagramTooltipTitleLink = (name: string) =>
+			this.diagramTooltip
+				.locator('.component-title')
+				.getByRole('link', {exact: true, name});
+		this.diagramTooltipViewLink = this.diagramTooltip.getByRole('link', {
+			exact: true,
+			name: 'View',
+		});
 		this.downloadAttachmentLink = page.getByRole('link', {
 			exact: true,
 			name: 'Download',
@@ -104,6 +159,18 @@ export class ProductDetailsPage {
 			name: 'Add Selected Product(s) to',
 		});
 		this.mappedProductCheckbox = page.getByLabel('Select SKU');
+		this.mappedProductCheckboxFor = (sku: string, productName: string) =>
+			page.getByLabel(`Select SKU ${sku}, ${productName}`, {exact: true});
+		this.mappedProductRow = (value: string) =>
+			page
+				.locator('.shop-by-diagram-table tbody tr')
+				.filter({hasText: value});
+		this.mappedProductRowAt = (index: number) =>
+			page.locator('.shop-by-diagram-table tbody tr').nth(index);
+		this.mappedProductSelectAllCheckbox = page.locator(
+			'.shop-by-diagram-table thead input[type="checkbox"]'
+		);
+		this.mappedProductsTable = page.locator('.shop-by-diagram-table');
 		this.mpnField = async (mpn: string) => {
 			return page.getByText(mpn, {exact: true});
 		};
@@ -125,9 +192,26 @@ export class ProductDetailsPage {
 		this.productNameHeading = async (productName) => {
 			return page.getByRole('heading', {name: productName});
 		};
+		this.productDetail = page.locator('.product-detail').first();
+		this.productDetailAddToCartButton = this.productDetail.getByRole(
+			'button',
+			{name: 'Add to Cart'}
+		);
+		this.productDetailQuantitySelector = this.productDetail.getByRole(
+			'spinbutton',
+			{name: 'Quantity Selector'}
+		);
 		this.productOptionUploadFormFeedback = page.locator(
 			'.product-option-upload'
 		);
+		this.relatedDiagramLink = (name: string) =>
+			page
+				.locator('[class*="product-publisher"] p a')
+				.filter({hasText: name});
+		this.productTitle = (productName: string) =>
+			page
+				.locator('.portlet-content .component-title')
+				.filter({hasText: productName});
 		this.promoPriceField = async (
 			promoPrice: string,
 			container = this.page
@@ -177,7 +261,19 @@ export class ProductDetailsPage {
 		this.unitOfMeasureSelect = page.locator(
 			'select.unit-of-measure-selector'
 		);
+		this.unitOfMeasureSelectedOption =
+			this.unitOfMeasureSelect.locator('option:checked');
 		this.uomCombobox = page.getByRole('combobox', {exact: true});
+		this.uomPriceTable = page.locator('.tier-price-table table');
+		this.uomPriceTableColumnHeader = (columnName: string) =>
+			this.uomPriceTable
+				.locator('thead')
+				.getByText(columnName, {exact: true});
+		this.uomPriceTableRow = (rowIndex: number) =>
+			this.uomPriceTableRows.nth(rowIndex);
+		this.uomPriceTableRowCells = (rowIndex: number) =>
+			this.uomPriceTableRow(rowIndex).locator('td');
+		this.uomPriceTableRows = this.uomPriceTable.locator('tbody tr');
 		this.uomTable = async (cellValue: string) => {
 			return page.getByRole('cell', {name: cellValue});
 		};
